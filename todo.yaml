@@ -1,0 +1,180 @@
+
+
+
+
+##################################################################Android#################################################################
+get user steps
+
+calculate steps
+
+run apis
+
+pages
+home
+leaderboard
+college sign up
+your stats
+settings
+
+  select goals ,   point allocation
+  view badges
+  select entities
+  user entity history
+  
+friends  view friends view groups
+
+##################################################################Xcode##################################################################
+get user steps
+
+calculate steps
+
+run apis
+
+##################################################################aws##################################################################
+put java in ec2 port 8082
+https in cloudfront
+test api
+
+
+#################################3#api##################################################################
+user
+  login/logout
+  set entities
+  update user
+  view user with achievements and entities
+  count number of users
+  count number of users for demeographics (college,affliation,goal,etc)
+  set point allocation for goals
+  set goals/pick goals
+  view goals
+  view goal history
+
+
+achievements
+   get list of achivements for a user
+    search achievments
+
+affiliations
+   get affilations
+    add affilation
+    remove affilation
+
+contriburions
+  get total contribuitons in a time frame
+  get user contributions in time frame
+  get contributions for entity in time frame
+  get contributions  for campaign , campaign type, campaign sponsor
+  get contributions by status
+  get payouts for contributions
+  get payouts by entites
+
+daily stats
+  get stats within timeframe
+
+
+entities
+  get entity lust
+  create entity
+  update neitti
+  get stats and details of entiy
+  create goal for entity
+  get entity goals
+  get active goals
+  get ended goals/completed goals
+  get afflications
+  get contributions
+  get payouts
+  get campaigns and sponsors
+
+
+goals
+  create agoal
+  update a goal  (lock or complete goal)
+  
+
+sponsors
+  create sponsor
+  update sponsor
+
+
+save batches and daily stats to s3
+save to s3 bucket
+
+get from s3 bucket and add to data from db
+#cors
+
+
+Database query limits
+  
+how to make timeout issue. prevent someone from sending multiple request
+does aws prevent to many request from a user like a bot
+  
+Rate limiting - inside spring or api gateway
+
+API throttling
+Backend timeouts - free spring
+Database query limits
+prevent large json - free in spring and postgress
+Rate limiting - inside spring
+Backend timeouts - free spring
+Input validation
+Authentication
+  
+  ##################################################################DB##################################################################
+#make data
+normalize database  same name in parent and child
+make payout batch data
+make groups table many to many
+#make friends table 
+needs CHECK (user_id < friend_id) - to make sure there are not duplicate friend request
+  
+  # make many to many relationship for user and entities need to update data
+
+
+
+
+  # make user with restrictions
+// to set up user who cant do much
+CREATE USER wc_app_user WITH PASSWORD 'yourStrongPassword';
+
+
+REVOKE ALL PRIVILEGES ON DATABASE wc_database FROM wc_app_user;
+REVOKE ALL PRIVILEGES ON SCHEMA public FROM wc_app_user;
+
+REVOKE ALL PRIVILEGES ON DATABASE atmheroes FROM wc_app_user;
+REVOKE ALL PRIVILEGES ON SCHEMA public FROM wc_app_user;
+
+
+
+GRANT CONNECT ON DATABASE wc_database TO wc_app_user;
+GRANT USAGE ON SCHEMA public TO wc_app_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO wc_app_user;
+
+
+GRANT CONNECT ON DATABASE atmheroes TO wc_app_user;
+GRANT USAGE ON SCHEMA public TO wc_app_user;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO wc_app_user;
+
+
+
+GRANT CONNECT ON DATABASE wc_database TO wc_app_user;
+GRANT USAGE ON SCHEMA public TO wc_app_user;
+GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA public TO wc_app_user;
+
+GRANT CONNECT ON DATABASE atmheroes TO wc_app_user;
+GRANT USAGE ON SCHEMA public TO wc_app_user;
+GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO wc_app_user;
+  
+  
+  #if deleted needed
+GRANT DELETE ON ALL TABLES IN SCHEMA public TO wc_app_user;
+
+GRANT DELETE ON ALL TABLES IN SCHEMA public TO atmheroes;
+  
+  
+  #// default privleges doesn
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT SELECT, INSERT, UPDATE ON TABLES TO wc_app_user;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT DELETE ON TABLES TO wc_app_user;

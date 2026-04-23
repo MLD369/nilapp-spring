@@ -1,0 +1,28 @@
+# This doc is how to run the DB setup
+
+#1 Download postgres and pgAdmin4
+
+#2 set db passwords to postgres and postgres
+- Note: if you want a different password and db name you will need to change the db connections in src/main/resources/application.properties
+
+#3 Create a database named {project name}
+- Note: if you want a different password and db name you will need to change the db connections in src/main/resources/application.properties
+
+#4 Run the latest DB Creation script
+- Run Script: Copy and paste or open the file in pgAdmin
+- Note: file location -> java\nilapp\db\schema.sql
+
+#5 Add other data 1
+- Run Script: Copy and paste or open the file in pgAdmin
+- Note: file location -> java\nilapp\db\data1.sql
+    
+#6 Add other data 2
+- Run Script: Copy and paste or open the file in pgAdmin
+- Note: file location -> java\nilapp\db\data2.sql
+#7 Add other data 3
+- Run Script: Copy and paste or open the file in pgAdmin
+- Note: file location -> java\nilapp\db\data3.sql
+
+#8 Add other data 3
+- Run Script: Copy and paste or open the file in pgAdmin
+- Note: file location -> java\nilapp\db\data4.sql

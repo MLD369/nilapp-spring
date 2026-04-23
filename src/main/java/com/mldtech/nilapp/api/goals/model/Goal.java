@@ -1,4 +1,38 @@
 package com.mldtech.nilapp.api.goals.model;
 
-public class Gaol {
+import jakarta.persistence.*;
+import lombok.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "goals")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Goal {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "goal_id")
+    private Long goalId;
+
+    @Column(name = "entity_id", nullable = false)
+    private Long entityId;
+
+    @Column(name = "achievement_id")
+    private Long achievementId;
+
+    @Column(length = 255)
+    private String goal;
+
+    @Column(length = 255)
+    private String description;
+
+    @Column(name = "completed_date")
+    private LocalDateTime completedDate;
+
+    @Column(name = "goal_lock_date")
+    private LocalDateTime goalLockDate;
 }
+
