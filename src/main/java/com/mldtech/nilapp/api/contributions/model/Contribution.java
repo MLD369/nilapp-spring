@@ -1,9 +1,13 @@
 package com.mldtech.nilapp.api.contributions.model;
 
+import com.mldtech.nilapp.api.contributions.children.ContributionStatus.model.ContributionStatus;
+import com.mldtech.nilapp.api.goals.model.Goal;
+import com.mldtech.nilapp.api.users.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "contributions")
@@ -19,7 +23,7 @@ public class Contribution {
     private Long contributionId;
 
     @Column(name = "user_id", nullable = false)
-    private Long userId;
+    private Long userId;  // TODO DTO
 
     @Column(name = "entity_id", nullable = false)
     private Long entityId;
@@ -45,6 +49,14 @@ public class Contribution {
     @Column(name = "payout_batch_id")
     private Long payoutBatchId;
 
-    @Column(name = "status", nullable = false)
-    private Long statusId;
+    @ManyToOne
+    @JoinColumn(name = "status",nullable = false)
+    private ContributionStatus contributionStatus;
+
+
+//    @Column(name = "contribution_status_id", nullable = false)
+//    private Long statusId;
+//
+//    @OneToMany(cascade = CascadeType.ALL, mappedBy = "user", orphanRemoval = true)
+//    private List<Goal> entityGoals;
 }
