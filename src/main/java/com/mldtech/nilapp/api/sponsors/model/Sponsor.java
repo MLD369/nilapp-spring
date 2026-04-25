@@ -1,7 +1,11 @@
 package com.mldtech.nilapp.api.sponsors.model;
 
+import com.mldtech.nilapp.api.sponsors.children.SponserCampaign.model.SponsorCampaign;
+import com.mldtech.nilapp.api.users.children.UserEntity.model.UserEntity;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.List;
 
 @Entity
 @Table(name = "sponsors")
@@ -27,4 +31,7 @@ public class Sponsor {
 
     @Column(name = "is_active")
     private Boolean isActive;
+
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "sponsorId", orphanRemoval = true)
+    private List<SponsorCampaign> sponsorCampaigns;
 }
