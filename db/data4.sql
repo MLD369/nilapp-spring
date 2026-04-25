@@ -8,7 +8,7 @@ INSERT INTO public.user_goal_histories(
 VALUES ( 1, 1, .5, '2026-04-12', null,500, 50);
 
 INSERT INTO public.user_achievements(
-    user_id, achievements_id, earned_at)
+    user_id, achievement_id, earned_at)
 VALUES (1, 1, '2026-04-12');
 
 INSERT INTO public.sponsor_campaigns(
@@ -49,7 +49,7 @@ INSERT INTO public.user_groups(
     group_id, user_id)
 VALUES (1, 1);
 INSERT INTO public.group_achievements(
-    group_id, achievements_id, earned_at)
+    group_id, achievement_id, earned_at)
 VALUES (1, 2, '2026-01-01');
 
 INSERT INTO public.user_entities(
