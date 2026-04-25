@@ -1,4 +1,4 @@
-package com.mldtech.nilapp.api.entities.model;
+package com.mldtech.nilapp.api.entities.children.EntityType.model;
 
 import jakarta.persistence.*;
 import lombok.*;
