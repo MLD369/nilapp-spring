@@ -1,4 +1,4 @@
-package com.mldtech.nilapp.api.contributions.model;
+package com.mldtech.nilapp.api.contributions.children.ContributionStatus.model;
 
 import jakarta.persistence.*;
 import lombok.*;
