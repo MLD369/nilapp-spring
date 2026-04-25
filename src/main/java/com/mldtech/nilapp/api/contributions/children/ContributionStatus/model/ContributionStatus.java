@@ -14,7 +14,7 @@ public class ContributionStatus {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "contribution_status_id")
-    private Long contributionStatusId;
+    private Integer contributionStatusId;
 
     @Column(unique = true, nullable = false, length = 50)
     private String code;
