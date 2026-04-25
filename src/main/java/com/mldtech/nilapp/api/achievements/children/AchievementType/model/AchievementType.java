@@ -1,4 +1,4 @@
-package com.mldtech.nilapp.api.achievements.model;
+package com.mldtech.nilapp.api.achievements.children.AchievementType.model;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -14,7 +14,7 @@ public class AchievementType {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "achievement_type_id")
-    private Integer achievementTypeId;
+    private int achievementTypeId;
 
     @Column(length = 50)
     private String type;
