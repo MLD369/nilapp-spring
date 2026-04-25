@@ -34,11 +34,11 @@ public class ContributionController {
         return service.createContribution(contribution);
     }
 
-//    @PutMapping("/{contributionId}/status/{statusId}")
-//    public Contribution updateStatus(
-//            @PathVariable Long contributionId,
-//            @PathVariable Integer statusId
-//    ) {
-//        return service.updateStatus(contributionId, statusId);
-//    }
+    @PutMapping("/{contributionId}/status/{statusId}")
+    public Contribution updateStatus(
+            @PathVariable Long contributionId,
+            @PathVariable Integer statusId
+    ) {
+        return service.updateStatus(contributionId, statusId);
+    }
 }
