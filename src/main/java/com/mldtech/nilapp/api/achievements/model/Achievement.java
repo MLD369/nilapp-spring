@@ -1,5 +1,6 @@
 package com.mldtech.nilapp.api.achievements.model;
 
+import com.mldtech.nilapp.api.achievements.children.AchievementType.model.AchievementType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -16,8 +17,9 @@ public class Achievement {
     @Column(name = "achievement_id")
     private Long achievementId;
 
-    @Column(name = "achievement_type", nullable = false)
-    private Long achievementTypeId;
+    @ManyToOne
+    @JoinColumn(name = "achievement_type",nullable = false)
+    private AchievementType achievementType;
 
     @Column(length = 255)
     private String achievement;
