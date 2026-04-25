@@ -1,4 +1,4 @@
-package com.mldtech.nilapp.api.friend.model;
+package com.mldtech.nilapp.api.friend.children.FriendStatus.model;
 
 import jakarta.persistence.*;
 import lombok.*;
