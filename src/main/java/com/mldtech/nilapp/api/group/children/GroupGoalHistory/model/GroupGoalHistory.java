@@ -1,4 +1,4 @@
-package com.mldtech.nilapp.api.group.model;
+package com.mldtech.nilapp.api.group.children.GroupGoalHistory.model;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -19,7 +19,7 @@ public class GroupGoalHistory {
     private Long groupGoalHistoryId;
 
     @Column(name = "group_id", nullable = false)
-    private Long groupId;
+    private Long group;
 
     @Column(name = "group_goal_id", nullable = false)
     private Long groupGoalId;
