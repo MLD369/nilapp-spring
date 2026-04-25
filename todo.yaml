@@ -1,4 +1,8 @@
+get user and children working
 
+get entity working 
+
+get other objects working
 
 
 
@@ -37,6 +41,8 @@ test api
 
 
 #################################3#api##################################################################
+// see what the apis are like
+
 user
   login/logout
   set entities
@@ -123,7 +129,12 @@ Authentication
   ##################################################################DB##################################################################
 #make data
 normalize database  same name in parent and child
+
+make should entity have a entity_goals table or will entites have their own goals
+entities_goal
+
 make payout batch data
+
 make groups table many to many
 #make friends table 
 needs CHECK (user_id < friend_id) - to make sure there are not duplicate friend request
