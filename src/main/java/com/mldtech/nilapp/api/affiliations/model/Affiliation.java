@@ -1,5 +1,6 @@
 package com.mldtech.nilapp.api.affiliations.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -11,6 +12,7 @@ import lombok.*;
 @AllArgsConstructor
 public class Affiliation {
 
+    @JsonIgnore
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "affiliations_id")
