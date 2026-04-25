@@ -139,7 +139,8 @@ CREATE TABLE "user_goals" (
                               "allocation_pct" decimal(5,2) NOT NULL DEFAULT 0,
                               "joined_at" timestamp DEFAULT (now()),
                               "left_at" timestamp,
-                              "is_active" bool DEFAULT true
+                              "is_active" bool DEFAULT true,
+                              "is_completed" bool DEFAULT false
 );
 
 CREATE TABLE "user_goal_histories" (

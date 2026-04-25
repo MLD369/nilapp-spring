@@ -17,10 +17,37 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+
     @GetMapping("/{userId}/profile")
     public UserProfileResponse getUserProfile(@PathVariable Long userId) {
         return userService.getUserProfile(userId);
     }
+
+    @GetMapping("/{userId}/achievements") //TODO new dto
+    public UserProfileResponse getUserAchievements(@PathVariable Long userId) {
+        return userService.getUserAchievements(userId);
+    }
+    @GetMapping("/{userId}/goals") //TODO new dto
+    public UserProfileResponse getUserGoals(@PathVariable Long userId) {
+        return userService.getUserGoals(userId);
+    }
+    @GetMapping("/{userId}/goals/completed") //TODO new dto
+    public UserProfileResponse getUserCompletedGoals(@PathVariable Long userId) {
+        return userService.getUserCompletedGoals(userId);
+    }
+    @GetMapping("/{userId}/goals/incompleted") //TODO new dto
+    public UserProfileResponse getUserIncompletedGoals(@PathVariable Long userId) {
+        return userService.getUserIncompletedGoals(userId);
+    }
+    @GetMapping("/{userId}/goal-history") //TODO new dto
+    public UserProfileResponse getUserGoalHistory(@PathVariable Long userId) {
+        return userService.getUserGoalHistory(userId);
+    }
+    @GetMapping("/{userId}/groups") //TODO new dto
+    public UserProfileResponse getUserGroups(@PathVariable Long userId) {
+        return userService.getUserGroups(userId);
+    }
+
 
 
 }

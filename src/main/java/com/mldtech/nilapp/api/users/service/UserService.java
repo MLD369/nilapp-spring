@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -76,6 +77,85 @@ public class UserService {
                 .contributions(user.getContributions().stream().toList())
                 .dailyStats(user.getDailyStats().stream().toList())
 //                .friends(user.getUserFriends().stream().toList())
+                .build();
+    }
+
+    public UserProfileResponse getUserAchievements(Long userId) {
+
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return UserProfileResponse.builder()
+                .userId(userId)
+                .username(user.getUsername())
+                .achievements(user.getUserAchievements().stream().toList())
+                .build();
+    }
+    public UserProfileResponse getUserGoals(Long userId) {
+
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return UserProfileResponse.builder()
+                .userId(userId)
+                .username(user.getUsername())
+                .goals(user.getUserGoals().stream().toList())
+                .build();
+    }
+    public UserProfileResponse getUserCompletedGoals(Long userId) {
+
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        var completedGoals = user.getUserGoals()
+                .stream()
+                .filter(g -> Boolean.TRUE.equals(g.getIsComplete()))
+                .toList();
+
+
+        return UserProfileResponse.builder()
+                .userId(userId)
+                .username(user.getUsername())
+                .goals(completedGoals)
+                .build();
+    }
+    public UserProfileResponse getUserIncompletedGoals(Long userId) {
+
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        var incompletedGoals = user.getUserGoals()
+                .stream()
+                .filter(g -> Boolean.FALSE.equals(g.getIsComplete()))
+                .toList();
+
+
+        return UserProfileResponse.builder()
+                .userId(userId)
+                .username(user.getUsername())
+                .goals(incompletedGoals)
+                .build();
+    }
+    public UserProfileResponse getUserGoalHistory(Long userId) {
+
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return UserProfileResponse.builder()
+                .userId(userId)
+                .username(user.getUsername())
+                .goalHistory(user.getUserGoalHistories().stream().toList())
+                .build();
+    }
+    public UserProfileResponse getUserGroups(Long userId) {
+
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return UserProfileResponse.builder()
+                .userId(userId)
+                .username(user.getUsername())
+                .groups(user.getUserGroups().stream().toList())
                 .build();
     }
 
