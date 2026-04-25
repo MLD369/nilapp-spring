@@ -1,4 +1,4 @@
-package com.mldtech.nilapp.api.group.model;
+package com.mldtech.nilapp.api.group.children.GroupGoal.model;
 
 import jakarta.persistence.*;
 import lombok.*;
