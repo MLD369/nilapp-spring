@@ -1,4 +1,4 @@
-package com.mldtech.nilapp.api.sponsors.model;
+package com.mldtech.nilapp.api.sponsors.children.SponserCampaign.model;
 
 import jakarta.persistence.*;
 import lombok.*;
