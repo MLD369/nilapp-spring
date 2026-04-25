@@ -1,5 +1,9 @@
-package com.mldtech.nilapp.api.users.model;
+package com.mldtech.nilapp.api.users.children.UserGoal.model;
 
+//import com.mldtech.nilapp.api.goals.model.Goal;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.mldtech.nilapp.api.goals.model.Goal;
+import com.mldtech.nilapp.api.users.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -8,21 +12,24 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "user_goals")
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class UserGoal {
-
+    @JsonIgnore
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_goal_id")
     private Long userGoalId;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @JsonIgnore
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 
-    @Column(name = "goal_id", nullable = false)
-    private Long goalId;
+    @ManyToOne
+    @JoinColumn(name = "goal_id")
+    private Goal goal;
 
     @Column(name = "allocation_pct", precision = 5, scale = 2, nullable = false)
     private BigDecimal allocationPct;
