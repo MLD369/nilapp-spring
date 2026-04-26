@@ -1,13 +1,13 @@
 package com.mldtech.nilapp.api.users.controller;
 
 import com.mldtech.nilapp.api.contributions.model.Contribution;
+import com.mldtech.nilapp.api.users.children.UserEntity.model.UserEntity;
+import com.mldtech.nilapp.api.users.children.UserEntity.service.UserEntityService;
+import com.mldtech.nilapp.api.users.dto.UpdateUserEntitiesRequest;
 import com.mldtech.nilapp.api.users.dto.UserProfileResponse;
 import com.mldtech.nilapp.api.users.service.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -17,6 +17,7 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+    private final UserEntityService userEntityService;
 
     @GetMapping("/{userId}/profile")
     public UserProfileResponse getUserProfile(@PathVariable Long userId) {
@@ -46,6 +47,42 @@ public class UserController {
     @GetMapping("/{userId}/groups") //TODO new dto
     public UserProfileResponse getUserGroups(@PathVariable Long userId) {
         return userService.getUserGroups(userId);
+    }
+    @GetMapping("/{userId}/entities") //TODO new dto
+    public UserProfileResponse getUserEntities(@PathVariable Long userId) {
+        return userService.getUserEntities(userId);
+    }
+    @GetMapping("/{userId}/friends") //TODO new dto
+    public UserProfileResponse getUserFriends(@PathVariable Long userId) {
+        return userService.getUserFriends(userId);
+    }
+
+    @PutMapping("/{userId}/entities")
+    public List<UserEntity> updateUserEntities(
+            @PathVariable Long userId,
+            @RequestBody UpdateUserEntitiesRequest request
+    ) {
+        return userEntityService.setUserEntities(userId, request.getEntityIds());
+    }
+
+
+
+    // ADD ENTITY
+    @PostMapping("/{userId}/entities/{entityId}")
+    public UserEntity addEntity(
+            @PathVariable Long userId,
+            @PathVariable Long entityId
+    ) {
+        return userEntityService.addEntity(userId, entityId);
+    }
+
+    // REMOVE ENTITY
+    @DeleteMapping("/{userId}/entities/{entityId}")
+    public void removeEntity(
+            @PathVariable Long userId,
+            @PathVariable Long entityId
+    ) {
+        userEntityService.removeEntity(userId, entityId);
     }
 
 

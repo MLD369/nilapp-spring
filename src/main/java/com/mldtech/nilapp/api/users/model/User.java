@@ -6,6 +6,7 @@ package com.mldtech.nilapp.api.users.model;
 //import com.mldtech.nilapp.api.users.children.UserGoal.model.UserGoal;
 //import com.mldtech.nilapp.api.users.children.UserGoalHistory.model.UserGoalHistory;
 //import com.mldtech.nilapp.api.users.children.UserGroup.model.UserGroup;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.daily_stat.model.DailyStat;
 import com.mldtech.nilapp.api.friend.model.Friend;
@@ -81,6 +82,7 @@ public class User {
     private String sessionId;
 
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "user", orphanRemoval = true)
+    @JsonManagedReference
     private List<UserEntity> userEntities;
 
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "user", orphanRemoval = true)
@@ -96,6 +98,7 @@ public class User {
     private List<UserGoalHistory> userGoalHistories;
 
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "user", orphanRemoval = true)
+    @JsonManagedReference
     private List<Friend> userFriends;
 
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId", orphanRemoval = true)

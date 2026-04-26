@@ -33,7 +33,7 @@ public class UserProfileResponse {
     private List<UserGoalHistory> goalHistory;
     private List<Contribution> contributions;
     private List<DailyStat> dailyStats;
-//    private List<Friend> friends;
+    private List<Friend> friends;
 
 //    public UserProfileResponse(User user){
 //        this.username = user.getUsername();

@@ -2,7 +2,9 @@ package com.mldtech.nilapp.api.users.children.UserEntity.model;
 
 
 //import com.mldtech.nilapp.api.entities.model.Entities;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mldtech.nilapp.api.entities.model.Entities;
 import com.mldtech.nilapp.api.users.model.User;
 import jakarta.persistence.*;
@@ -24,15 +26,33 @@ public class UserEntity {
     @Column(name = "user_entities_id")
     private Long userEntitiesId;
 
-    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "user_id")
+    @JsonBackReference
     private User user;
 
-    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "entity_id")
+    @JsonBackReference
     private Entities entity;
+
+    @JsonProperty("userId")
+    public Long getUserId() {
+        return user != null ? user.getUserId() : null;
+    }
+
+    @JsonProperty("entityId")
+    public Long getEntityId() {
+        return entity != null ? entity.getEntityId() : null;
+    }
+    @JsonProperty("name")
+    public String getName() {
+        return entity != null ? entity.getName() : null;
+    }
+    @JsonProperty("associatedSchool")
+    public String getAssociatedSchool() {
+        return entity != null ? entity.getAssociatedSchool() : null;
+    }
 }
 
 

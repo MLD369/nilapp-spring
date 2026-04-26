@@ -76,7 +76,7 @@ public class UserService {
                 .entities(user.getUserEntities().stream().toList())
                 .contributions(user.getContributions().stream().toList())
                 .dailyStats(user.getDailyStats().stream().toList())
-//                .friends(user.getUserFriends().stream().toList())
+                .friends(user.getUserFriends().stream().toList())
                 .build();
     }
 
@@ -159,5 +159,27 @@ public class UserService {
                 .build();
     }
 
+    public UserProfileResponse getUserEntities(Long userId) {
+
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return UserProfileResponse.builder()
+                .userId(userId)
+                .username(user.getUsername())
+                .entities(user.getUserEntities().stream().toList())
+                .build();
+    }
+    public UserProfileResponse getUserFriends(Long userId) {
+
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return UserProfileResponse.builder()
+                .userId(userId)
+                .username(user.getUsername())
+                .friends(user.getUserFriends().stream().toList())
+                .build();
+    }
 }
 
