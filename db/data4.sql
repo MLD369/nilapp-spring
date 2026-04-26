@@ -29,17 +29,26 @@ VALUES (1, 1, 1, 500, 5, .001, 'ad1', null, 1);
 
 INSERT INTO public.friend_statuses(
     status, description)
-VALUES ('pending', 'Friend request is pending acceptance');
+VALUES ('REQUESTED', 'Friend request is pending acceptance');
 INSERT INTO public.friend_statuses(
     status, description)
-VALUES ('accepted', 'Friend request accepted');
+VALUES ('FRIENDS', 'Friend request accepted');
 INSERT INTO public.friend_statuses(
     status, description)
-VALUES ('blocked', 'User has blocked the user');
+VALUES ('BLOCKED_BY_USER', 'User with userId blocked user');
+INSERT INTO public.friend_statuses(
+    status, description)
+VALUES ('UNFRIENDED', 'User has unfriended the user');
+INSERT INTO public.friend_statuses(
+    status, description)
+VALUES ('BLOCKED_BY_FRIEND', 'User with Friend Id blocked user');
 
 INSERT INTO public.friends(
     user_id, friend_id, status)
-VALUES (1, 1, 1);
+VALUES (1, 2, 1);
+INSERT INTO public.friends(
+    user_id, friend_id, status)
+VALUES (1, 3, 1);
 
 INSERT INTO public.groups(
     name)
