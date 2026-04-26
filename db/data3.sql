@@ -42,7 +42,9 @@ VALUES (1, 1);
 
 
 INSERT INTO public.goals(
-    entity_id, achievement_id, goal, description, completed_date, goal_lock_date)
-VALUES ( 1, 2, 'Raise 10k USD', 'Raise $10,000 for Track Team Travel', '9999-12-31', '9999-12-31');
+    goal_types_id, achievement_id, goal, description, completed_date, goal_lock_date)
+VALUES (1, 1, 'Raise 10k USD', 'Raise $10,000 for Track Team Travel', '9999-12-31', '9999-12-31');
 
-
+INSERT INTO public.goal_instances(
+    goal_id, entity_id, group_id, start_date, end_date, current_progress, is_active, is_complete)
+VALUES (1, null, null, now(), '9999-12-12', 0, true, false);

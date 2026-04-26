@@ -1,11 +1,9 @@
 -- step 4
-INSERT INTO public.user_goals(
-    user_id, goal_id, allocation_pct, joined_at, left_at, is_active)
-VALUES (1, 1, .5, '2026-04-12', null, true);
+INSERT INTO public.goal_instances(
+    goal_id, entity_id, group_id, start_date, end_date, current_progress, is_active, is_complete)
+VALUES (1, null, null, now(), '9999-12-12', 0, true, false);
 
-INSERT INTO public.user_goal_histories(
-    user_id, goal_id, allocation_pct, joined_at, left_at, coins_contributed, steps_contributed)
-VALUES ( 1, 1, .5, '2026-04-12', null,500, 50);
+
 
 INSERT INTO public.user_achievements(
     user_id, achievement_id, earned_at)
@@ -70,11 +68,8 @@ VALUES (1, 2);
 INSERT INTO public.user_entities(
     entity_id, user_id)
 VALUES (2, 1);
+INSERT INTO public.user_goals(
+    user_id, goal_instance_id, allocation_pct, joined_at, left_at, is_active, is_complete)
+VALUES ( 1, 1, .5, now(), null, true, false);
 
-INSERT INTO public.group_goals(
-    group_id, goal_id, allocation_pct, joined_at, left_at, is_active)
-VALUES (1, 1, .5, now(), null, true);
 
-INSERT INTO public.group_goal_histories(
-    group_id, group_goal_id, allocation_pct, joined_at,left_at, coins_contributed, steps_contributed)
-VALUES (1, 1, .5, now() ,null, 0, 0);

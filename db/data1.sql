@@ -12,5 +12,14 @@ INSERT INTO public.achievement_types(
 INSERT INTO public.achievement_types(
 	type, meaning)
 	VALUES ('SPECIAL', 'Manual or rare achievements EX. 100 MILES ON GAMEDAYS');
+INSERT INTO public.goal_types(
+    type, description)
+VALUES ('App', 'App goal');
+INSERT INTO public.goal_types(
+    type, description)
+VALUES ('ENTITY', 'Entity goal');
+INSERT INTO public.goal_types(
+    type, description)
+VALUES ('GROUP', 'Group goal');
 
 
