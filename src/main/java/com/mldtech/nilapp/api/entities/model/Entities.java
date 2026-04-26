@@ -1,5 +1,7 @@
 package com.mldtech.nilapp.api.entities.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.entities.children.EntityAffiliation.model.EntityAffiliation;
 import com.mldtech.nilapp.api.entities.children.EntityType.model.EntityType;
@@ -68,8 +70,9 @@ public class Entities {
 //    @ManyToOne
 //    @JoinColumn(name = "user_id",nullable = false)
 //    private User user;
-
+    @JsonIgnore
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "entity", orphanRemoval = true)
+    @JsonManagedReference
     private List<UserEntity> userEntities;
 
 
