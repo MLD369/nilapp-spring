@@ -1,5 +1,6 @@
 package com.mldtech.nilapp.api.group.children.GroupAchievement.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.mldtech.nilapp.api.achievements.model.Achievement;
 import com.mldtech.nilapp.api.group.model.Group;
@@ -25,12 +26,14 @@ public class GroupAchievement {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id")
+    @JsonBackReference
     private Group group;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "achievement_id")
-    @JsonManagedReference
+    @JsonBackReference
     private Achievement achievement;
+
 
     @Column(name = "earned_at")
     private LocalDate earnedAt;

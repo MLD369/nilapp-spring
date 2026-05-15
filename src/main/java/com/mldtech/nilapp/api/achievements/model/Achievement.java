@@ -1,8 +1,13 @@
 package com.mldtech.nilapp.api.achievements.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.mldtech.nilapp.api.achievements.children.AchievementType.model.AchievementType;
+import com.mldtech.nilapp.api.group.children.GroupAchievement.model.GroupAchievement;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "achievements")
@@ -38,5 +43,10 @@ public class Achievement {
 
     @Column(name = "required_coins")
     private Long requiredCoins;
+
+    @OneToMany(mappedBy = "achievement", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<GroupAchievement> groupAchievements = new ArrayList<>();
+
 }
 

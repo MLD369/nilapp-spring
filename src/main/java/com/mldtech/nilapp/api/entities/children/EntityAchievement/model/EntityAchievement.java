@@ -1,4 +1,4 @@
-package com.mldtech.nilapp.api.entities.children;
+package com.mldtech.nilapp.api.entities.children.EntityAchievement.model;
 
 import com.mldtech.nilapp.api.achievements.model.Achievement;
 import com.mldtech.nilapp.api.entities.model.Entities;
