@@ -10,8 +10,9 @@ package com.mldtech.nilapp.api.users.service;
 //import com.mldtech.nilapp.api.users.children.UserGroup.repository.UserGroupRepository;
 //import com.mldtech.nilapp.api.users.dto.UserProfileResponse;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
-import com.mldtech.nilapp.api.users.dto.UserProfileResponse;
+import com.mldtech.nilapp.api.users.dto.*;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,64 +32,142 @@ public class UserService {
 //    private final UserGoalRepository userGoalRepository;
 //    private final UserGoalHistoryRepository userGoalHistoryRepository;
 //    private final FriendRepository friendRepository;
-
+//    @Transactional   /// TODO change this to the right way with dtos
+//    public UserProfileResponse getUserProfile(Long userId) {
+//
+//        var user = userRepository.findById(userId)
+//                .orElseThrow(() -> new RuntimeException("User not found"));
+//
+////        var entities = userEntityRepository.findByUserEntitiesByUserId(userId)
+////                .stream()
+////                .map(ue -> ue.getEntity().getEntityId())
+////                .toList();
+////
+////        var groups = userGroupRepository.findByUserGroupUserId(userId)
+////                .stream()
+////                .map(ug -> ug.getGroup().getGroupId())
+////                .toList();
+////
+////        var achievements = userAchievementRepository.findByUserUserId(userId)
+////                .stream()
+////                .map(ua -> ua.getAchievement().getAchievementId())
+////                .toList();
+////
+////        var activeGoals = userGoalRepository.findByUserUserIdAndIsActiveTrue(userId);
+////
+////        var goalHistory = userGoalHistoryRepository.findByUserUserId(userId);
+////
+////        var friends = friendRepository.findByFriendUserId(userId)
+////                .username(user.getUsername())
+////                .email(user.getEmail())
+////                .entityIds(entities)
+////                .stream()
+////                .map(Friend::getId)
+////                .toList();
+//
+//        return UserProfileResponse.builder()
+//                .userId(userId)
+//                .username(user.getUsername())
+//                .email(user.getEmail())
+//                .totalLifetimeCoins(user.getTotalLifetimeCoins())
+//                .groups(user.getUserGroups().stream().toList())
+//                .achievements(user.getUserAchievements().stream().toList())
+//                .goals(user.getUserGoals().stream().toList())
+////                .goalHistory(user.getUserGoalHistories().stream().toList())
+//                .entities(user.getUserEntities().stream().toList())
+//                .contributions(user.getContributions().stream().toList())
+//                .dailyStats(user.getDailyStats().stream().toList())
+//                .friends(user.getUserFriends().stream().toList())
+//                .build();
+//    }
     public UserProfileResponse getUserProfile(Long userId) {
 
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-//        var entities = userEntityRepository.findByUserEntitiesByUserId(userId)
-//                .stream()
-//                .map(ue -> ue.getEntity().getEntityId())
-//                .toList();
-//
-//        var groups = userGroupRepository.findByUserGroupUserId(userId)
-//                .stream()
-//                .map(ug -> ug.getGroup().getGroupId())
-//                .toList();
-//
-//        var achievements = userAchievementRepository.findByUserUserId(userId)
-//                .stream()
-//                .map(ua -> ua.getAchievement().getAchievementId())
-//                .toList();
-//
-//        var activeGoals = userGoalRepository.findByUserUserIdAndIsActiveTrue(userId);
-//
-//        var goalHistory = userGoalHistoryRepository.findByUserUserId(userId);
-//
-//        var friends = friendRepository.findByFriendUserId(userId)
-//                .username(user.getUsername())
-//                .email(user.getEmail())
-//                .entityIds(entities)
-//                .stream()
-//                .map(Friend::getId)
-//                .toList();
-
         return UserProfileResponse.builder()
-                .userId(userId)
+                .userId(user.getUserId())
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .totalLifetimeCoins(user.getTotalLifetimeCoins())
-                .groups(user.getUserGroups().stream().toList())
-                .achievements(user.getUserAchievements().stream().toList())
-                .goals(user.getUserGoals().stream().toList())
-//                .goalHistory(user.getUserGoalHistories().stream().toList())
-                .entities(user.getUserEntities().stream().toList())
-                .contributions(user.getContributions().stream().toList())
-                .dailyStats(user.getDailyStats().stream().toList())
-                .friends(user.getUserFriends().stream().toList())
+
+                .groups(user.getUserGroups().stream()
+                        .map(ug -> GroupDTO.builder()
+                                .groupId(ug.getGroup().getGroupId())
+                                .name(ug.getGroup().getName())
+                                .build())
+                        .toList())
+
+                .achievements(user.getUserAchievements().stream()
+                        .map(ua -> AchievementDTO.builder()
+                                .achievementId(ua.getAchievement().getAchievementId())
+                                .achievement(ua.getAchievement().getAchievement())
+                                .description(ua.getAchievement().getDescription())
+                                .badge(ua.getAchievement().getBadge())
+                                .build())
+                        .toList())
+
+                .goals(user.getUserGoals().stream()
+                        .map(g -> GoalDTO.builder()
+                                .goalId(g.getUserGoalId())
+//                                .goalName(g.getGoal().getGoal())
+                                .isActive(g.getIsActive())
+                                .build())
+                        .toList())
+
+                .entities(user.getUserEntities().stream()
+                        .map(ue -> EntityDTO.builder()
+                                .entityId(ue.getEntity().getEntityId())
+                                .name(ue.getEntity().getName())
+                                .abbreviation(ue.getEntity().getAbbreviation())
+                                .build())
+                        .toList())
+
+                .contributions(user.getContributions().stream()
+                        .map(c -> ContributionDTO.builder()
+                                .contributionId(c.getContributionId())
+//                                .amount(c.getAmount())
+//                                .type(c.getType())
+                                .build())
+                        .toList())
+
+                .dailyStats(user.getDailyStats().stream()
+                        .map(ds -> DailyStatDTO.builder()
+                                .dailyStatId(ds.getDailyStatId())
+//                                .steps(ds.getSteps())
+//                                .distance(ds.getDistance())
+                                .date(ds.getDate().toString())
+                                .build())
+                        .toList())
+
+                .friends(user.getUserFriends().stream()
+                        .map(f -> FriendDTO.builder()
+                                .friendId(f.getFriendId())
+                                .friendUserId(f.getFriend().getUserId())
+                                .friendUsername(f.getFriend().getUsername())
+                                .build())
+                        .toList())
+
                 .build();
     }
-
     public UserProfileResponse getUserAchievements(Long userId) {
 
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        var achievements = user.getUserAchievements().stream()
+                .map(ua -> AchievementDTO.builder()
+                        .achievementId(ua.getAchievement().getAchievementId())
+                        .achievement(ua.getAchievement().getAchievement())
+                        .description(ua.getAchievement().getDescription())
+                        .badge(ua.getAchievement().getBadge())
+                        .build())
+                .toList();
+
         return UserProfileResponse.builder()
                 .userId(userId)
                 .username(user.getUsername())
-                .achievements(user.getUserAchievements().stream().toList())
+                .achievements(achievements)
                 .build();
     }
     public UserProfileResponse getUserGoals(Long userId) {
@@ -96,10 +175,18 @@ public class UserService {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        var goals = user.getUserGoals().stream()
+                .map(g -> GoalDTO.builder()
+                        .goalId(g.getUserGoalId())
+//                        .goalName(g.getGoal().getGoal())
+                        .isActive(g.getIsActive())
+                        .build())
+                .toList();
+
         return UserProfileResponse.builder()
                 .userId(userId)
                 .username(user.getUsername())
-                .goals(user.getUserGoals().stream().toList())
+                .goals(goals)
                 .build();
     }
     public UserProfileResponse getUserCompletedGoals(Long userId) {
@@ -107,11 +194,14 @@ public class UserService {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        var completedGoals = user.getUserGoals()
-                .stream()
+        var completedGoals = user.getUserGoals().stream()
                 .filter(g -> Boolean.TRUE.equals(g.getIsComplete()))
+                .map(g -> GoalDTO.builder()
+                        .goalId(g.getUserGoalId())
+//                        .goalName(g.getGoal().getGoal())
+                        .isActive(g.getIsActive())
+                        .build())
                 .toList();
-
 
         return UserProfileResponse.builder()
                 .userId(userId)
@@ -124,11 +214,14 @@ public class UserService {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        var incompletedGoals = user.getUserGoals()
-                .stream()
+        var incompletedGoals = user.getUserGoals().stream()
                 .filter(g -> Boolean.FALSE.equals(g.getIsComplete()))
+                .map(g -> GoalDTO.builder()
+                        .goalId(g.getUserGoalId())
+//                        .goalName(g.getGoal().getGoal())
+                        .isActive(g.getIsActive())
+                        .build())
                 .toList();
-
 
         return UserProfileResponse.builder()
                 .userId(userId)
@@ -136,38 +229,41 @@ public class UserService {
                 .goals(incompletedGoals)
                 .build();
     }
-//    public UserProfileResponse getUserGoalHistory(Long userId) {
-//
-//        var user = userRepository.findById(userId)
-//                .orElseThrow(() -> new RuntimeException("User not found"));
-//
-//        return UserProfileResponse.builder()
-//                .userId(userId)
-//                .username(user.getUsername())
-//                .goalHistory(user.getUserGoalHistories().stream().toList())
-//                .build();
-//    }
     public UserProfileResponse getUserGroups(Long userId) {
 
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        var groups = user.getUserGroups().stream()
+                .map(ug -> GroupDTO.builder()
+                        .groupId(ug.getGroup().getGroupId())
+                        .name(ug.getGroup().getName())
+                        .build())
+                .toList();
+
         return UserProfileResponse.builder()
                 .userId(userId)
                 .username(user.getUsername())
-                .groups(user.getUserGroups().stream().toList())
+                .groups(groups)
                 .build();
     }
-
     public UserProfileResponse getUserEntities(Long userId) {
 
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        var entities = user.getUserEntities().stream()
+                .map(ue -> EntityDTO.builder()
+                        .entityId(ue.getEntity().getEntityId())
+                        .name(ue.getEntity().getName())
+                        .abbreviation(ue.getEntity().getAbbreviation())
+                        .build())
+                .toList();
+
         return UserProfileResponse.builder()
                 .userId(userId)
                 .username(user.getUsername())
-                .entities(user.getUserEntities().stream().toList())
+                .entities(entities)
                 .build();
     }
     public UserProfileResponse getUserFriends(Long userId) {
@@ -175,11 +271,124 @@ public class UserService {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        var friends = user.getUserFriends().stream()
+                .map(f -> FriendDTO.builder()
+                        .friendId(f.getFriendId())
+                        .friendUserId(f.getFriend().getUserId())
+                        .friendUsername(f.getFriend().getUsername())
+                        .build())
+                .toList();
+
         return UserProfileResponse.builder()
                 .userId(userId)
                 .username(user.getUsername())
-                .friends(user.getUserFriends().stream().toList())
+                .friends(friends)
                 .build();
     }
+
+//public UserProfileResponse getUserAchievements(Long userId) {
+//
+//    var user = userRepository.findById(userId)
+//            .orElseThrow(() -> new RuntimeException("User not found"));
+//
+//    return UserProfileResponse.builder()
+//            .userId(userId)
+//            .username(user.getUsername())
+//            .achievements(user.getUserAchievements().stream().toList())
+//            .build();
+//}
+//public UserProfileResponse getUserGoals(Long userId) {
+//
+//    var user = userRepository.findById(userId)
+//            .orElseThrow(() -> new RuntimeException("User not found"));
+//
+//    return UserProfileResponse.builder()
+//            .userId(userId)
+//            .username(user.getUsername())
+//            .goals(user.getUserGoals().stream().toList())
+//            .build();
+//}
+//public UserProfileResponse getUserCompletedGoals(Long userId) {
+//
+//    var user = userRepository.findById(userId)
+//            .orElseThrow(() -> new RuntimeException("User not found"));
+//
+//    var completedGoals = user.getUserGoals()
+//            .stream()
+//            .filter(g -> Boolean.TRUE.equals(g.getIsComplete()))
+//            .toList();
+//
+//
+//    return UserProfileResponse.builder()
+//            .userId(userId)
+//            .username(user.getUsername())
+//            .goals(completedGoals)
+//            .build();
+//}
+//public UserProfileResponse getUserIncompletedGoals(Long userId) {
+//
+//    var user = userRepository.findById(userId)
+//            .orElseThrow(() -> new RuntimeException("User not found"));
+//
+//    var incompletedGoals = user.getUserGoals()
+//            .stream()
+//            .filter(g -> Boolean.FALSE.equals(g.getIsComplete()))
+//            .toList();
+//
+//
+//    return UserProfileResponse.builder()
+//            .userId(userId)
+//            .username(user.getUsername())
+//            .goals(incompletedGoals)
+//            .build();
+//}
+////    public UserProfileResponse getUserGoalHistory(Long userId) {
+////
+////        var user = userRepository.findById(userId)
+////                .orElseThrow(() -> new RuntimeException("User not found"));
+////
+////        return UserProfileResponse.builder()
+////                .userId(userId)
+////                .username(user.getUsername())
+////                .goalHistory(user.getUserGoalHistories().stream().toList())
+////                .build();
+////    }
+//public UserProfileResponse getUserGroups(Long userId) {
+//
+//    var user = userRepository.findById(userId)
+//            .orElseThrow(() -> new RuntimeException("User not found"));
+//
+//    return UserProfileResponse.builder()
+//            .userId(userId)
+//            .username(user.getUsername())
+//            .groups(user.getUserGroups().stream().toList())
+//            .build();
+//}
+//
+//public UserProfileResponse getUserEntities(Long userId) {
+//
+//    var user = userRepository.findById(userId)
+//            .orElseThrow(() -> new RuntimeException("User not found"));
+//
+//    return UserProfileResponse.builder()
+//            .userId(userId)
+//            .username(user.getUsername())
+//            .entities(user.getUserEntities().stream().toList())
+//            .build();
+//}
+//public UserProfileResponse getUserFriends(Long userId) {
+//
+//    var user = userRepository.findById(userId)
+//            .orElseThrow(() -> new RuntimeException("User not found"));
+//
+//    return UserProfileResponse.builder()
+//            .userId(userId)
+//            .username(user.getUsername())
+//            .friends(user.getUserFriends().stream().toList())
+//            .build();
+//}
+
+
+
 }
 

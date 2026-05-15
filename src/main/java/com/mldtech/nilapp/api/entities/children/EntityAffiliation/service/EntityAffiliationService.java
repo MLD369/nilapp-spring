@@ -39,7 +39,7 @@ public class EntityAffiliationService {
         EntityAffiliation ea = EntityAffiliation.builder()
                 .entities(entity)
                 .affiliation(affiliation)
-                .createdAt(LocalDateTime.now())
+//                .createdAt(LocalDateTime.now())
                 .build();
 
         return repository.save(ea);

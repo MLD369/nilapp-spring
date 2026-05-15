@@ -15,8 +15,8 @@ public class Affiliation {
     @JsonIgnore
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "affiliations_id")
-    private Long affiliationsId;
+    @Column(name = "affiliation_id")
+    private Long affiliationId;
 
     @Column(nullable = false)
     private String name;
