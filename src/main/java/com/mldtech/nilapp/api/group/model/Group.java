@@ -2,10 +2,10 @@ package com.mldtech.nilapp.api.group.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.mldtech.nilapp.api.group.children.GroupAchievement.model.GroupAchievement;
-import com.mldtech.nilapp.api.group.children.GroupGoalHistory.model.GroupGoalHistory;
+//import com.mldtech.nilapp.api.group.children.GroupGoalHistory.model.GroupGoalHistory;
 import com.mldtech.nilapp.api.users.children.UserAchievement.model.UserAchievement;
 import com.mldtech.nilapp.api.users.children.UserGoal.model.UserGoal;
-import com.mldtech.nilapp.api.users.children.UserGoalHistory.model.UserGoalHistory;
+//import com.mldtech.nilapp.api.users.children.UserGoalHistory.model.UserGoalHistory;
 import com.mldtech.nilapp.api.users.children.UserGroup.model.UserGroup;
 import jakarta.persistence.*;
 import lombok.*;
@@ -35,8 +35,8 @@ public class Group {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "group", orphanRemoval = true)
     private List<GroupAchievement> groupAchievements;
 
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "group", orphanRemoval = true)
-    private List<GroupGoalHistory> groupGoalHistories = new ArrayList<>();
+//    @OneToMany(cascade = CascadeType.ALL, mappedBy = "group", orphanRemoval = true)
+//    private List<GroupGoalHistory> groupGoalHistories = new ArrayList<>();
 
     @JsonIgnore
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "group", orphanRemoval = true)

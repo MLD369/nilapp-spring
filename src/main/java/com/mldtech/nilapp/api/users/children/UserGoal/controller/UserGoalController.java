@@ -15,5 +15,18 @@ public class UserGoalController {
 
     private final UserGoalService service;
 
+    @GetMapping
+    public Object getAll() {
+        return service.getAll();
+    }
+
+    @PostMapping("/{userId}/{instanceId}")
+    public Object joinGoal(
+            @PathVariable Long userId,
+            @PathVariable Long instanceId,
+            @RequestBody UserGoal userGoal
+    ) {
+        return service.joinGoal(userId, instanceId, userGoal);
+    }
 
 }

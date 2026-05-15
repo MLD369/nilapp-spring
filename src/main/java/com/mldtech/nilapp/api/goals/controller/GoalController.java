@@ -24,10 +24,10 @@ public class GoalController {
         return service.getGoal(goalId);
     }
 
-    @GetMapping("/entity/{entityId}")
-    public List<Goal> getGoalsForEntity(@PathVariable Long entityId) {
-        return service.getGoalsForEntity(entityId);
-    }
+//    @GetMapping("/entity/{entityId}")
+//    public List<Goal> getGoalsForEntity(@PathVariable Long entityId) {
+//        return service.getGoalsForEntity(entityId);
+//    }
 
     @PostMapping
     public Goal createGoal(@RequestBody Goal goal) {

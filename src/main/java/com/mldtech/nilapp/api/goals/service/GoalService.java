@@ -2,7 +2,9 @@ package com.mldtech.nilapp.api.goals.service;
 
 import com.mldtech.nilapp.api.goals.model.Goal;
 import com.mldtech.nilapp.api.goals.repository.GoalRepository;
+import com.mldtech.nilapp.helper.CustomResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -23,9 +25,9 @@ public class GoalService {
                 .orElseThrow(() -> new RuntimeException("Goal not found"));
     }
 
-    public List<Goal> getGoalsForEntity(Long entityId) {
-        return repository.findByEntityId(entityId);
-    }
+//    public List<Goal> getGoalsForEntity(Long entityId) {
+//        return repository.findByEntityId(entityId);
+//    }
 
     public Goal createGoal(Goal goal) {
         return repository.save(goal);
@@ -34,7 +36,6 @@ public class GoalService {
     public Goal updateGoal(Long goalId, Goal updated) {
         Goal existing = getGoal(goalId);
 
-        existing.setEntityId(updated.getEntityId());
         existing.setAchievementId(updated.getAchievementId());
         existing.setGoal(updated.getGoal());
         existing.setDescription(updated.getDescription());
@@ -52,6 +53,14 @@ public class GoalService {
 
     public void deleteGoal(Long goalId) {
         repository.deleteById(goalId);
+    }
+
+    public CustomResponse<?> getAll() {
+        return new CustomResponse<>(repository.findAll(), HttpStatus.OK, "200");
+    }
+
+    public CustomResponse<?> create(Goal goal) {
+        return new CustomResponse<>(repository.save(goal), HttpStatus.OK, "200");
     }
 }
 

@@ -72,7 +72,7 @@ public class UserService {
                 .groups(user.getUserGroups().stream().toList())
                 .achievements(user.getUserAchievements().stream().toList())
                 .goals(user.getUserGoals().stream().toList())
-                .goalHistory(user.getUserGoalHistories().stream().toList())
+//                .goalHistory(user.getUserGoalHistories().stream().toList())
                 .entities(user.getUserEntities().stream().toList())
                 .contributions(user.getContributions().stream().toList())
                 .dailyStats(user.getDailyStats().stream().toList())
@@ -136,17 +136,17 @@ public class UserService {
                 .goals(incompletedGoals)
                 .build();
     }
-    public UserProfileResponse getUserGoalHistory(Long userId) {
-
-        var user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        return UserProfileResponse.builder()
-                .userId(userId)
-                .username(user.getUsername())
-                .goalHistory(user.getUserGoalHistories().stream().toList())
-                .build();
-    }
+//    public UserProfileResponse getUserGoalHistory(Long userId) {
+//
+//        var user = userRepository.findById(userId)
+//                .orElseThrow(() -> new RuntimeException("User not found"));
+//
+//        return UserProfileResponse.builder()
+//                .userId(userId)
+//                .username(user.getUsername())
+//                .goalHistory(user.getUserGoalHistories().stream().toList())
+//                .build();
+//    }
     public UserProfileResponse getUserGroups(Long userId) {
 
         var user = userRepository.findById(userId)

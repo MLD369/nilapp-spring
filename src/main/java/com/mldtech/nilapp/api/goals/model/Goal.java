@@ -17,8 +17,8 @@ public class Goal {
     @Column(name = "goal_id")
     private Long goalId;
 
-    @Column(name = "entity_id", nullable = false)
-    private Long entityId;
+    @Column(name = "goal_types_id")
+    private int goalTypesId;
 
     @Column(name = "achievement_id")
     private Long achievementId;

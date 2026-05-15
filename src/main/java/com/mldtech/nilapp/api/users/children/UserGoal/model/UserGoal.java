@@ -2,6 +2,7 @@ package com.mldtech.nilapp.api.users.children.UserGoal.model;
 
 //import com.mldtech.nilapp.api.goals.model.Goal;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.mldtech.nilapp.api.goals.children.GoalInstances.model.GoalInstance;
 import com.mldtech.nilapp.api.goals.model.Goal;
 import com.mldtech.nilapp.api.users.model.User;
 import jakarta.persistence.*;
@@ -27,9 +28,14 @@ public class UserGoal {
     @JoinColumn(name = "user_id")
     private User user;
 
+//    @ManyToOne
+//    @JoinColumn(name = "goal_id")
+//    private Goal goal;
+//    @Column(name = "goal_instance_id", precision = 5, scale = 2, nullable = false)
+//    private Long goalInstanceId;
     @ManyToOne
-    @JoinColumn(name = "goal_id")
-    private Goal goal;
+    @JoinColumn(name = "goal_instance_id")
+    private GoalInstance goalInstance;
 
     @Column(name = "allocation_pct", precision = 5, scale = 2, nullable = false)
     private BigDecimal allocationPct;

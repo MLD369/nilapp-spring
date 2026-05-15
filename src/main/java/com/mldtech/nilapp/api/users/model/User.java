@@ -13,7 +13,7 @@ import com.mldtech.nilapp.api.friend.model.Friend;
 import com.mldtech.nilapp.api.users.children.UserAchievement.model.UserAchievement;
 import com.mldtech.nilapp.api.users.children.UserEntity.model.UserEntity;
 import com.mldtech.nilapp.api.users.children.UserGoal.model.UserGoal;
-import com.mldtech.nilapp.api.users.children.UserGoalHistory.model.UserGoalHistory;
+//import com.mldtech.nilapp.api.users.children.UserGoalHistory.model.UserGoalHistory;
 import com.mldtech.nilapp.api.users.children.UserGroup.model.UserGroup;
 import jakarta.persistence.*;
 import lombok.*;
@@ -94,8 +94,8 @@ public class User {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "user", orphanRemoval = true)
     private List<UserGoal> userGoals = new ArrayList<>();
 
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "user", orphanRemoval = true)
-    private List<UserGoalHistory> userGoalHistories;
+//    @OneToMany(cascade = CascadeType.ALL, mappedBy = "user", orphanRemoval = true)
+//    private List<UserGoalHistory> userGoalHistories;
 
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "user", orphanRemoval = true)
     @JsonManagedReference

@@ -8,7 +8,7 @@ import com.mldtech.nilapp.api.users.children.UserAchievement.model.UserAchieveme
 import com.mldtech.nilapp.api.users.children.UserEntity.model.UserEntity;
 import com.mldtech.nilapp.api.users.children.UserGoal.model.UserGoal;
 //import com.mldtech.nilapp.api.users.children.UserGoalHistory.model.UserGoalHistory;
-import com.mldtech.nilapp.api.users.children.UserGoalHistory.model.UserGoalHistory;
+//import com.mldtech.nilapp.api.users.children.UserGoalHistory.model.UserGoalHistory;
 import com.mldtech.nilapp.api.users.children.UserGroup.model.UserGroup;
 import com.mldtech.nilapp.api.users.model.User;
 import lombok.*;
@@ -30,7 +30,7 @@ public class UserProfileResponse {
     private List<UserAchievement> achievements;
 
     private List<UserGoal> goals = new ArrayList<>();
-    private List<UserGoalHistory> goalHistory;
+//    private List<UserGoalHistory> goalHistory;
     private List<Contribution> contributions;
     private List<DailyStat> dailyStats;
     private List<Friend> friends;

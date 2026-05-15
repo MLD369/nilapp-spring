@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface GoalRepository extends JpaRepository<Goal, Long> {
 
-    List<Goal> findByEntityId(Long entityId);
+//    List<Goal> findByEntityId(Long entityId);
 
     List<Goal> findByAchievementId(Long achievementId);
 

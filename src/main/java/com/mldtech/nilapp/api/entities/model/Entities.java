@@ -63,9 +63,6 @@ public class Entities {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "entityId", orphanRemoval = true)
     private List<Contribution> contributions;
 
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "entityId", orphanRemoval = true)
-    private List<Goal> entityGoals;
-
 //    @OneToMany
 //    @ManyToOne
 //    @JoinColumn(name = "user_id",nullable = false)

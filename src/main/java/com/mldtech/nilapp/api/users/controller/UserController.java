@@ -40,10 +40,10 @@ public class UserController {
     public UserProfileResponse getUserIncompletedGoals(@PathVariable Long userId) {
         return userService.getUserIncompletedGoals(userId);
     }
-    @GetMapping("/{userId}/goal-history") //TODO new dto
-    public UserProfileResponse getUserGoalHistory(@PathVariable Long userId) {
-        return userService.getUserGoalHistory(userId);
-    }
+//    @GetMapping("/{userId}/goal-history") //TODO new dto
+//    public UserProfileResponse getUserGoalHistory(@PathVariable Long userId) {
+//        return userService.getUserGoalHistory(userId);
+//    }
     @GetMapping("/{userId}/groups") //TODO new dto
     public UserProfileResponse getUserGroups(@PathVariable Long userId) {
         return userService.getUserGroups(userId);
