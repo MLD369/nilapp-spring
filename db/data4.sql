@@ -27,7 +27,7 @@ VALUES (1, 1, 1, 500, 5, .001, 'ad1', null, 1);
 
 INSERT INTO public.friend_statuses(
     status, description)
-VALUES ('REQUESTED', 'Friend request is pending acceptance');
+VALUES ('REQUESTED', 'User''s Friend request is pending acceptance');
 INSERT INTO public.friend_statuses(
     status, description)
 VALUES ('FRIENDS', 'Friend request accepted');
@@ -40,6 +40,9 @@ VALUES ('UNFRIENDED', 'User has unfriended the user');
 INSERT INTO public.friend_statuses(
     status, description)
 VALUES ('BLOCKED_BY_FRIEND', 'User with Friend Id blocked user');
+INSERT INTO public.friend_statuses(
+    status, description)
+VALUES ('RECEIVED', 'User has received a Friend Request');
 
 INSERT INTO public.friends(
     user_id, friend_id, status)
