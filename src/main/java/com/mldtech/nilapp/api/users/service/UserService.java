@@ -10,6 +10,7 @@ package com.mldtech.nilapp.api.users.service;
 //import com.mldtech.nilapp.api.users.children.UserGroup.repository.UserGroupRepository;
 //import com.mldtech.nilapp.api.users.dto.UserProfileResponse;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
+import com.mldtech.nilapp.api.friend.repository.FriendRepository;
 import com.mldtech.nilapp.api.users.dto.*;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +33,7 @@ public class UserService {
 //    private final UserAchievementRepository userAchievementRepository;
 //    private final UserGoalRepository userGoalRepository;
 //    private final UserGoalHistoryRepository userGoalHistoryRepository;
-//    private final FriendRepository friendRepository;
+    private final FriendRepository friendRepository;
 //    @Transactional   /// TODO change this to the right way with dtos
 //    public UserProfileResponse getUserProfile(Long userId) {
 //
@@ -142,8 +144,9 @@ public class UserService {
 
                 .friends(user.getUserFriends().stream()
                         .map(f -> FriendDTO.builder()
+                                .yourId(userId)
                                 .friendId(f.getFriendId())
-                                .friendUserId(f.getFriend().getUserId())
+//                                .friendUserId(f.getFriend().getUserId())
                                 .friendUsername(f.getFriend().getUsername())
                                 .build())
                         .toList())
@@ -271,20 +274,43 @@ public class UserService {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        var friends = user.getUserFriends().stream()
-                .map(f -> FriendDTO.builder()
-                        .friendId(f.getFriendId())
-                        .friendUserId(f.getFriend().getUserId())
-                        .friendUsername(f.getFriend().getUsername())
-                        .build())
+        // Outgoing: user → friend
+        var outgoing = friendRepository.findByUserUserId(userId);
+
+        // Incoming: friend → user
+        var incoming = friendRepository.findByFriendUserId(userId);
+
+        // Combine both
+        var all = Stream.concat(outgoing.stream(), incoming.stream())
+                .filter(f -> {
+                    int s = f.getFriendStatus().getFriendStatusId();
+                    return s == 1 || s == 2 || s == 6; // requested, friends, received
+                })
+                .map(f -> {
+
+                    // Determine the OTHER user
+                    var other = f.getUser().getUserId().equals(userId)
+                            ? f.getFriend()
+                            : f.getUser();
+
+                    return FriendDTO.builder()
+                            .yourId(userId)
+                            .friendId(other.getUserId())
+                            .friendUsername(other.getUsername())
+                            .statusId(f.getFriendStatus().getFriendStatusId())
+                            .status(f.getFriendStatus().getStatus())
+                            .statusDescription(f.getFriendStatus().getDescription())
+                            .build();
+                })
                 .toList();
 
         return UserProfileResponse.builder()
                 .userId(userId)
                 .username(user.getUsername())
-                .friends(friends)
+                .friends(all)
                 .build();
     }
+
 
 //public UserProfileResponse getUserAchievements(Long userId) {
 //

@@ -16,6 +16,11 @@ import java.util.List;
 public class FriendController {
 
     private final FriendService service;
+    @GetMapping()
+    public ResponseEntity<CustomResponse<?>> getAllFriend() {
+        var result = service.getAllFriends();
+        return ResponseEntity.ok(new CustomResponse<>(result, HttpStatus.OK, "200"));
+    }
 
     @PostMapping("/{userId}/request/{friendId}")
     public ResponseEntity<CustomResponse<?>> sendRequest(

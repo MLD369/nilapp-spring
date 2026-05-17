@@ -3,12 +3,15 @@ package com.mldtech.nilapp.api.friend.service;
 import com.mldtech.nilapp.api.friend.model.Friend;
 import com.mldtech.nilapp.api.friend.repository.FriendRepository;
 import com.mldtech.nilapp.api.friend.children.FriendStatus.repository.FriendStatusRepository;
+import com.mldtech.nilapp.api.users.dto.FriendDTO;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
 import com.mldtech.nilapp.helper.CustomResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +35,21 @@ public class FriendService {
     private static final int STATUS_BLOCKED_BY_USER = 3;
     private static final int STATUS_UNFRIENDED = 4;
     private static final int STATUS_BLOCKED_BY_FRIEND = 5;
+    private static final int RECEIVED = 6;
+
+    public List<FriendDTO> getAllFriends() {
+
+        return repo.findAll().stream()
+                .map(f -> FriendDTO.builder()
+                        .yourId(f.getUserId())
+                        .friendId(f.getFriend().getUserId())
+                        .friendUsername(f.getFriend().getUsername())
+                        .statusId(f.getFriendStatus().getFriendStatusId())
+                        .status(f.getFriendStatus().getStatus())
+                        .statusDescription(f.getFriendStatus().getDescription())
+                        .build())
+                .toList();
+    }
 
     // SEND FRIEND REQUEST
     public CustomResponse<?> sendFriendRequest(Long userId, Long friendId) {
@@ -42,7 +60,7 @@ public class FriendService {
 
         Friend relation = findRelation(userId, friendId);
 
-        // No record → create new with user=userId, friend=friendId
+        // No record → create new with REQUESTED
         if (relation == null) {
             Friend request = Friend.builder()
                     .user(userRepo.getReferenceById(userId))
@@ -50,23 +68,28 @@ public class FriendService {
                     .friendStatus(statusRepo.getReferenceById(STATUS_REQUESTED))
                     .build();
             repo.save(request);
-            return new CustomResponse<>(request, HttpStatus.OK, "200");
+            return new CustomResponse<>("Friend Request Sent", HttpStatus.OK, "200");
         }
 
         int status = relation.getFriendStatus().getFriendStatusId();
         boolean callerIsUserColumn = relation.getUser().getUserId().equals(userId);
         boolean callerIsFriendColumn = relation.getFriend().getUserId().equals(userId);
 
-        // UNFRIENDED → allow new request (whoever sends it)
+        // 🔥 NEW LOGIC: If user RECEIVED a request → auto accept
+        if (status == RECEIVED) {
+            relation.setFriendStatus(statusRepo.getReferenceById(STATUS_FRIENDS));
+            repo.save(relation);
+            return new CustomResponse<>("Friend Request Auto-Accepted", HttpStatus.OK, "200");
+        }
+
+        // UNFRIENDED → allow new request
         if (status == STATUS_UNFRIENDED) {
             relation.setFriendStatus(statusRepo.getReferenceById(STATUS_REQUESTED));
             repo.save(relation);
             return new CustomResponse<>("New Request Sent #4", HttpStatus.OK, "200");
         }
 
-        // BLOCKED_BY_USER (3): user column blocked friend column
-        // If caller is the blocker (user column) → allow them to re-request (unblock + request)
-        // If caller is the blocked one (friend column) → generic failure
+        // BLOCKED_BY_USER (3)
         if (status == STATUS_BLOCKED_BY_USER) {
             if (callerIsUserColumn) {
                 relation.setFriendStatus(statusRepo.getReferenceById(STATUS_REQUESTED));
@@ -77,9 +100,7 @@ public class FriendService {
             }
         }
 
-        // BLOCKED_BY_FRIEND (5): friend column blocked user column
-        // If caller is the blocker (friend column) → allow re-request
-        // If caller is blocked (user column) → generic failure
+        // BLOCKED_BY_FRIEND (5)
         if (status == STATUS_BLOCKED_BY_FRIEND) {
             if (callerIsFriendColumn) {
                 relation.setFriendStatus(statusRepo.getReferenceById(STATUS_REQUESTED));
@@ -102,6 +123,7 @@ public class FriendService {
 
         return new CustomResponse<>("Invalid friendship state", HttpStatus.BAD_REQUEST, "400");
     }
+
 
     // ACCEPT FRIEND REQUEST
     public CustomResponse<?> acceptFriendRequest(Long userId, Long friendId) {
