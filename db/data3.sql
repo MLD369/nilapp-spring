@@ -23,6 +23,11 @@ INSERT INTO public.users(
     username, first_name, last_name, middle_name, email, phone, password,  total_lifetime_coins, birthday, birth_year, created_at, updated_at, state, country, city, county, language, timezone, force_password_change, session_id)
 VALUES ( 'alex44', 'Alex', 'Johnson', 'Blake', 'alex44@example.com', '+1-555-211-6712', '$2b$12$MXe...',  4972, '2001-04-20', 2001, '2025-07-21 23:38:29', '2025-07-21 23:38:29', 'IL', 'USA', 'Chicago', 'Cook', 'es-ES', 'America/Chicago', TRUE, 'sess_4560');
 
+INSERT INTO public.users(
+    username, first_name, last_name, middle_name, email, phone, password,  total_lifetime_coins, birthday, birth_year, created_at, updated_at, state, country, city, county, language, timezone, force_password_change, session_id)
+VALUES ( 'tim44', 'Tim', 'Timmo', 'Blake', 'tim44@example.com', '+1-554-211-6712', '$2b$12$MXe...',  4972, '2001-04-20', 2001, '2025-07-21 23:38:29', '2025-07-21 23:38:29', 'IL', 'USA', 'Chicago', 'Cook', 'es-ES', 'America/Chicago', TRUE, 'sess_4560');
+
+
 
 
 
