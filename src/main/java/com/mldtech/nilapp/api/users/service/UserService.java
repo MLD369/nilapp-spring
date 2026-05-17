@@ -294,7 +294,6 @@ public class UserService {
                             : f.getUser();
 
                     return FriendDTO.builder()
-                            .yourId(userId)
                             .friendId(other.getUserId())
                             .friendUsername(other.getUsername())
                             .statusId(f.getFriendStatus().getFriendStatusId())

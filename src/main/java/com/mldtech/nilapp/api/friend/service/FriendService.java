@@ -35,7 +35,7 @@ public class FriendService {
     private static final int STATUS_BLOCKED_BY_USER = 3;
     private static final int STATUS_UNFRIENDED = 4;
     private static final int STATUS_BLOCKED_BY_FRIEND = 5;
-    private static final int RECEIVED = 6;
+    private static final int STATUS_RECEIVED = 6;
 
     public List<FriendDTO> getAllFriends() {
 
@@ -76,7 +76,7 @@ public class FriendService {
         boolean callerIsFriendColumn = relation.getFriend().getUserId().equals(userId);
 
         // 🔥 NEW LOGIC: If user RECEIVED a request → auto accept
-        if (status == RECEIVED) {
+        if (status == STATUS_RECEIVED) {
             relation.setFriendStatus(statusRepo.getReferenceById(STATUS_FRIENDS));
             repo.save(relation);
             return new CustomResponse<>("Friend Request Auto-Accepted", HttpStatus.OK, "200");
@@ -131,7 +131,7 @@ public class FriendService {
         // The record must exist with REQUESTED status, regardless of who is user/friend
         Friend relation = findRelation(userId, friendId);
 
-        if (relation == null || relation.getFriendStatus().getFriendStatusId() != STATUS_REQUESTED) {
+        if (relation == null || relation.getFriendStatus().getFriendStatusId() != STATUS_RECEIVED) {
             return new CustomResponse<>("No pending friend request found", HttpStatus.BAD_REQUEST, "400");
         }
 
@@ -155,15 +155,37 @@ public class FriendService {
 
         Friend relation = findRelation(userId, friendId);
 
-        if (relation == null || relation.getFriendStatus().getFriendStatusId() != STATUS_FRIENDS) {
-            return new CustomResponse<>("No active friendship exists", HttpStatus.BAD_REQUEST, "400");
+        if (relation == null) {
+            return new CustomResponse<>("No relationship exists", HttpStatus.BAD_REQUEST, "400");
         }
 
-        relation.setFriendStatus(statusRepo.getReferenceById(STATUS_UNFRIENDED));
-        repo.save(relation);
+        int status = relation.getFriendStatus().getFriendStatusId();
+        boolean callerIsUserColumn = relation.getUser().getUserId().equals(userId);
+        boolean callerIsFriendColumn = relation.getFriend().getUserId().equals(userId);
 
-        return new CustomResponse<>("Unfriend #4", HttpStatus.OK, "200");
+        // CASE 1: They are FRIENDS → allow unfriend
+        if (status == STATUS_FRIENDS) {
+            relation.setFriendStatus(statusRepo.getReferenceById(STATUS_UNFRIENDED));
+            repo.save(relation);
+            return new CustomResponse<>("Unfriended successfully", HttpStatus.OK, "200");
+        }
+
+        // CASE 2: User wants to CANCEL a request they sent
+        // REQUESTED means relation.user sent the request
+        if (status == STATUS_REQUESTED && callerIsUserColumn) {
+            relation.setFriendStatus(statusRepo.getReferenceById(STATUS_UNFRIENDED));
+            repo.save(relation);
+            return new CustomResponse<>("Friend request canceled", HttpStatus.OK, "200");
+        }
+
+        // CASE 3: User tries to cancel a request they DID NOT send
+        if (status == STATUS_REQUESTED && callerIsFriendColumn) {
+            return new CustomResponse<>("You cannot cancel a request you did not send", HttpStatus.BAD_REQUEST, "400");
+        }
+
+        return new CustomResponse<>("Cannot unfriend in current state", HttpStatus.BAD_REQUEST, "400");
     }
+
 
     // BLOCK
     public CustomResponse<?> blockUser(Long userId, Long friendId) {
