@@ -6,7 +6,9 @@ import com.mldtech.nilapp.api.users.children.UserEntity.service.UserEntityServic
 import com.mldtech.nilapp.api.users.dto.UpdateUserEntitiesRequest;
 import com.mldtech.nilapp.api.users.dto.UserProfileResponse;
 import com.mldtech.nilapp.api.users.service.UserService;
+import com.mldtech.nilapp.helper.CustomResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,9 +22,11 @@ public class UserController {
     private final UserEntityService userEntityService;
 
     @GetMapping("/{userId}/profile")
-    public UserProfileResponse getUserProfile(@PathVariable Long userId) {
+    public CustomResponse<UserProfileResponse> getUserProfile(@PathVariable Long userId) {
         return userService.getUserProfile(userId);
     }
+
+
 
     @GetMapping("/{userId}/achievements") //TODO new dto
     public UserProfileResponse getUserAchievements(@PathVariable Long userId) {

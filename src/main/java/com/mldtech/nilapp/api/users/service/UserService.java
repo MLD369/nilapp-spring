@@ -13,8 +13,10 @@ import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.friend.repository.FriendRepository;
 import com.mldtech.nilapp.api.users.dto.*;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
+import com.mldtech.nilapp.helper.CustomResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PathVariable;
 
@@ -82,77 +84,92 @@ public class UserService {
 //                .friends(user.getUserFriends().stream().toList())
 //                .build();
 //    }
-    public UserProfileResponse getUserProfile(Long userId) {
+public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
 
-        var user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    var user = userRepository.findById(userId)
+            .orElse(null);
 
-        return UserProfileResponse.builder()
-                .userId(user.getUserId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .totalLifetimeCoins(user.getTotalLifetimeCoins())
-
-                .groups(user.getUserGroups().stream()
-                        .map(ug -> GroupDTO.builder()
-                                .groupId(ug.getGroup().getGroupId())
-                                .name(ug.getGroup().getName())
-                                .build())
-                        .toList())
-
-                .achievements(user.getUserAchievements().stream()
-                        .map(ua -> AchievementDTO.builder()
-                                .achievementId(ua.getAchievement().getAchievementId())
-                                .achievement(ua.getAchievement().getAchievement())
-                                .description(ua.getAchievement().getDescription())
-                                .badge(ua.getAchievement().getBadge())
-                                .build())
-                        .toList())
-
-                .goals(user.getUserGoals().stream()
-                        .map(g -> GoalDTO.builder()
-                                .goalId(g.getUserGoalId())
-//                                .goalName(g.getGoal().getGoal())
-                                .isActive(g.getIsActive())
-                                .build())
-                        .toList())
-
-                .entities(user.getUserEntities().stream()
-                        .map(ue -> EntityDTO.builder()
-                                .entityId(ue.getEntity().getEntityId())
-                                .name(ue.getEntity().getName())
-                                .abbreviation(ue.getEntity().getAbbreviation())
-                                .build())
-                        .toList())
-
-                .contributions(user.getContributions().stream()
-                        .map(c -> ContributionDTO.builder()
-                                .contributionId(c.getContributionId())
-//                                .amount(c.getAmount())
-//                                .type(c.getType())
-                                .build())
-                        .toList())
-
-                .dailyStats(user.getDailyStats().stream()
-                        .map(ds -> DailyStatDTO.builder()
-                                .dailyStatId(ds.getDailyStatId())
-//                                .steps(ds.getSteps())
-//                                .distance(ds.getDistance())
-                                .date(ds.getDate().toString())
-                                .build())
-                        .toList())
-
-                .friends(user.getUserFriends().stream()
-                        .map(f -> FriendDTO.builder()
-                                .yourId(userId)
-                                .friendId(f.getFriendId())
-//                                .friendUserId(f.getFriend().getUserId())
-                                .friendUsername(f.getFriend().getUsername())
-                                .build())
-                        .toList())
-
-                .build();
+    if (user == null) {
+        return new CustomResponse<>(
+                "User not found",
+                HttpStatus.BAD_REQUEST,
+                "400"
+        );
     }
+
+    UserProfileResponse profile = UserProfileResponse.builder()
+            .userId(userId)
+            .username(user.getUsername())
+            .email(user.getEmail())
+            .totalLifetimeCoins(user.getTotalLifetimeCoins())
+
+            .groups(
+                    user.getUserGroups().stream()
+                            .map(ug -> GroupDTO.builder()
+                                    .groupId(ug.getGroup().getGroupId())
+                                    .name(ug.getGroup().getName())
+                                    .build()
+                            )
+                            .toList()
+            )
+
+            .achievements(
+                    user.getUserAchievements().stream()
+                            .map(ua -> AchievementDTO.builder()
+                                    .achievementId(ua.getAchievement().getAchievementId())
+                                    .achievement(ua.getAchievement().getAchievement())
+                                    .description(ua.getAchievement().getDescription())
+                                    .badge(ua.getAchievement().getBadge())
+                                    .build()
+                            )
+                            .toList()
+            )
+
+            .goals(
+                    user.getUserGoals().stream()
+                            .map(g -> GoalDTO.builder()
+                                    .goalId(g.getUserGoalId())
+//                                    .goalName(g.getGoal().getGoal())
+                                    .isActive(g.getIsActive())
+                                    .build()
+                            )
+                            .toList()
+            )
+
+            .entities(
+                    user.getUserEntities().stream()
+                            .map(ue -> EntityDTO.builder()
+                                    .entityId(ue.getEntity().getEntityId())
+                                    .name(ue.getEntity().getName())
+                                    .abbreviation(ue.getEntity().getAbbreviation())
+                                    .build()
+                            )
+                            .toList()
+            )
+
+            .friends(
+                    user.getUserFriends().stream()
+                            .map(f -> FriendDTO.builder()
+                                    .friendId(f.getFriend().getUserId())
+                                    .friendUsername(f.getFriend().getUsername())
+                                    .statusId(f.getFriendStatus().getFriendStatusId())
+                                    .status(f.getFriendStatus().getStatus())
+                                    .statusDescription(f.getFriendStatus().getDescription())
+                                    .build()
+                            )
+                            .toList()
+            )
+
+            .build();
+
+
+    return new CustomResponse<>(
+            profile,
+            HttpStatus.OK,
+            "200"
+    );
+}
+
     public UserProfileResponse getUserAchievements(Long userId) {
 
         var user = userRepository.findById(userId)
