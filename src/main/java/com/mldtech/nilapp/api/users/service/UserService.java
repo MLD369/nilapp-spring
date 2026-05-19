@@ -9,7 +9,11 @@ package com.mldtech.nilapp.api.users.service;
 //import com.mldtech.nilapp.api.users.children.UserGoalHistory.repository.UserGoalHistoryRepository;
 //import com.mldtech.nilapp.api.users.children.UserGroup.repository.UserGroupRepository;
 //import com.mldtech.nilapp.api.users.dto.UserProfileResponse;
+import com.mldtech.nilapp.api.contributions.dto.ContributionSummaryDTO;
+import com.mldtech.nilapp.api.contributions.dto.EntityContributionDTO;
+import com.mldtech.nilapp.api.contributions.dto.GroupContributionDTO;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
+import com.mldtech.nilapp.api.contributions.repository.ContributionRepository;
 import com.mldtech.nilapp.api.friend.repository.FriendRepository;
 import com.mldtech.nilapp.api.users.dto.*;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
@@ -29,6 +33,7 @@ import java.util.stream.Stream;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final ContributionRepository contributionRepository;
 
 //    private final UserEntityRepository userEntityRepository;
 //    private final UserGroupRepository userGroupRepository;
@@ -325,6 +330,83 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                 .username(user.getUsername())
                 .friends(all)
                 .build();
+    }
+    public CustomResponse<ContributionSummaryDTO> getUserContributionSummary(Long userId) {
+
+        var user = userRepository.findById(userId).orElse(null);
+
+        if (user == null) {
+            return new CustomResponse<>(
+                    "User not found",
+                    HttpStatus.BAD_REQUEST,
+                    "400"
+            );
+        }
+
+        // Get all contributions for this user
+        var contributions = contributionRepository.findByUserId(userId);
+
+        // Total NIL coins across all entities
+        long totalNilCoins = contributions.stream()
+                .mapToLong(c -> c.getCoinsContributed() != null ? c.getCoinsContributed() : 0)
+                .sum();
+
+        // GROUP AGGREGATION
+        var groupTotals = user.getUserGroups().stream()
+                .map(ug -> {
+                    long steps = contributions.stream()
+                            .filter(c -> c.getEntityId().equals(ug.getGroup().getGroupId()))
+                            .mapToLong(c -> c.getStepsContributed() != null ? c.getStepsContributed() : 0)
+                            .sum();
+
+                    long nil = contributions.stream()
+                            .filter(c -> c.getEntityId().equals(ug.getGroup().getGroupId()))
+                            .mapToLong(c -> c.getCoinsContributed() != null ? c.getCoinsContributed() : 0)
+                            .sum();
+
+                    return GroupContributionDTO.builder()
+                            .groupId(ug.getGroup().getGroupId())
+                            .groupName(ug.getGroup().getName())
+                            .totalSteps(steps)
+                            .totalNilCoins(nil)
+                            .build();
+                })
+                .toList();
+
+        // ENTITY AGGREGATION
+        var entityTotals = user.getUserEntities().stream()
+                .map(ue -> {
+                    long steps = contributions.stream()
+                            .filter(c -> c.getEntityId().equals(ue.getEntity().getEntityId()))
+                            .mapToLong(c -> c.getStepsContributed() != null ? c.getStepsContributed() : 0)
+                            .sum();
+
+                    long nil = contributions.stream()
+                            .filter(c -> c.getEntityId().equals(ue.getEntity().getEntityId()))
+                            .mapToLong(c -> c.getCoinsContributed() != null ? c.getCoinsContributed() : 0)
+                            .sum();
+
+                    return EntityContributionDTO.builder()
+                            .entityId(ue.getEntity().getEntityId())
+                            .entityName(ue.getEntity().getName())
+                            .totalSteps(steps)
+                            .totalNilCoins(nil)
+                            .build();
+                })
+                .toList();
+
+        ContributionSummaryDTO summary = ContributionSummaryDTO.builder()
+                .userId(userId)
+                .totalNilCoins(totalNilCoins)
+                .groupContributions(groupTotals)
+                .entityContributions(entityTotals)
+                .build();
+
+        return new CustomResponse<>(
+                summary,
+                HttpStatus.OK,
+                "200"
+        );
     }
 
 

@@ -1,5 +1,6 @@
 package com.mldtech.nilapp.api.users.controller;
 
+import com.mldtech.nilapp.api.contributions.dto.ContributionSummaryDTO;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.users.children.UserEntity.model.UserEntity;
 import com.mldtech.nilapp.api.users.children.UserEntity.service.UserEntityService;
@@ -25,7 +26,10 @@ public class UserController {
     public CustomResponse<UserProfileResponse> getUserProfile(@PathVariable Long userId) {
         return userService.getUserProfile(userId);
     }
-
+    @GetMapping("/{userId}/contributions/summary")
+    public CustomResponse<ContributionSummaryDTO> getUserContributionSummary(@PathVariable Long userId) {
+        return userService.getUserContributionSummary(userId);
+    }
 
 
     @GetMapping("/{userId}/achievements") //TODO new dto

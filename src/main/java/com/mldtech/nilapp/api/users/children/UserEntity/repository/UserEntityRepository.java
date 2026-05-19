@@ -12,5 +12,8 @@ public interface UserEntityRepository extends JpaRepository<UserEntity, Long> {
     boolean existsByUserUserIdAndEntityEntityId(Long userId, Long entityId);
 
     void deleteByUserUserIdAndEntityEntityId(Long userId, Long entityId);
+    List<UserEntity> findByUser_UserId(Long userId);
+
+
 }
 
