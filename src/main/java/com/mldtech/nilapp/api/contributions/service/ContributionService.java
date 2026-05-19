@@ -1,15 +1,22 @@
 package com.mldtech.nilapp.api.contributions.service;
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mldtech.nilapp.api.contributions.children.ContributionStatus.model.ContributionStatus;
 import com.mldtech.nilapp.api.contributions.children.ContributionStatus.repository.ContributionStatusRepository;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.contributions.repository.ContributionRepository;
 import com.mldtech.nilapp.api.entities.repository.EntityRepository;
+import com.mldtech.nilapp.api.entitystat.model.EntityStat;
+import com.mldtech.nilapp.api.entitystat.repository.EntityStatRepository;
 import com.mldtech.nilapp.api.group.repository.GroupRepository;
+import com.mldtech.nilapp.api.groupstat.model.GroupStat;
+import com.mldtech.nilapp.api.groupstat.repository.GroupStatRepository;
 import com.mldtech.nilapp.api.users.children.UserEntity.repository.UserEntityRepository;
 import com.mldtech.nilapp.api.users.dto.ContributionDTO;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
 import com.mldtech.nilapp.helper.CustomResponse;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,6 +24,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +35,8 @@ public class ContributionService {
     private final GroupRepository groupRepository;
     private final UserRepository userRepository;
     private final UserEntityRepository userEntityRepository;
-
+    private final EntityStatRepository entityStatRepository;
+    private final GroupStatRepository groupStatRepository;
 
     public List<Contribution> getContributionsForUser(Long userId) {
         return contributionrepository.findByUserId(userId);
@@ -192,4 +201,81 @@ public class ContributionService {
         );
     }
 
+
+    @Transactional
+    public Contribution createContribution(
+            Long userId,
+            Long entityId,
+            int coins,
+            int steps,
+            Map<Long, Integer> entityAllocations,
+            Map<Long, Integer> groupAllocations,
+            BigDecimal adValue,
+            BigDecimal coinValue
+    ) {
+        // 1) Build allocation snapshot JSON
+        ObjectNode root = JsonNodeFactory.instance.objectNode();
+
+        ObjectNode entityNode = root.putObject("entityAllocations");
+        entityAllocations.forEach((id, pct) -> entityNode.put(String.valueOf(id), pct));
+
+        ObjectNode groupNode = root.putObject("groupAllocations");
+        groupAllocations.forEach((id, pct) -> groupNode.put(String.valueOf(id), pct));
+
+        root.put("adValue", adValue != null ? adValue : BigDecimal.ZERO);
+        root.put("coinValue", coinValue != null ? coinValue : BigDecimal.ONE);
+        root.put("coinsEarned", coins);
+        root.put("steps", steps);
+
+        String snapshotJson = root.toString();
+
+        // 2) Save raw contribution
+        Contribution contribution = Contribution.builder()
+                .userId(userId)
+                .entityId(entityId)
+                .coinsContributed(coins)
+                .stepsContributed(steps)
+                .allocationSnapshot(snapshotJson)
+                .build();
+
+        Contribution saved = contributionrepository.save(contribution);
+
+        Long contributionId = saved.getContributionId();
+
+        // 3) Save entity_stats rows
+        entityAllocations.forEach((allocEntityId, pct) -> {
+            long allocCoins = coins * pct / 100;
+            long allocSteps = steps * pct / 100;
+
+            EntityStat es = EntityStat.builder()
+                    .contributionId(contributionId)
+                    .entityId(allocEntityId)
+                    .userId(userId)
+                    .coins(allocCoins)
+                    .steps(allocSteps)
+                    .allocationPercentage(pct)
+                    .build();
+
+            entityStatRepository.save(es);
+        });
+
+        // 4) Save group_stats rows
+        groupAllocations.forEach((groupId, pct) -> {
+            long allocCoins = coins * pct / 100;
+            long allocSteps = steps * pct / 100;
+
+            GroupStat gs = GroupStat.builder()
+                    .contributionId(contributionId)
+                    .groupId(groupId)
+                    .userId(userId)
+                    .coins(allocCoins)
+                    .steps(allocSteps)
+                    .allocationPercentage(pct)
+                    .build();
+
+            groupStatRepository.save(gs);
+        });
+
+        return saved;
+    }
 }

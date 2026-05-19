@@ -1,6 +1,7 @@
 package com.mldtech.nilapp.api.contributions.controller;
 
 import com.mldtech.nilapp.api.contributions.dto.ContributionSummaryDTO;
+import com.mldtech.nilapp.api.contributions.dto.CreateContributionRequest;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.contributions.service.ContributionService;
 import com.mldtech.nilapp.api.users.dto.ContributionDTO;
@@ -36,7 +37,7 @@ public class ContributionController {
         return service.getContributionsForCampaign(campaignId);
     }
 
-    @PostMapping
+    @PostMapping("only")
     public Contribution createContribution(@RequestBody Contribution contribution) {
         return service.createContribution(contribution);
     }
@@ -48,4 +49,23 @@ public class ContributionController {
     ) {
         return service.updateStatus(contributionId, statusId);
     }
+
+
+        private final ContributionService contributionService;
+
+    @PostMapping
+    public Contribution createContribution(@RequestBody CreateContributionRequest request) {
+        return contributionService.createContribution(
+                request.getUserId(),
+                request.getEntityId(),
+                request.getCoins(),
+                request.getSteps(),
+                request.getEntityAllocations(),
+                request.getGroupAllocations(),
+                request.getAdValue(),
+                request.getCoinValue()
+        );
+    }
+
+
 }

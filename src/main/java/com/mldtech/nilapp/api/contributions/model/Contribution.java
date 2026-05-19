@@ -53,6 +53,16 @@ public class Contribution {
     @JoinColumn(name = "status",nullable = false)
     private ContributionStatus contributionStatus;
 
+    @Column(name = "allocation_snapshot", columnDefinition = "jsonb")
+    private String allocationSnapshot;
+//    {
+//        "entityAllocations": { "5": 60, "7": 40 },
+//        "groupAllocations": { "3": 70, "9": 30 },
+//        "adValue": 0.004,
+//            "coinValue": 1,
+//            "coinsEarned": 100,
+//            "steps": 8000
+//    }
 
 //    @Column(name = "contribution_status_id", nullable = false)
 //    private Long statusId;
