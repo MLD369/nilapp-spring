@@ -408,8 +408,6 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                 "200"
         );
     }
-
-
 //public UserProfileResponse getUserAchievements(Long userId) {
 //
 //    var user = userRepository.findById(userId)

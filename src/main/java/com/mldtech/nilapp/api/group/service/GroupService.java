@@ -30,7 +30,6 @@ public class GroupService {
         Group existing = getGroup(groupId);
 
         existing.setName(updated.getName());
-        existing.setEntities(updated.getEntities());
 
         return repository.save(existing);
     }

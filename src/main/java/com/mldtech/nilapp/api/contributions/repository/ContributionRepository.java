@@ -16,6 +16,8 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
     List<Contribution> findByCampaignId(Long campaignId);
 
 //    List<Contribution> findByStatusId(Integer statusId);
+    List<Contribution> findByUserIdAndEntityId(Long userId, Long entityId);
+
 
 }
 

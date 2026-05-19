@@ -1,5 +1,6 @@
 package com.mldtech.nilapp.api.entities.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
@@ -7,6 +8,7 @@ import com.mldtech.nilapp.api.entities.children.EntityAffiliation.model.EntityAf
 import com.mldtech.nilapp.api.entities.children.EntityType.model.EntityType;
 import com.mldtech.nilapp.api.friend.model.Friend;
 import com.mldtech.nilapp.api.goals.model.Goal;
+import com.mldtech.nilapp.api.group.model.Group;
 import com.mldtech.nilapp.api.payout_batches.model.PayoutBatch;
 import com.mldtech.nilapp.api.users.children.UserEntity.model.UserEntity;
 import com.mldtech.nilapp.api.users.children.UserGoal.model.UserGoal;
@@ -71,6 +73,11 @@ public class Entities {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "entity", orphanRemoval = true)
     @JsonManagedReference
     private List<UserEntity> userEntities;
+
+    @ManyToMany(mappedBy = "entities")
+    @JsonBackReference
+    private List<Group> groups;
+
 
 
 //    @OneToMany(cascade = CascadeType.ALL, mappedBy = "entities", orphanRemoval = true)

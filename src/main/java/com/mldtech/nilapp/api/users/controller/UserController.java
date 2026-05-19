@@ -2,8 +2,10 @@ package com.mldtech.nilapp.api.users.controller;
 
 import com.mldtech.nilapp.api.contributions.dto.ContributionSummaryDTO;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
+import com.mldtech.nilapp.api.contributions.service.ContributionService;
 import com.mldtech.nilapp.api.users.children.UserEntity.model.UserEntity;
 import com.mldtech.nilapp.api.users.children.UserEntity.service.UserEntityService;
+import com.mldtech.nilapp.api.users.dto.ContributionDTO;
 import com.mldtech.nilapp.api.users.dto.UpdateUserEntitiesRequest;
 import com.mldtech.nilapp.api.users.dto.UserProfileResponse;
 import com.mldtech.nilapp.api.users.service.UserService;
@@ -21,6 +23,7 @@ public class UserController {
 
     private final UserService userService;
     private final UserEntityService userEntityService;
+    private final ContributionService contributionService;
 
     @GetMapping("/{userId}/profile")
     public CustomResponse<UserProfileResponse> getUserProfile(@PathVariable Long userId) {
@@ -31,6 +34,14 @@ public class UserController {
         return userService.getUserContributionSummary(userId);
     }
 
+    @GetMapping("/{userId}/contributions/filter")
+    public CustomResponse<List<ContributionDTO>> getUserContributionsByFilter(
+            @PathVariable Long userId,
+            @RequestParam(required = false) Long entityId,
+            @RequestParam(required = false) Long groupId
+    ) {
+        return contributionService.getUserContributionsByFilter(userId, entityId, groupId);
+    }
 
     @GetMapping("/{userId}/achievements") //TODO new dto
     public UserProfileResponse getUserAchievements(@PathVariable Long userId) {
