@@ -1,13 +1,20 @@
 package com.mldtech.nilapp.api.contributions.model;
 
 import com.mldtech.nilapp.api.contributions.children.ContributionStatus.model.ContributionStatus;
+import com.mldtech.nilapp.api.contributions.children.ContributionType.model.ContributionType;
 import com.mldtech.nilapp.api.goals.model.Goal;
 import com.mldtech.nilapp.api.users.model.User;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Type;
+import com.vladmihalcea.hibernate.type.json.JsonType;
+
+
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "contributions")
@@ -53,9 +60,12 @@ public class Contribution {
     @JoinColumn(name = "status",nullable = false)
     private ContributionStatus contributionStatus;
 
-    @Column(name = "allocation_snapshot", columnDefinition = "jsonb")
-    private String allocationSnapshot;
-//    {
+    @Type(JsonType.class)
+    @Column(name = "allocation_snapshot",columnDefinition = "jsonb", nullable = false)
+    private Map<String, Object> allocationSnapshot;
+
+
+    //    {
 //        "entityAllocations": { "5": 60, "7": 40 },
 //        "groupAllocations": { "3": 70, "9": 30 },
 //        "adValue": 0.004,
@@ -63,7 +73,9 @@ public class Contribution {
 //            "coinsEarned": 100,
 //            "steps": 8000
 //    }
-
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "contribution_type_id", nullable = false)
+    private ContributionType contributionType;
 //    @Column(name = "contribution_status_id", nullable = false)
 //    private Long statusId;
 //
