@@ -12,11 +12,13 @@ import com.mldtech.nilapp.api.contributions.repository.ContributionRepository;
 import com.mldtech.nilapp.api.group.repository.GroupRepository;
 import com.mldtech.nilapp.api.users.children.UserEntity.repository.UserEntityRepository;
 import com.mldtech.nilapp.api.users.dto.ContributionDTO;
+import com.mldtech.nilapp.api.users.dto.ContributionPeriodStatsDTO;
 import com.mldtech.nilapp.api.users.dto.EntityAllocationDTO;
 import com.mldtech.nilapp.api.users.dto.GroupAllocationDTO;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
 import com.mldtech.nilapp.helper.CustomResponse;
 import com.mldtech.nilapp.mapper.ContributionMapper;
+import com.mldtech.nilapp.mapper.ContributionStatusMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -235,5 +237,55 @@ public class ContributionService {
 
         return contributionRepository.save(contribution);
     }
+    public CustomResponse<List<ContributionPeriodStatsDTO>> getContributionStats(
+            Long userId,
+            Long entityId,
+            Long groupId,
+            String period,        // "MONTH" or "YEAR"
+            String status,        // PENDING, VERIFIED, PAID, REJECTED
+            LocalDateTime startDate,
+            LocalDateTime endDate
+    ) {
+
+        ContributionStatusMapper csm = new ContributionStatusMapper();
+        Long statusId = csm.mapStatusToId(status);
+
+        boolean isMonth = period.equalsIgnoreCase("MONTH");
+
+        List<Object[]> rows;
+
+        if (entityId != null) {
+            rows = contributionRepository.getEntityStats(
+                    userId,
+                    entityId,
+                    statusId,
+                    startDate,
+                    endDate
+            );
+        } else {
+            rows = contributionRepository.getGroupStats(
+                    userId,
+                    groupId,
+                    statusId,
+                    startDate,
+                    endDate
+            );
+        }
+
+        List<ContributionPeriodStatsDTO> dtoList = rows.stream()
+                .map(r -> ContributionPeriodStatsDTO.builder()
+                        .periodLabel(isMonth ? (String) r[0] : (String) r[1]) // month_label or year_label
+                        .entityId(entityId)
+                        .groupId(groupId)
+                        .totalSteps(((BigDecimal) r[3]).intValue())
+                        .totalCoins(((BigDecimal) r[4]).intValue())
+                        .avgSteps(((BigDecimal) r[3]).doubleValue())
+                        .avgCoins(((BigDecimal) r[4]).doubleValue())
+                        .build()
+                ).toList();
+
+        return new CustomResponse<>(dtoList, HttpStatus.OK, "200");
+    }
+
 
 }

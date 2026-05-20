@@ -6,6 +6,7 @@ import com.mldtech.nilapp.api.contributions.service.ContributionService;
 import com.mldtech.nilapp.api.users.children.UserEntity.model.UserEntity;
 import com.mldtech.nilapp.api.users.children.UserEntity.service.UserEntityService;
 import com.mldtech.nilapp.api.users.dto.ContributionDTO;
+import com.mldtech.nilapp.api.users.dto.ContributionPeriodStatsDTO;
 import com.mldtech.nilapp.api.users.dto.UpdateUserEntitiesRequest;
 import com.mldtech.nilapp.api.users.dto.UserProfileResponse;
 import com.mldtech.nilapp.api.users.service.UserService;
@@ -14,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -102,6 +105,31 @@ public class UserController {
             @PathVariable Long entityId
     ) {
         userEntityService.removeEntity(userId, entityId);
+    }
+
+    @GetMapping("/{userId}/contribution-stats")
+    public CustomResponse<List<ContributionPeriodStatsDTO>> getContributionStats(
+            @PathVariable Long userId,
+            @RequestParam(required = false) Long entityId,
+            @RequestParam(required = false) Long groupId,
+            @RequestParam String period,
+            @RequestParam String status,
+            @RequestParam String startDate,
+            @RequestParam String endDate
+    ) {
+
+        LocalDateTime start = LocalDate.parse(startDate).atStartOfDay();
+        LocalDateTime end = LocalDate.parse(endDate).atTime(23, 59, 59);
+
+        return contributionService.getContributionStats(
+                userId,
+                entityId,
+                groupId,
+                period,
+                status,
+                start,
+                end
+        );
     }
 
 
