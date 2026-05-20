@@ -21,5 +21,11 @@ VALUES ('ENTITY', 'Entity goal');
 INSERT INTO public.goal_types(
     type, description)
 VALUES ('GROUP', 'Group goal');
+-- // TODO make sure this works
+INSERT INTO contribution_types (code, label, description)
+VALUES
+    ('AD', 'Advertisement', 'User viewed an ad and earned NIL coins'),
+    ('SURVEY', 'Survey', 'User completed a survey and earned NIL coins');
+
 
 

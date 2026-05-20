@@ -24,6 +24,14 @@ VALUES (1, '2026-04-19', 500, 50, 0, 'phone','2026-04-19 14:30:00' , 0, '2026-04
 INSERT INTO public.contributions(
     user_id, entity_id, campaign_id, steps_contributed, coins_contributed, conversion_rate, ad_session_id,  payout_batch_id, status)
 VALUES (1, 1, 1, 500, 5, .001, 'ad1', null, 1);
+-- // TODO make sure this works
+INSERT INTO public.contributions(
+    user_id, entity_id, campaign_id, steps_contributed, coins_contributed, conversion_rate, ad_session_id,  payout_batch_id, status)
+VALUES (1, 1, 1, 100, 10, .001, 'ad1', null, 1);
+
+INSERT INTO public.contributions(
+    user_id, entity_id, campaign_id, steps_contributed, coins_contributed, conversion_rate, ad_session_id,  payout_batch_id, status)
+VALUES (1, 2, 1, 100, 10, .001, 'ad1', null, 1);
 
 INSERT INTO public.friend_statuses(
     status, description)
