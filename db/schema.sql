@@ -102,7 +102,7 @@ CREATE TABLE "contributions" (
                                  "ad_session_id" varchar(100),
                                  "created_at" timestamp DEFAULT (now()),
                                  "payout_batch_id" bigint,
-                                 "status" int NOT NULL DEFAULT 1,
+                                 "contribution_status_id" int NOT NULL DEFAULT 1,
 --                                  "contribution_type_id" INT NOT NULL REFERENCES contribution_types(contribution_type_id),  // added later TODO just use this
 --                                  allocation_snapshot JSONB;  // added later TODO just use this
 );
@@ -363,7 +363,7 @@ ALTER TABLE "contributions" ADD FOREIGN KEY ("campaign_id") REFERENCES "sponsor_
 
 ALTER TABLE "contributions" ADD FOREIGN KEY ("payout_batch_id") REFERENCES "payout_batches" ("payout_batch_id") DEFERRABLE INITIALLY IMMEDIATE;
 
-ALTER TABLE "contributions" ADD FOREIGN KEY ("status") REFERENCES "contribution_statuses" ("contribution_status_id") DEFERRABLE INITIALLY IMMEDIATE;
+ALTER TABLE "contributions" ADD FOREIGN KEY ("contribution_status_id") REFERENCES "contribution_statuses" ("contribution_status_id") DEFERRABLE INITIALLY IMMEDIATE;
 
 ALTER TABLE "friends" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("user_id") DEFERRABLE INITIALLY IMMEDIATE;
 

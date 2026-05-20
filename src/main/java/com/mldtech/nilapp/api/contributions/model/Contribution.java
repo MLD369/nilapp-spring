@@ -57,7 +57,7 @@ public class Contribution {
     private Long payoutBatchId;
 
     @ManyToOne
-    @JoinColumn(name = "status",nullable = false)
+    @JoinColumn(name = "contribution_status_id",nullable = false)
     private ContributionStatus contributionStatus;
 
     @Type(JsonType.class)
