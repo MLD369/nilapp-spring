@@ -2,6 +2,8 @@ need to use customresponse in all api calls
 
 fix all repo names
 
+no random longs that should be ints for tables and classsees
+
 
 get user and children working
 

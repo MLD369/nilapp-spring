@@ -284,6 +284,8 @@ public class ContributionService {
                         .build()
                 ).toList();
 
+        System.out.println(dtoList);
+
         return new CustomResponse<>(dtoList, HttpStatus.OK, "200");
     }
 

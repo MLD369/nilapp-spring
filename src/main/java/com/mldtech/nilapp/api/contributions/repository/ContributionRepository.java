@@ -21,7 +21,7 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
 //    List<Contribution> findByStatusId(Integer statusId);
     List<Contribution> findByUserIdAndEntityId(Long userId, Long entityId);
 
-
+    // TODO update the view to get the  entity or group name
     @Query(value =
             "SELECT month_label, year_label, entity_id, total_steps, total_coins " +
                     " FROM user_entity_stats_view " +
@@ -38,7 +38,7 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
-
+    // TODO update the view to get the  entity or group name
     @Query(value =
             "SELECT month_label, year_label, group_id, total_steps, total_coins " +
                     " FROM user_group_stats_view " +
