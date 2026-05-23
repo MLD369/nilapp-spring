@@ -3,14 +3,14 @@ package com.mldtech.nilapp.api.users.controller;
 import com.mldtech.nilapp.api.contributions.dto.ContributionSummaryDTO;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.contributions.service.ContributionService;
+import com.mldtech.nilapp.api.entities.service.EntityService;
+import com.mldtech.nilapp.api.group.service.GroupService;
 import com.mldtech.nilapp.api.users.children.UserEntity.model.UserEntity;
 import com.mldtech.nilapp.api.users.children.UserEntity.service.UserEntityService;
-import com.mldtech.nilapp.api.users.dto.ContributionDTO;
-import com.mldtech.nilapp.api.users.dto.ContributionPeriodStatsDTO;
-import com.mldtech.nilapp.api.users.dto.UpdateUserEntitiesRequest;
-import com.mldtech.nilapp.api.users.dto.UserProfileResponse;
+import com.mldtech.nilapp.api.users.dto.*;
 import com.mldtech.nilapp.api.users.service.UserService;
 import com.mldtech.nilapp.helper.CustomResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -27,16 +27,53 @@ public class UserController {
     private final UserService userService;
     private final UserEntityService userEntityService;
     private final ContributionService contributionService;
+    private final EntityService entityService;
+    private final GroupService groupService;
 
+    /**
+     * Retrieves the full user profile including:
+     * - basic user info
+     * - entities
+     * - groups
+     * - achievements
+     * - goals
+     * - friends
+     *
+     * @param userId ID of the user
+     * @return CustomResponse containing UserProfileResponse
+     */
     @GetMapping("/{userId}/profile")
     public CustomResponse<UserProfileResponse> getUserProfile(@PathVariable Long userId) {
         return userService.getUserProfile(userId);
     }
+
+    /**
+     * Retrieves a summary of a user's contributions:
+     * - total coins
+     * - total steps
+     * - total contributions
+     *
+     * @param userId ID of the user
+     * @return CustomResponse containing ContributionSummaryDTO
+     */
     @GetMapping("/{userId}/contributions/summary")
-    public CustomResponse<ContributionSummaryDTO> getUserContributionSummary(@PathVariable Long userId) {
+    public CustomResponse<ContributionSummaryDTO> getUserContributionSummary(
+            HttpServletRequest request,
+            @PathVariable Long userId
+    ) {
         return userService.getUserContributionSummary(userId);
     }
 
+    /**
+     * Retrieves contributions filtered by:
+     * - entityId (optional)
+     * - groupId (optional)
+     *
+     * @param userId ID of the user
+     * @param entityId optional entity filter
+     * @param groupId optional group filter
+     * @return CustomResponse containing list of ContributionDTO
+     */
     @GetMapping("/{userId}/contributions/filter")
     public CustomResponse<List<ContributionDTO>> getUserContributionsByFilter(
             @PathVariable Long userId,
@@ -46,39 +83,76 @@ public class UserController {
         return contributionService.getUserContributionsByFilter(userId, entityId, groupId);
     }
 
-    @GetMapping("/{userId}/achievements") //TODO new dto
+    /**
+     * Retrieves all achievements for a user.
+     */
+    @GetMapping("/{userId}/achievements")
     public UserProfileResponse getUserAchievements(@PathVariable Long userId) {
         return userService.getUserAchievements(userId);
     }
-    @GetMapping("/{userId}/goals") //TODO new dto
+
+    /**
+     * Retrieves all goals for a user.
+     */
+    @GetMapping("/{userId}/goals")
     public UserProfileResponse getUserGoals(@PathVariable Long userId) {
         return userService.getUserGoals(userId);
     }
-    @GetMapping("/{userId}/goals/completed") //TODO new dto
+
+    /**
+     * Retrieves all completed goals for a user.
+     */
+    @GetMapping("/{userId}/goals/completed")
     public UserProfileResponse getUserCompletedGoals(@PathVariable Long userId) {
         return userService.getUserCompletedGoals(userId);
     }
-    @GetMapping("/{userId}/goals/incompleted") //TODO new dto
+
+    /**
+     * Retrieves all incomplete goals for a user.
+     */
+    @GetMapping("/{userId}/goals/incompleted")
     public UserProfileResponse getUserIncompletedGoals(@PathVariable Long userId) {
         return userService.getUserIncompletedGoals(userId);
     }
-//    @GetMapping("/{userId}/goal-history") //TODO new dto
-//    public UserProfileResponse getUserGoalHistory(@PathVariable Long userId) {
-//        return userService.getUserGoalHistory(userId);
-//    }
-    @GetMapping("/{userId}/groups") //TODO new dto
-    public UserProfileResponse getUserGroups(@PathVariable Long userId) {
-        return userService.getUserGroups(userId);
-    }
-    @GetMapping("/{userId}/entities") //TODO new dto
-    public UserProfileResponse getUserEntities(@PathVariable Long userId) {
+
+    /**
+     * Retrieves only the entities a user is currently a member of.
+     *
+     * @param userId ID of the user
+     * @return CustomResponse containing UserProfileResponse with entity list
+     */
+    @GetMapping("/{userId}/entities")
+    public CustomResponse<UserProfileResponse> getUserEntities(@PathVariable Long userId) {
         return userService.getUserEntities(userId);
     }
-    @GetMapping("/{userId}/friends") //TODO new dto
+
+    /**
+     * Retrieves:
+     * - all entities in the system
+     * - marks each with joined = true/false depending on user membership
+     *
+     * Used for the "Entities" tab in the UI.
+     */
+    @GetMapping("/{userId}/entities/all")
+    public CustomResponse<List<EntityDTO>> getAllEntitiesWithUserStatus(@PathVariable Long userId) {
+        return entityService.getAllEntitiesWithUserStatus(userId);
+    }
+
+    /**
+     * Retrieves all friends for a user.
+     */
+    @GetMapping("/{userId}/friends")
     public UserProfileResponse getUserFriends(@PathVariable Long userId) {
         return userService.getUserFriends(userId);
     }
 
+    /**
+     * Bulk update of user entities.
+     * Replaces all existing user entities with the provided list.
+     *
+     * @param userId ID of the user
+     * @param request contains list of entity IDs
+     */
     @PutMapping("/{userId}/entities")
     public List<UserEntity> updateUserEntities(
             @PathVariable Long userId,
@@ -87,9 +161,10 @@ public class UserController {
         return userEntityService.setUserEntities(userId, request.getEntityIds());
     }
 
-
-
-    // ADD ENTITY
+    /**
+     * Adds a single entity to a user.
+     * (Legacy endpoint — replaced by joinEntity)
+     */
     @PostMapping("/{userId}/entities/{entityId}")
     public UserEntity addEntity(
             @PathVariable Long userId,
@@ -98,7 +173,10 @@ public class UserController {
         return userEntityService.addEntity(userId, entityId);
     }
 
-    // REMOVE ENTITY
+    /**
+     * Removes a single entity from a user.
+     * (Legacy endpoint — replaced by leaveEntity)
+     */
     @DeleteMapping("/{userId}/entities/{entityId}")
     public void removeEntity(
             @PathVariable Long userId,
@@ -107,8 +185,18 @@ public class UserController {
         userEntityService.removeEntity(userId, entityId);
     }
 
+    /**
+     * Retrieves contribution statistics for a user over a period.
+     * Supports filtering by:
+     * - entity
+     * - group
+     * - period (daily, weekly, monthly, yearly)
+     * - status (completed, pending)
+     * - date range
+     */
     @GetMapping("/{userId}/contribution-stats")
     public CustomResponse<List<ContributionPeriodStatsDTO>> getContributionStats(
+            HttpServletRequest request,
             @PathVariable Long userId,
             @RequestParam(required = false) Long entityId,
             @RequestParam(required = false) Long groupId,
@@ -117,7 +205,6 @@ public class UserController {
             @RequestParam String startDate,
             @RequestParam String endDate
     ) {
-
         LocalDateTime start = LocalDate.parse(startDate).atStartOfDay();
         LocalDateTime end = LocalDate.parse(endDate).atTime(23, 59, 59);
 
@@ -132,6 +219,83 @@ public class UserController {
         );
     }
 
+    // ---------------------------------------------------------
+    // ENTITY JOIN / LEAVE (History-based membership)
+    // ---------------------------------------------------------
 
+    /**
+     * User joins an entity.
+     * Creates a new membership row with joined_at timestamp.
+     */
+    @PostMapping("/{userId}/entities/{entityId}/join")
+    public CustomResponse<String> joinEntity(
+            @PathVariable Long userId,
+            @PathVariable Long entityId
+    ) {
+        return entityService.joinEntity(userId, entityId);
+    }
 
+    /**
+     * User leaves an entity.
+     * Updates left_at timestamp instead of deleting the row.
+     */
+    @PutMapping("/{userId}/entities/{entityId}/leave")
+    public CustomResponse<String> leaveEntity(
+            @PathVariable Long userId,
+            @PathVariable Long entityId
+    ) {
+        return entityService.leaveEntity(userId, entityId);
+    }
+
+    // ---------------------------------------------------------
+    // GROUP JOIN / LEAVE (History-based membership)
+    // ---------------------------------------------------------
+
+    /**
+     * User joins a group.
+     * Creates a new membership row with joined_at timestamp.
+     */
+    @PostMapping("/{userId}/groups/{groupId}/join")
+    public CustomResponse<String> joinGroup(
+            @PathVariable Long userId,
+            @PathVariable Long groupId
+    ) {
+        return groupService.joinGroup(userId, groupId);
+    }
+
+    /**
+     * User leaves a group.
+     * Updates left_at timestamp instead of deleting the row.
+     */
+    @PutMapping("/{userId}/groups/{groupId}/leave")
+    public CustomResponse<String> leaveGroup(
+            @PathVariable Long userId,
+            @PathVariable Long groupId
+    ) {
+        return groupService.leaveGroup(userId, groupId);
+    }
+
+    // ---------------------------------------------------------
+    // GROUP LISTING
+    // ---------------------------------------------------------
+
+    /**
+     * Retrieves only the groups a user is currently a member of.
+     */
+    @GetMapping("/{userId}/groups")
+    public UserProfileResponse getUserGroups(@PathVariable Long userId) {
+        return userService.getUserGroups(userId);
+    }
+
+    /**
+     * Retrieves:
+     * - all groups in the system
+     * - marks each with joined = true/false depending on user membership
+     *
+     * Used for the "Groups" tab in the UI.
+     */
+    @GetMapping("/{userId}/groups/all")
+    public CustomResponse<List<GroupDTO>> getAllGroups(@PathVariable Long userId) {
+        return groupService.getAllGroupsWithUserStatus(userId);
+    }
 }
