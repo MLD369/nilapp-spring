@@ -8,4 +8,8 @@ import lombok.Data;
 public class GroupDTO {
     private Long groupId;
     private String name;
+    private boolean joined;
+    private String joinedAt;
+    private String leftAt;
 }
+
