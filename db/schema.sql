@@ -325,6 +325,14 @@ ALTER TABLE contributions
 --         OPTIONAL (BUT RECOMMENDED)
 -- If you want to enforce valid types only:
 
+-- // TODO make sure this works
+ALTER TABLE user_entities
+    ADD COLUMN joined_at TIMESTAMP NOT NULL DEFAULT NOW(),
+ADD COLUMN left_at TIMESTAMP NULL;
+ALTER TABLE user_groups
+    ADD COLUMN joined_at TIMESTAMP NOT NULL DEFAULT NOW(),
+ADD COLUMN left_at TIMESTAMP NULL;
+
 ALTER TABLE groups DROP COLUMN entities;
 
 CREATE INDEX ON "user_entities" ("entity_id", "user_id");
