@@ -10,6 +10,8 @@ import com.mldtech.nilapp.api.users.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.Instant;
+
 @Entity
 @Table(
         name = "user_entities",
@@ -45,14 +47,20 @@ public class UserEntity {
     public Long getEntityId() {
         return entity != null ? entity.getEntityId() : null;
     }
+
     @JsonProperty("name")
     public String getName() {
         return entity != null ? entity.getName() : null;
     }
+
     @JsonProperty("associatedSchool")
     public String getAssociatedSchool() {
         return entity != null ? entity.getAssociatedSchool() : null;
     }
+    @JoinColumn(name = "joined_at")
+    private Instant joinedAt;
+    @JoinColumn(name = "left_at")
+    private Instant leftAt;
 }
 
 

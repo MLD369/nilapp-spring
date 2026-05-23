@@ -10,6 +10,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
+
 @Entity
 @Table(
         name = "user_groups",
@@ -34,4 +36,10 @@ public class UserGroup {
     @ManyToOne
     @JoinColumn(name = "group_id")
     private Group group;
+
+    @JoinColumn(name = "joined_at")
+    private Instant joinedAt;
+
+    @JoinColumn(name = "left_at")
+    private Instant leftAt;
 }
