@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.stream.Stream;
 
 @Service
@@ -273,25 +274,67 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                 .groups(groups)
                 .build();
     }
-    public UserProfileResponse getUserEntities(Long userId) {
+    public CustomResponse<UserProfileResponse> getUserEntities(Long userId) {
+        try {
+            var user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
-        var user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+            var entities = user.getUserEntities().stream()
+                    .map(ue -> EntityDTO.builder()
+                            .entityId(ue.getEntity().getEntityId())
+                            .name(ue.getEntity().getName())
+                            .abbreviation(ue.getEntity().getAbbreviation())
+                            .build())
+                    .toList();
 
-        var entities = user.getUserEntities().stream()
-                .map(ue -> EntityDTO.builder()
-                        .entityId(ue.getEntity().getEntityId())
-                        .name(ue.getEntity().getName())
-                        .abbreviation(ue.getEntity().getAbbreviation())
-                        .build())
-                .toList();
+            var response = UserProfileResponse.builder()
+                    .userId(userId)
+                    .username(user.getUsername())
+                    .entities(entities)
+                    .build();
 
-        return UserProfileResponse.builder()
-                .userId(userId)
-                .username(user.getUsername())
-                .entities(entities)
-                .build();
+            if (entities.isEmpty()) {
+                return new CustomResponse<>(
+                        "User found but has no associated entities.",
+                        response,
+                        HttpStatus.NO_CONTENT,
+                        String.valueOf(HttpStatus.NO_CONTENT.value())
+                );
+            }
+
+            return new CustomResponse<>(
+                    "User entities fetched successfully.",
+                    response,
+                    HttpStatus.OK,
+                    String.valueOf(HttpStatus.OK.value())
+            );
+
+        } catch (NoSuchElementException ex) {
+            return new CustomResponse<>(
+                    "User not found: " + ex.getMessage(),
+                    null,
+                    HttpStatus.NOT_FOUND,
+                    String.valueOf(HttpStatus.NOT_FOUND.value())
+            );
+
+        } catch (IllegalArgumentException ex) {
+            return new CustomResponse<>(
+                    "Invalid user ID provided: " + ex.getMessage(),
+                    null,
+                    HttpStatus.BAD_REQUEST,
+                    String.valueOf(HttpStatus.BAD_REQUEST.value())
+            );
+
+        } catch (Exception ex) {
+            return new CustomResponse<>(
+                    "Unexpected error while fetching user entities: " + ex.getMessage(),
+                    null,
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value())
+            );
+        }
     }
+
     public UserProfileResponse getUserFriends(Long userId) {
 
         var user = userRepository.findById(userId)
