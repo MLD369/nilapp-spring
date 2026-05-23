@@ -37,9 +37,9 @@ public class UserGroup {
     @JoinColumn(name = "group_id")
     private Group group;
 
-    @JoinColumn(name = "joined_at")
+    @Column(name = "joined_at")
     private Instant joinedAt;
 
-    @JoinColumn(name = "left_at")
+    @Column(name = "left_at")
     private Instant leftAt;
 }
