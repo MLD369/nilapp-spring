@@ -290,6 +290,20 @@ CREATE TABLE contribution_types (
                                     label       TEXT NOT NULL,          -- human-readable name
                                     description TEXT
 );
+CREATE TABLE user_streaks (
+                              user_streak_id BIGSERIAL PRIMARY KEY,
+                              user_id BIGINT NOT NULL,
+                              current_streak INT DEFAULT 0,
+                              longest_streak INT DEFAULT 0,
+                              last_completed_date DATE,
+                              streak_shields INT DEFAULT 0,
+                              streak_savers INT DEFAULT 0,
+                              created_at TIMESTAMP DEFAULT NOW(),
+                              updated_at TIMESTAMP DEFAULT NOW(),
+
+                              CONSTRAINT fk_user_streak_user
+                                  FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
 
 -- contribution_id	group_id	coins	allocation_percentage
 -- 123	3	70	70
@@ -327,11 +341,20 @@ ALTER TABLE contributions
 
 -- // TODO make sure this works
 ALTER TABLE user_entities
-    ADD COLUMN joined_at TIMESTAMP NOT NULL DEFAULT NOW(),
+ADD COLUMN joined_at TIMESTAMP NOT NULL DEFAULT NOW(),
 ADD COLUMN left_at TIMESTAMP NULL;
 ALTER TABLE user_groups
-    ADD COLUMN joined_at TIMESTAMP NOT NULL DEFAULT NOW(),
+ADD COLUMN joined_at TIMESTAMP NOT NULL DEFAULT NOW(),
 ADD COLUMN left_at TIMESTAMP NULL;
+ALTER TABLE user_goals
+ADD COLUMN completed_at TIMESTAMP NULL;
+
+ALTER TABLE user_achievements
+ALTER COLUMN earned_at TYPE TIMESTAMP;
+ALTER TABLE entity_achievements
+ALTER COLUMN earned_at TYPE TIMESTAMP;
+ALTER TABLE group_achievements
+ALTER COLUMN earned_at TYPE TIMESTAMP;
 
 ALTER TABLE groups DROP COLUMN entities;
 

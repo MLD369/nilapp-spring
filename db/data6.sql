@@ -39,3 +39,15 @@ GROUP BY
     year_label,
     c.status_id,
     c.created_at;
+
+INSERT INTO public.user_streaks(
+    user_id, current_streak, longest_streak, last_completed_date, streak_shields, created_at)
+VALUES ( 1, 10, 10, now(), 2, now());
+
+INSERT INTO public.user_streaks(
+    user_id, current_streak, longest_streak, last_completed_date, streak_shields, created_at)
+VALUES ( 2, 5, 15, now(), 10, now());
+
+INSERT INTO public.user_streaks(
+    user_id, current_streak, longest_streak, last_completed_date, streak_shields, created_at)
+VALUES ( 2, 1, 1, now(), 10, now());
