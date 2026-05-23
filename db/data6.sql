@@ -28,7 +28,7 @@ SELECT
     to_char(c.created_at, 'YYYY') AS year_label,
     SUM(c.steps_contributed * ((ga->>'percentage')::NUMERIC / 100.0)) AS total_steps,
     SUM(c.coins_contributed * ((ga->>'percentage')::NUMERIC / 100.0)) AS total_coins,
-    c.status_id,
+    c.contribution_status_id,
     c.created_at
 FROM contributions c
          CROSS JOIN LATERAL jsonb_array_elements(c.allocation_snapshot->'groupAllocations') ga
