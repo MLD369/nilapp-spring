@@ -1,7 +1,6 @@
 package com.mldtech.nilapp.api.friend.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mldtech.nilapp.api.friend.children.FriendStatus.model.FriendStatus;
 import com.mldtech.nilapp.api.users.model.User;
@@ -50,6 +49,7 @@ public class Friend {
     public Long getFriendId() {
         return friend != null ? getFriend().getUserId() : null;
     }
+
     @JsonProperty("friendUsername")
     public String getFriendUsername() {
         return friend != null ? getFriend().getUsername() : null;
@@ -59,6 +59,7 @@ public class Friend {
     public Long getUserId() {
         return user != null ? getUser().getUserId() : null;
     }
+
     @JsonProperty("userUsername")
     public String getUserUsername() {
         return user != null ? getUser().getUsername() : null;
