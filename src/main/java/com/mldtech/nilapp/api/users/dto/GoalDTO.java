@@ -9,4 +9,6 @@ public class GoalDTO {
     private Long goalId;
     private String goalName;
     private Boolean isActive;
+    private String groupName;
+    private String entityName;
 }

@@ -15,6 +15,8 @@ import com.mldtech.nilapp.api.contributions.dto.GroupContributionDTO;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.contributions.repository.ContributionRepository;
 import com.mldtech.nilapp.api.friend.repository.FriendRepository;
+import com.mldtech.nilapp.api.users.children.UserAchievement.repository.UserAchievementRepository;
+import com.mldtech.nilapp.api.users.children.UserGoal.repository.UserGoalRepository;
 import com.mldtech.nilapp.api.users.dto.*;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
 import com.mldtech.nilapp.helper.CustomResponse;
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Stream;
@@ -39,8 +42,8 @@ public class UserService {
 
 //    private final UserEntityRepository userEntityRepository;
 //    private final UserGroupRepository userGroupRepository;
-//    private final UserAchievementRepository userAchievementRepository;
-//    private final UserGoalRepository userGoalRepository;
+    private final UserAchievementRepository userAchievementRepository;
+    private final UserGoalRepository userGoalRepository;
 //    private final UserGoalHistoryRepository userGoalHistoryRepository;
     private final FriendRepository friendRepository;
 //    @Transactional   /// TODO change this to the right way with dtos
@@ -124,7 +127,7 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                     user.getUserAchievements().stream()
                             .map(ua -> AchievementDTO.builder()
                                     .achievementId(ua.getAchievement().getAchievementId())
-                                    .achievement(ua.getAchievement().getAchievement())
+                                    .achievementName(ua.getAchievement().getAchievement())
                                     .description(ua.getAchievement().getDescription())
                                     .badge(ua.getAchievement().getBadge())
                                     .build()
@@ -185,7 +188,7 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
         var achievements = user.getUserAchievements().stream()
                 .map(ua -> AchievementDTO.builder()
                         .achievementId(ua.getAchievement().getAchievementId())
-                        .achievement(ua.getAchievement().getAchievement())
+                        .achievementName(ua.getAchievement().getAchievement())
                         .description(ua.getAchievement().getDescription())
                         .badge(ua.getAchievement().getBadge())
                         .build())
@@ -216,27 +219,63 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                 .goals(goals)
                 .build();
     }
-    public UserProfileResponse getUserCompletedGoals(Long userId) {
+    public CustomResponse<UserProfileResponse> getUserCompletedGoals(Long userId, String startDate, String endDate) {
+        try {
+            var user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
-        var user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+            LocalDateTime start = (startDate != null)
+                    ? LocalDate.parse(startDate).atStartOfDay()
+                    : LocalDate.now().withDayOfMonth(1).atStartOfDay();
 
-        var completedGoals = user.getUserGoals().stream()
-                .filter(g -> Boolean.TRUE.equals(g.getIsComplete()))
-                .map(g -> GoalDTO.builder()
-                        .goalId(g.getUserGoalId())
-//                        .goalName(g.getGoal().getGoal())
-                        .isActive(g.getIsActive())
-                        .build())
-                .toList();
+            LocalDateTime end = (endDate != null)
+                    ? LocalDate.parse(endDate).atTime(23, 59, 59)
+                    : LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()).atTime(23, 59, 59);
 
-        return UserProfileResponse.builder()
-                .userId(userId)
-                .username(user.getUsername())
-                .goals(completedGoals)
-                .build();
+            var completedGoals = userGoalRepository.findByUserUserIdAndIsCompleteTrueAndCompletedAtBetween(userId, start, end)
+                    .stream()
+                    .map(g -> GoalDTO.builder()
+                            .goalId(g.getUserGoalId())
+                            .goalName(g.getGoalInstance().getGoal().getGoal())
+                            .entityName(g.getGoalInstance().getEntity() != null ? g.getGoalInstance().getEntity().getName() : null)
+                            .groupName(g.getGoalInstance().getGroup() != null ? g.getGoalInstance().getGroup().getName() : null)
+                            .isActive(false)
+                            .build())
+                    .toList();
+
+            if (completedGoals.isEmpty()) {
+                return new CustomResponse<>(
+                        "No completed goals found for the specified date range.",
+                        null,
+                        HttpStatus.NO_CONTENT,
+                        "204"
+                );
+            }
+
+            var response = UserProfileResponse.builder()
+                    .userId(userId)
+                    .username(user.getUsername())
+                    .goals(completedGoals)
+                    .build();
+
+            return new CustomResponse<>(
+                    "Completed goals fetched successfully.",
+                    response,
+                    HttpStatus.OK,
+                    "200"
+            );
+
+        } catch (Exception ex) {
+            return new CustomResponse<>(
+                    "Error fetching completed goals: " + ex.getMessage(),
+                    null,
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "500"
+            );
+        }
     }
-    public UserProfileResponse getUserIncompletedGoals(Long userId) {
+
+    public UserProfileResponse getUserIncompletedGoals(Long userId, String startDate, String endDate) {
 
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -452,6 +491,89 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                 "200"
         );
     }
+
+    public CustomResponse<UserStatsResponse> getUserStats(Long userId, String startDate, String endDate) {
+        try {
+            var user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            LocalDateTime start = (startDate != null)
+                    ? LocalDate.parse(startDate).atStartOfDay()
+                    : LocalDate.now().withDayOfMonth(1).atStartOfDay();
+
+            LocalDateTime end = (endDate != null)
+                    ? LocalDate.parse(endDate).atTime(23, 59, 59)
+                    : LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()).atTime(23, 59, 59);
+
+            // Total steps and coins for the month
+            var contributionTotalDTO = contributionRepository.getUserMonthlyTotals(userId, start, end);
+
+            // Active goals for the month
+            var activeGoals = userGoalRepository.findByUserUserIdAndIsActiveTrue(userId)
+                    .stream()
+                    .map(g -> GoalDTO.builder()
+                            .goalId(g.getUserGoalId())
+                            .goalName(g.getGoalInstance().getGoal().getGoal())
+                            .entityName(g.getGoalInstance().getEntity() != null ? g.getGoalInstance().getEntity().getName() : null)
+                            .groupName(g.getGoalInstance().getGroup() != null ? g.getGoalInstance().getGroup().getName() : null)
+                            .isActive(true)
+                            .build())
+                    .toList();
+
+            // Completed goals for the month
+            var completedGoals = userGoalRepository.findByUserUserIdAndIsCompleteTrueAndCompletedAtBetween(userId, start, end)
+                    .stream()
+                    .map(g -> GoalDTO.builder()
+                            .goalId(g.getUserGoalId())
+                            .goalName(g.getGoalInstance().getGoal().getGoal())
+                            .entityName(g.getGoalInstance().getEntity() != null ? g.getGoalInstance().getEntity().getName() : null)
+                            .groupName(g.getGoalInstance().getGroup() != null ? g.getGoalInstance().getGroup().getName() : null)
+                            .isActive(false)
+                            .build())
+                    .toList();
+
+            // Achievements (with times earned)
+            var achievements = userAchievementRepository.getUserAchievementsWithCount(userId, start, end)
+                    .stream()
+                    .map(a -> AchievementDTO.builder()
+                            .achievementId(a.getAchievementId())
+                            .achievementName(a.getAchievementName())
+                            .timesEarned(a.getTimesEarned())
+                            .entityName(a.getEntityName())
+                            .groupName(a.getGroupName())
+                            .earnedAt(a.getEarnedAt())
+                            .lastEarnedAt(a.getLastEarnedAt())
+                            .build())
+                    .toList();
+
+
+            var response = UserStatsResponse.builder()
+                    .userId(userId)
+                    .username(user.getUsername())
+                    .totalSteps(contributionTotalDTO.getTotalSteps())
+                    .totalCoins(contributionTotalDTO.getTotalNilCoins())
+                    .activeGoals(activeGoals)
+                    .completedGoals(completedGoals)
+                    .achievements(achievements)
+                    .build();
+
+            return new CustomResponse<>(
+                    "User stats fetched successfully.",
+                    response,
+                    HttpStatus.OK,
+                    "200"
+            );
+
+        } catch (Exception ex) {
+            return new CustomResponse<>(
+                    "Error fetching user stats: " + ex.getMessage(),
+                    null,
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "500"
+            );
+        }
+    }
+
 //public UserProfileResponse getUserAchievements(Long userId) {
 //
 //    var user = userRepository.findById(userId)

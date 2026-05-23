@@ -1,5 +1,7 @@
 package com.mldtech.nilapp.api.contributions.repository;
 
+import com.mldtech.nilapp.api.contributions.dto.ContributionSummaryDTO;
+import com.mldtech.nilapp.api.contributions.dto.ContributionTotalDTO;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.users.children.UserEntity.model.UserEntity;
 import com.mldtech.nilapp.api.users.children.UserGroup.model.UserGroup;
@@ -55,6 +57,23 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+
+    @Query("""
+    SELECT new com.mldtech.nilapp.api.contributions.dto.ContributionTotalDTO(
+        COALESCE(SUM(c.stepsContributed), 0),
+        COALESCE(SUM(c.coinsContributed), 0)
+    )
+    FROM Contribution c
+    WHERE c.userId = :userId
+      AND c.createdAt BETWEEN :start AND :end
+""")
+    ContributionTotalDTO getUserMonthlyTotals(
+            Long userId,
+            LocalDateTime start,
+            LocalDateTime end
+    );
+
+
 
 }
 

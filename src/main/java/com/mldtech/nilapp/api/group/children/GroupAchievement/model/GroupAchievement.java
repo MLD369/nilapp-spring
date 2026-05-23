@@ -7,6 +7,7 @@ import com.mldtech.nilapp.api.group.model.Group;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(
@@ -36,6 +37,6 @@ public class GroupAchievement {
 
 
     @Column(name = "earned_at")
-    private LocalDate earnedAt;
+    private LocalDateTime earnedAt;
 }
 

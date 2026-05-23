@@ -9,9 +9,8 @@ import java.util.List;
 public class ContributionSummaryDTO {
 
     private Long userId;
-
     private Long totalNilCoins;   // sum of all coins contributed
-
+    private Long totalSteps;
     private List<GroupContributionDTO> groupContributions;
     private List<EntityContributionDTO> entityContributions;
 }

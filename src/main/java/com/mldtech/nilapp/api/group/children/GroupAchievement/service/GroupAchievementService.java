@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -42,7 +43,7 @@ public class GroupAchievementService {
         GroupAchievement ga = GroupAchievement.builder()
                 .group(group)
                 .achievement(achievement)
-                .earnedAt(LocalDate.now())
+                .earnedAt(LocalDateTime.now())
                 .build();
 
         return repository.save(ga);

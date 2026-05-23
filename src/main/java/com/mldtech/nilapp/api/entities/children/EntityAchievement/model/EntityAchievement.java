@@ -5,6 +5,7 @@ import com.mldtech.nilapp.api.entities.model.Entities;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "entity_achievements")
@@ -28,5 +29,5 @@ public class EntityAchievement {
     private Achievement achievement;
 
     @Column(name = "earned_at")
-    private LocalDate earnedAt;
+    private LocalDateTime earnedAt;
 }

@@ -103,16 +103,25 @@ public class UserController {
      * Retrieves all completed goals for a user.
      */
     @GetMapping("/{userId}/goals/completed")
-    public UserProfileResponse getUserCompletedGoals(@PathVariable Long userId) {
-        return userService.getUserCompletedGoals(userId);
+    public CustomResponse<UserProfileResponse> getUserCompletedGoals(
+            @PathVariable Long userId,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
+    ) {
+        return userService.getUserCompletedGoals(userId, startDate, endDate);
     }
+
 
     /**
      * Retrieves all incomplete goals for a user.
      */
     @GetMapping("/{userId}/goals/incompleted")
-    public UserProfileResponse getUserIncompletedGoals(@PathVariable Long userId) {
-        return userService.getUserIncompletedGoals(userId);
+    public UserProfileResponse getUserIncompletedGoals(
+            @PathVariable Long userId,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
+    ) {
+        return userService.getUserIncompletedGoals(userId, startDate, endDate);
     }
 
     /**
@@ -298,4 +307,14 @@ public class UserController {
     public CustomResponse<List<GroupDTO>> getAllGroups(@PathVariable Long userId) {
         return groupService.getAllGroupsWithUserStatus(userId);
     }
+
+    @GetMapping("/{userId}/stats")
+    public CustomResponse<UserStatsResponse> getUserStats(
+            @PathVariable Long userId,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
+    ) {
+        return userService.getUserStats(userId, startDate, endDate);
+    }
+
 }

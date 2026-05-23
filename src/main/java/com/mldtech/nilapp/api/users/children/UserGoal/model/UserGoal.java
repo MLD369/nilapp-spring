@@ -51,4 +51,8 @@ public class UserGoal {
 
     @Column(name = "is_complete")
     private Boolean isComplete;
+
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
 }
