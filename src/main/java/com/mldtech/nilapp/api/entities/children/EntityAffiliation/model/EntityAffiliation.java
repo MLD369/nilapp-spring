@@ -33,4 +33,6 @@ public class EntityAffiliation {
     @JoinColumn(name = "affiliation_id", nullable = false)
     private Affiliation affiliation;
 
+    @Column(name = "created_at")
+    private LocalDateTime createdAt = LocalDateTime.now();
 }
