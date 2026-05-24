@@ -13,25 +13,25 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DailyStatService {
 
-    private final DailyStatRepository repository;
+    private final DailyStatRepository dailyStatRepository;
 
     public List<DailyStat> getStatsForUser(Long userId) {
-        return repository.findByUserId(userId);
+        return dailyStatRepository.findByUserId(userId);
     }
 
     public DailyStat getStatForDay(Long userId, LocalDate date) {
-        return repository.findByUserIdAndDate(userId, date)
+        return dailyStatRepository.findByUserIdAndDate(userId, date)
                 .orElseThrow(() -> new RuntimeException("Daily stat not found"));
     }
 
     public List<DailyStat> getStatsForRange(Long userId, LocalDate start, LocalDate end) {
-        return repository.findByUserIdAndDateBetween(userId, start, end);
+        return dailyStatRepository.findByUserIdAndDateBetween(userId, start, end);
     }
 
     public DailyStat createOrUpdateDailyStat(DailyStat stat) {
 
         // If exists, update instead of creating a duplicate
-        return repository.findByUserIdAndDate(stat.getUserId(), stat.getDate())
+        return dailyStatRepository.findByUserIdAndDate(stat.getUserId(), stat.getDate())
                 .map(existing -> {
                     existing.setTotalSteps(stat.getTotalSteps());
                     existing.setCoins(stat.getCoins());
@@ -39,11 +39,11 @@ public class DailyStatService {
                     existing.setDeviceSource(stat.getDeviceSource());
                     existing.setSyncTimestamp(LocalDateTime.now());
                     existing.setCalories(stat.getCalories());
-                    return repository.save(existing);
+                    return dailyStatRepository.save(existing);
                 })
                 .orElseGet(() -> {
                     stat.setSyncTimestamp(LocalDateTime.now());
-                    return repository.save(stat);
+                    return dailyStatRepository.save(stat);
                 });
     }
 }

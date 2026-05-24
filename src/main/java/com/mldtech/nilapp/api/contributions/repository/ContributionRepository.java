@@ -5,6 +5,7 @@ import com.mldtech.nilapp.api.contributions.dto.ContributionTotalDTO;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.users.children.UserEntity.model.UserEntity;
 import com.mldtech.nilapp.api.users.children.UserGroup.model.UserGroup;
+import com.mldtech.nilapp.api.users.dto.EntityNilLeaderDTO;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -73,7 +74,29 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
             LocalDateTime end
     );
 
+    @Query("""
+    SELECT u.userId, u.username, SUM(c.coinsContributed)
+    FROM Contribution c
+    JOIN User u ON u.userId = c.userId
+    WHERE c.createdAt BETWEEN :start AND :end
+    GROUP BY u.userId, u.username
+    ORDER BY SUM(c.coinsContributed) DESC
+""")
+    List<Object[]> getTopCoins(LocalDateTime start, LocalDateTime end);
 
+    @Query("""
+    SELECT new com.mldtech.nilapp.api.users.dto.EntityNilLeaderDTO(
+        e.entityId,
+        e.name,
+        SUM(c.coinsContributed)
+    )
+    FROM Contribution c
+    JOIN Entities e ON e.entityId = c.entityId
+    WHERE c.createdAt BETWEEN :start AND :end
+    GROUP BY e.entityId, e.name
+    ORDER BY SUM(c.coinsContributed) DESC
+""")
+    List<EntityNilLeaderDTO> getEntityNilLeaderboard(LocalDateTime start, LocalDateTime end);
 
 }
 
