@@ -22,7 +22,7 @@ public class WebConfig {
 //                                "http://www.mldtechnology.com",
 //                                "https://www.mldtechnology.com"
                         )
-                        .allowedMethods("GET", "POST", "OPTIONS")// "PUT", "DELETE"
+                        .allowedMethods("GET", "POST", "OPTIONS","PUT")// "PUT", "DELETE"
                         .allowedHeaders("*");
             }
         };
