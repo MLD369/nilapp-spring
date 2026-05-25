@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -56,23 +57,37 @@ public class GroupService {
 
             var allGroups = groupRepository.findAll();
 
-            var userGroupIds = user.getUserGroups().stream()
-                    .map(ug -> ug.getGroup().getGroupId())
-                    .collect(Collectors.toSet());
+            // Map: groupId → latest UserGroup membership row
+            var membershipMap = user.getUserGroups().stream()
+                    .collect(Collectors.toMap(
+                            ug -> ug.getGroup().getGroupId(),
+                            ug -> ug,
+                            (a, b) -> a.getJoinedAt().isAfter(b.getJoinedAt()) ? a : b
+                    ));
 
             var groups = allGroups.stream()
-                    .map(g -> GroupDTO.builder()
-                            .groupId(g.getGroupId())
-                            .name(g.getName())
-                            .joined(userGroupIds.contains(g.getGroupId()))
-                            .build())
+                    .map(g -> {
+                        var membership = membershipMap.get(g.getGroupId());
+
+                        boolean joined = membership != null && membership.getLeftAt() == null;
+
+                        return GroupDTO.builder()
+                                .groupId(g.getGroupId())
+                                .name(g.getName())
+
+                                .joined(joined)
+                                .joinedAt(membership != null ? String.valueOf(membership.getJoinedAt()) : null)
+                                .leftAt(membership != null ? String.valueOf(membership.getLeftAt()) : null)
+
+                                .build();
+                    })
                     .toList();
 
             return new CustomResponse<>(
                     "Groups fetched successfully with user join status.",
                     groups,
                     HttpStatus.OK,
-                    String.valueOf(HttpStatus.OK.value())
+                    "200"
             );
 
         } catch (Exception ex) {
@@ -80,7 +95,7 @@ public class GroupService {
                     "Unexpected error while fetching groups: " + ex.getMessage(),
                     null,
                     HttpStatus.INTERNAL_SERVER_ERROR,
-                    String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                    "500"
             );
         }
     }
@@ -94,21 +109,26 @@ public class GroupService {
             var group = groupRepository.findById(groupId)
                     .orElseThrow(() -> new RuntimeException("Group not found"));
 
+            // Check if already ACTIVE
             boolean alreadyJoined = user.getUserGroups().stream()
-                    .anyMatch(ug -> ug.getGroup().getGroupId().equals(groupId));
+                    .anyMatch(ug -> ug.getGroup().getGroupId().equals(groupId)
+                            && ug.getLeftAt() == null);
 
             if (alreadyJoined) {
                 return new CustomResponse<>(
                         "User already joined this group.",
                         null,
                         HttpStatus.CONFLICT,
-                        String.valueOf(HttpStatus.CONFLICT.value())
+                        "409"
                 );
             }
 
+            // Create new membership
             UserGroup userGroup = new UserGroup();
             userGroup.setUser(user);
             userGroup.setGroup(group);
+            userGroup.setJoinedAt(Instant.now());
+            userGroup.setLeftAt(null);
 
             userGroupRepository.save(userGroup);
 
@@ -116,7 +136,7 @@ public class GroupService {
                     "User successfully joined the group.",
                     null,
                     HttpStatus.OK,
-                    String.valueOf(HttpStatus.OK.value())
+                    "200"
             );
 
         } catch (Exception ex) {
@@ -124,10 +144,11 @@ public class GroupService {
                     "Error joining group: " + ex.getMessage(),
                     null,
                     HttpStatus.INTERNAL_SERVER_ERROR,
-                    String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                    "500"
             );
         }
     }
+
     @Transactional
     public CustomResponse<String> leaveGroup(Long userId, Long groupId) {
         try {

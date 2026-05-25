@@ -113,56 +113,42 @@ public class EntityService {
             var user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            // Get all entities
             var allEntities = entityRepository.findAll();
 
-            // Get IDs of entities the user has joined
-            var userEntityIds = user.getUserEntities().stream()
-                    .map(ue -> ue.getEntity().getEntityId())
-                    .collect(Collectors.toSet());
+            // Map: entityId → latest UserEntity membership row
+            var membershipMap = user.getUserEntities().stream()
+                    .collect(Collectors.toMap(
+                            ue -> ue.getEntity().getEntityId(),
+                            ue -> ue,
+                            (a, b) -> a.getJoinedAt().isAfter(b.getJoinedAt()) ? a : b
+                    ));
 
-            // Map all entities and mark joined status
             var entityDTOs = allEntities.stream()
-                    .map(e -> EntityDTO.builder()
-                            .entityId(e.getEntityId())
-                            .name(e.getName())
-                            .abbreviation(e.getAbbreviation())
-                            .associatedSchool(e.getAssociatedSchool())
-                            .entityType(e.getEntityType() != null ? e.getEntityType().getType() : null)
-                            .joined(userEntityIds.contains(e.getEntityId())) // ✅ flag
-                            .build())
-                    .toList();
+                    .map(e -> {
+                        var membership = membershipMap.get(e.getEntityId());
 
-            if (entityDTOs.isEmpty()) {
-                return new CustomResponse<>(
-                        "No entities found in the database.",
-                        null,
-                        HttpStatus.NO_CONTENT,
-                        String.valueOf(HttpStatus.NO_CONTENT.value())
-                );
-            }
+                        boolean joined = membership != null && membership.getLeftAt() == null;
+
+                        return EntityDTO.builder()
+                                .entityId(e.getEntityId())
+                                .name(e.getName())
+                                .abbreviation(e.getAbbreviation())
+                                .associatedSchool(e.getAssociatedSchool())
+                                .entityType(e.getEntityType() != null ? e.getEntityType().getType() : null)
+
+                                .joined(joined)
+                                .joinedAt(membership != null ? String.valueOf(membership.getJoinedAt()) : null)
+                                .leftAt(membership != null ? String.valueOf(membership.getLeftAt()) : null)
+
+                                .build();
+                    })
+                    .toList();
 
             return new CustomResponse<>(
                     "Entities fetched successfully with user join status.",
                     entityDTOs,
                     HttpStatus.OK,
-                    String.valueOf(HttpStatus.OK.value())
-            );
-
-        } catch (NoSuchElementException ex) {
-            return new CustomResponse<>(
-                    "User not found: " + ex.getMessage(),
-                    null,
-                    HttpStatus.NOT_FOUND,
-                    String.valueOf(HttpStatus.NOT_FOUND.value())
-            );
-
-        } catch (IllegalArgumentException ex) {
-            return new CustomResponse<>(
-                    "Invalid user ID provided: " + ex.getMessage(),
-                    null,
-                    HttpStatus.BAD_REQUEST,
-                    String.valueOf(HttpStatus.BAD_REQUEST.value())
+                    "200"
             );
 
         } catch (Exception ex) {
@@ -170,10 +156,13 @@ public class EntityService {
                     "Unexpected error while fetching entities: " + ex.getMessage(),
                     null,
                     HttpStatus.INTERNAL_SERVER_ERROR,
-                    String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                    "500"
             );
         }
     }
+
+
+
     @Transactional
     public CustomResponse<String> joinEntity(Long userId, Long entityId) {
         try {
