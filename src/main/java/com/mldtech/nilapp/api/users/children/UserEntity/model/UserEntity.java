@@ -21,6 +21,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(exclude = {"user","entity"})
 public class UserEntity {
 
     @Id

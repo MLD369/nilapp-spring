@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"affiliationType"})
 public class Affiliation {
 
     @JsonIgnore
@@ -32,7 +33,7 @@ public class Affiliation {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
-    
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt = LocalDateTime.now();
 }

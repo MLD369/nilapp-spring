@@ -1,7 +1,11 @@
 package com.mldtech.nilapp.api.entities.children.EntityType.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.mldtech.nilapp.api.entities.model.Entities;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.List;
 
 @Entity
 @Table(name = "entity_types")
@@ -9,6 +13,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"entities"})
 public class EntityType {
 
     @Id
@@ -21,5 +26,10 @@ public class EntityType {
 
     @Column(length = 100)
     private String description;
+
+    @OneToMany(mappedBy = "entityType")
+    @JsonManagedReference
+    private List<Entities> entities;
+
 }
 

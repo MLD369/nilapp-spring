@@ -21,6 +21,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"userGroups","groupAchievements","entities"})
 public class Group {
 
     @Id

@@ -28,6 +28,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"contributions","dailyStats","userFriends","userGoals","userAchievements","userGroups","userEntities"})
 public class User {
 
     @Id

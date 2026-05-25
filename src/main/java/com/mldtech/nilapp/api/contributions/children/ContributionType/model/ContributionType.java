@@ -1,7 +1,11 @@
 package com.mldtech.nilapp.api.contributions.children.ContributionType.model;
 
+import com.mldtech.nilapp.api.contributions.model.Contribution;
+import com.mldtech.nilapp.api.entities.model.Entities;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.List;
 
 @Entity
 @Table(name = "contribution_types")
@@ -9,6 +13,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(exclude = {"contributions"})
 public class ContributionType {
 
     @Id
@@ -24,4 +29,7 @@ public class ContributionType {
 
     @Column(length = 255)
     private String description;
+
+    @OneToMany(mappedBy = "contributionType")
+    private List<Contribution> contributions;
 }

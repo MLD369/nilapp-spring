@@ -16,6 +16,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(exclude = {"goal","group","entity"})
 public class GoalInstance {
 
     @Id

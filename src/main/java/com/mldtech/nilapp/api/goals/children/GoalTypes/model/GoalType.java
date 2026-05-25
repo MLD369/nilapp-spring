@@ -10,6 +10,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+//@ToString(exclude = {"goal"})
 public class GoalType {
 
     @Id

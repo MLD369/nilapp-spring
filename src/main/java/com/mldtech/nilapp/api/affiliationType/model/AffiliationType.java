@@ -1,10 +1,10 @@
 package com.mldtech.nilapp.api.affiliationType.model;
 
+import com.mldtech.nilapp.api.affiliations.model.Affiliation;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
+import java.util.List;
 
 @Entity
 @Table(name = "affiliation_types")
@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(exclude = {"affiliation"})
 public class AffiliationType {
 
     @Id
@@ -23,5 +24,8 @@ public class AffiliationType {
     private String name;
 
     private String description;
+
+    @OneToMany(mappedBy = "affiliationType")
+    private List<Affiliation> affiliation;
 }
 

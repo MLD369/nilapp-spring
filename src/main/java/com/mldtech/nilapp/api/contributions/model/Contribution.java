@@ -22,6 +22,7 @@ import java.util.Map;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"contributionType","contributionStatus"})
 public class Contribution {
 
     @Id

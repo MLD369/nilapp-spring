@@ -1,7 +1,11 @@
 package com.mldtech.nilapp.api.contributions.children.ContributionStatus.model;
 
+import com.mldtech.nilapp.api.contributions.model.Contribution;
+import com.mldtech.nilapp.api.entities.model.Entities;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.List;
 
 @Entity
 @Table(name = "contribution_statuses")
@@ -9,6 +13,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"contributions"})
 public class ContributionStatus {
 
     @Id
@@ -24,5 +29,8 @@ public class ContributionStatus {
 
     @Column(columnDefinition = "text")
     private String description;
+
+    @OneToMany(mappedBy = "contributionStatus")
+    private List<Contribution> contributions;
 }
 

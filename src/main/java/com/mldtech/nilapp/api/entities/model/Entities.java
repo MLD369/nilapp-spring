@@ -24,6 +24,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"entityAffiliations", "entityType"})
 public class Entities {
 
     @Id
