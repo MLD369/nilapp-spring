@@ -14,7 +14,12 @@ import com.mldtech.nilapp.api.contributions.dto.EntityContributionDTO;
 import com.mldtech.nilapp.api.contributions.dto.GroupContributionDTO;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.contributions.repository.ContributionRepository;
+import com.mldtech.nilapp.api.entities.children.EntityAchievement.model.EntityAchievement;
+import com.mldtech.nilapp.api.entities.children.EntityAchievement.repository.EntityAchievementRepository;
 import com.mldtech.nilapp.api.friend.repository.FriendRepository;
+import com.mldtech.nilapp.api.group.children.GroupAchievement.model.GroupAchievement;
+import com.mldtech.nilapp.api.group.children.GroupAchievement.repository.GroupAchievementRepository;
+import com.mldtech.nilapp.api.users.children.UserAchievement.model.UserAchievement;
 import com.mldtech.nilapp.api.users.children.UserAchievement.repository.UserAchievementRepository;
 import com.mldtech.nilapp.api.users.children.UserGoal.repository.UserGoalRepository;
 import com.mldtech.nilapp.api.users.dto.*;
@@ -30,10 +35,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -47,6 +49,8 @@ public class UserService {
 //    private final UserEntityRepository userEntityRepository;
 //    private final UserGroupRepository userGroupRepository;
     private final UserAchievementRepository userAchievementRepository;
+    private final EntityAchievementRepository entityAchievementRepository;
+    private final GroupAchievementRepository groupAchievementRepository;
     private final UserGoalRepository userGoalRepository;
 //    private final UserGoalHistoryRepository userGoalHistoryRepository;
     private final FriendRepository friendRepository;
@@ -189,21 +193,158 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        var achievements = user.getUserAchievements().stream()
-                .map(ua -> AchievementDTO.builder()
-                        .achievementId(ua.getAchievement().getAchievementId())
-                        .achievementName(ua.getAchievement().getAchievement())
-                        .description(ua.getAchievement().getDescription())
-                        .badge(ua.getAchievement().getBadge())
-                        .build())
-                .toList();
+        Map<String, AchievementDTO> compiled = new LinkedHashMap<>();
+
+        // =====================================================
+        // 1. USER ACHIEVEMENTS
+        // =====================================================
+        var userAchievements = userAchievementRepository.findByUser_UserId(userId);
+
+        for (var ua : userAchievements) {
+
+            var achievement = ua.getAchievement();
+
+            String key = "USER-" + achievement.getAchievementId();
+
+            AchievementDTO dto = compiled.computeIfAbsent(key, k ->
+                    AchievementDTO.builder()
+                            .achievementId(achievement.getAchievementId())
+                            .achievementName(achievement.getAchievement())
+                            .description(achievement.getDescription())
+                            .badge(achievement.getBadge())
+                            .timesEarned(0L)
+                            .entityName(null)
+                            .groupName(null)
+                            .earnedAt(ua.getEarnedAt())
+                            .lastEarnedAt(ua.getEarnedAt())
+                            .build()
+            );
+
+            dto.setTimesEarned(dto.getTimesEarned() + 1);
+
+            updateDates(dto, ua.getEarnedAt());
+        }
+
+        // =====================================================
+        // 2. ENTITY ACHIEVEMENTS
+        // =====================================================
+        Set<Long> processedEntityAchievements = new HashSet<>();
+
+        for (var ue : user.getUserEntities()) {
+
+            var entity = ue.getEntity();
+
+            var entityAchievements =
+                    entityAchievementRepository.findByEntity_EntityId(entity.getEntityId());
+
+            for (var ea : entityAchievements) {
+
+                // prevents duplicate rows
+                if (!processedEntityAchievements.add(ea.getEntityAchievementId())) {
+                    continue;
+                }
+
+                var achievement = ea.getAchievement();
+
+                String key =
+                        "ENTITY-" +
+                                achievement.getAchievementId() +
+                                "-" +
+                                entity.getEntityId();
+
+                AchievementDTO dto = compiled.computeIfAbsent(key, k ->
+                        AchievementDTO.builder()
+                                .achievementId(achievement.getAchievementId())
+                                .achievementName(achievement.getAchievement())
+                                .description(achievement.getDescription())
+                                .badge(achievement.getBadge())
+                                .timesEarned(0L)
+                                .entityName(entity.getName())
+                                .groupName(null)
+                                .earnedAt(ea.getEarnedAt())
+                                .lastEarnedAt(ea.getEarnedAt())
+                                .build()
+                );
+
+                dto.setTimesEarned(dto.getTimesEarned() + 1);
+
+                updateDates(dto, ea.getEarnedAt());
+            }
+        }
+
+        // =====================================================
+        // 3. GROUP ACHIEVEMENTS
+        // =====================================================
+        Set<Long> processedGroupAchievements = new HashSet<>();
+
+        for (var ug : user.getUserGroups()) {
+
+            var group = ug.getGroup();
+
+            var groupAchievements =
+                    groupAchievementRepository.findByGroup_GroupId(group.getGroupId());
+
+            for (var ga : groupAchievements) {
+
+                // prevents duplicate rows
+                if (!processedGroupAchievements.add(ga.getGroupAchievementsId())) {
+                    continue;
+                }
+
+                var achievement = ga.getAchievement();
+
+                String key =
+                        "GROUP-" +
+                                achievement.getAchievementId() +
+                                "-" +
+                                group.getGroupId();
+
+                AchievementDTO dto = compiled.computeIfAbsent(key, k ->
+                        AchievementDTO.builder()
+                                .achievementId(achievement.getAchievementId())
+                                .achievementName(achievement.getAchievement())
+                                .description(achievement.getDescription())
+                                .badge(achievement.getBadge())
+                                .timesEarned(0L)
+                                .entityName(null)
+                                .groupName(group.getName())
+                                .earnedAt(ga.getEarnedAt())
+                                .lastEarnedAt(ga.getEarnedAt())
+                                .build()
+                );
+
+                dto.setTimesEarned(dto.getTimesEarned() + 1);
+
+                updateDates(dto, ga.getEarnedAt());
+            }
+        }
 
         return UserProfileResponse.builder()
                 .userId(userId)
                 .username(user.getUsername())
-                .achievements(achievements)
+                .achievements(new ArrayList<>(compiled.values()))
                 .build();
     }
+
+    private void updateDates(AchievementDTO dto, LocalDateTime earnedAt) {
+
+        if (earnedAt == null) {
+            return;
+        }
+
+        if (dto.getEarnedAt() == null ||
+                earnedAt.isBefore(dto.getEarnedAt())) {
+
+            dto.setEarnedAt(earnedAt);
+        }
+
+        if (dto.getLastEarnedAt() == null ||
+                earnedAt.isAfter(dto.getLastEarnedAt())) {
+
+            dto.setLastEarnedAt(earnedAt);
+        }
+    }
+
     public UserProfileResponse getUserGoals(Long userId) {
 
         var user = userRepository.findById(userId)

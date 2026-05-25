@@ -14,4 +14,5 @@ public interface GroupAchievementRepository extends JpaRepository<GroupAchieveme
     boolean existsByGroup_GroupIdAndAchievement_AchievementId(Long groupId, Long achievementId);
 
     void deleteByGroup_GroupIdAndAchievement_AchievementId(Long groupId, Long achievementId);
+
 }

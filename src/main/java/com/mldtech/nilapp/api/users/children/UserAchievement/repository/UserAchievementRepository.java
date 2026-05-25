@@ -42,5 +42,8 @@ public interface UserAchievementRepository extends JpaRepository<UserAchievement
             LocalDateTime start,
             LocalDateTime end
     );
+
+    List<UserAchievement> findByUser_UserId(Long userId);
+
 }
 

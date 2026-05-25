@@ -3,6 +3,8 @@ package com.mldtech.nilapp.api.users.children.UserAchievement.model;
 //import com.mldtech.nilapp.api.achievements.model.Achievement;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.mldtech.nilapp.api.achievements.model.Achievement;
+import com.mldtech.nilapp.api.entities.model.Entities;
+import com.mldtech.nilapp.api.group.model.Group;
 import com.mldtech.nilapp.api.users.model.User;
 import jakarta.persistence.*;
 import lombok.*;
