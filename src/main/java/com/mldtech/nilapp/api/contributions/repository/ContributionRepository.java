@@ -98,5 +98,13 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
 """)
     List<EntityNilLeaderDTO> getEntityNilLeaderboard(LocalDateTime start, LocalDateTime end);
 
+    @Query("""
+    SELECT c FROM Contribution c
+    WHERE c.userId = :userId
+      AND c.createdAt >= :start
+      AND c.createdAt < :end
+""")
+    List<Contribution> findByUserIdAndDateRange(Long userId, LocalDateTime start, LocalDateTime end);
+
 }
 

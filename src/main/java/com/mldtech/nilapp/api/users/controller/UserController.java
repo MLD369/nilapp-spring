@@ -13,6 +13,7 @@ import com.mldtech.nilapp.helper.CustomResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -309,12 +310,64 @@ public class UserController {
     }
 
     @GetMapping("/{userId}/stats")
-    public CustomResponse<UserStatsResponse> getUserStats(
+    public CustomResponse<UserStatsResponse> getUserStats( /// for the stats page
             @PathVariable Long userId,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate
     ) {
         return userService.getUserStats(userId, startDate, endDate);
     }
+
+
+    @GetMapping("/{userId}/stats-by-period")
+    public CustomResponse<UserStatsSummaryDTO> getUserStatsByPeriod(
+            @PathVariable Long userId,
+            @RequestParam String startDate,
+            @RequestParam String endDate,
+            @RequestParam String period
+    ) {
+        try {
+            // Validate period
+            String normalizedPeriod = period.toUpperCase();
+            if (!List.of("DAILY", "WEEKLY", "MONTHLY", "YEARLY").contains(normalizedPeriod)) {
+                return new CustomResponse<>(
+                        "Invalid period. Must be DAILY, WEEKLY, MONTHLY, or YEARLY.",
+                        null,
+                        HttpStatus.BAD_REQUEST,
+                        "400"
+                );
+            }
+
+            // Parse dates
+            LocalDate start = LocalDate.parse(startDate);
+            LocalDate end = LocalDate.parse(endDate);
+
+            if (end.isBefore(start)) {
+                return new CustomResponse<>(
+                        "endDate cannot be before startDate.",
+                        null,
+                        HttpStatus.BAD_REQUEST,
+                        "400"
+                );
+            }
+
+            // Call service
+            return userService.getUserStatsByPeriod(
+                    userId,
+                    start,
+                    end,
+                    normalizedPeriod
+            );
+
+        } catch (Exception ex) {
+            return new CustomResponse<>(
+                    "Unexpected error while fetching stats: " + ex.getMessage(),
+                    null,
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "500"
+            );
+        }
+    }
+
 
 }

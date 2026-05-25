@@ -20,6 +20,7 @@ import com.mldtech.nilapp.api.users.children.UserGoal.repository.UserGoalReposit
 import com.mldtech.nilapp.api.users.dto.*;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
 import com.mldtech.nilapp.helper.CustomResponse;
+import com.mldtech.nilapp.helper.PeriodKey;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,8 +30,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
@@ -573,6 +577,78 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
             );
         }
     }
+    public CustomResponse<UserStatsSummaryDTO> getUserStatsByPeriod(
+            Long userId,
+            LocalDate startDate,
+            LocalDate endDate,
+            String periodType
+    ) {
+        try {
+            var user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            List<Contribution> contributions =
+                    contributionRepository.findByUserIdAndDateRange(
+                            userId,
+                            startDate.atStartOfDay(),
+                            endDate.plusDays(1).atStartOfDay()
+                    );
+            PeriodKey periodKey = new PeriodKey();
+            // Group contributions by period
+            Map<String, List<Contribution>> grouped = contributions.stream()
+                    .collect(Collectors.groupingBy(c -> periodKey.getPeriodKey(c.getCreatedAt(), periodType)));
+
+            // Build per-period stats
+            List<UserPeriodStatsDTO> periodStats = grouped.entrySet().stream()
+                    .map(entry -> {
+                        String key = entry.getKey();
+                        List<Contribution> list = entry.getValue();
+
+                        long totalSteps = list.stream().mapToLong(Contribution::getStepsContributed).sum();
+                        long totalCoins = list.stream().mapToLong(Contribution::getCoinsContributed).sum();
+
+                        return UserPeriodStatsDTO.builder()
+                                .period(key)
+                                .totalSteps(totalSteps)
+                                .totalCoins(totalCoins)
+                                .build();
+                    })
+                    .sorted(Comparator.comparing(UserPeriodStatsDTO::getPeriod))
+                    .toList();
+
+            // Global averages across periods
+            long totalStepsAll = periodStats.stream().mapToLong(UserPeriodStatsDTO::getTotalSteps).sum();
+            long totalCoinsAll = periodStats.stream().mapToLong(UserPeriodStatsDTO::getTotalCoins).sum();
+            int numberOfPeriods = periodStats.size();
+
+            double avgStepsPerPeriod = numberOfPeriods == 0 ? 0 : (double) totalStepsAll / numberOfPeriods;
+            double avgCoinsPerPeriod = numberOfPeriods == 0 ? 0 : (double) totalCoinsAll / numberOfPeriods;
+
+            UserStatsSummaryDTO summary = UserStatsSummaryDTO.builder()
+                    .avgSteps(avgStepsPerPeriod)
+                    .avgCoins(avgCoinsPerPeriod)
+                    .periodStats(periodStats)
+                    .build();
+
+            return new CustomResponse<>(
+                    "User stats fetched successfully.",
+                    summary,
+                    HttpStatus.OK,
+                    "200"
+            );
+
+        } catch (Exception ex) {
+            return new CustomResponse<>(
+                    "Unexpected error while fetching stats: " + ex.getMessage(),
+                    null,
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "500"
+            );
+        }
+    }
+
+
+
 
 //public UserProfileResponse getUserAchievements(Long userId) {
 //
