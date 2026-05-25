@@ -146,8 +146,9 @@ make groups table many to many
 #make friends table 
 needs CHECK (user_id < friend_id) - to make sure there are not duplicate friend request
   
-  # make many to many relationship for user and entities need to update data
+# make many to many relationship for user and entities need to update data
 
+#need a way to track a users leaving and joining a group right now it just shows joined and left -> do we need history of joining and leaving entity?
 
 
 
