@@ -262,10 +262,10 @@ CREATE TABLE "goal_instances" (
                                   "current_progress" decimal(10,6) DEFAULT 0.00,
                                   "is_active" bool DEFAULT true,
                                   "is_complete" bool DEFAULT false,
-                                  "steps_contributed" int NOT NULL DEFAULT 0,
-                                  "coins_contributed" int NOT NULL DEFAULT 0,
-                                  "steps_needed" int,
-                                  "coins_needed" int,
+                                  "steps_contributed" bigint NOT NULL DEFAULT 0,
+                                  "coins_contributed" bigint NOT NULL DEFAULT 0,
+                                  "steps_needed" bigint,
+                                  "coins_needed" bigint,
                                   "dollar_amount"  decimal(10,6) NOT NULL,
 );
 
