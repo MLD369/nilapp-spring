@@ -45,12 +45,28 @@ public class GoalInstance {
     private LocalDate endDate;
 
     @Column(name = "current_progress", precision = 10, scale = 6)
-    private BigDecimal currentProgress;
+    private BigDecimal currentProgress; // TODO remove?
 
     @Column(name = "is_active")
     private Boolean isActive;
 
     @Column(name = "is_complete")
     private Boolean isComplete;
+
+    @Column(name = "steps_contributed", nullable = false)
+    private Long stepsContributed = 0L;
+
+    @Column(name = "coins_contributed", nullable = false)
+    private Long coinsContributed = 0L;
+
+    @Column(name = "steps_needed")
+    private Long stepsNeeded;
+
+    @Column(name = "coins_needed")
+    private Long coinsNeeded;
+
+    @Column(name = "dollar_amount", nullable = false)
+    private BigDecimal dollarAmount = BigDecimal.ZERO;
 }
+
 

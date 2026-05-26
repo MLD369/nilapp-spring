@@ -10,6 +10,7 @@ import com.mldtech.nilapp.api.users.children.UserEntity.service.UserEntityServic
 import com.mldtech.nilapp.api.users.dto.*;
 import com.mldtech.nilapp.api.users.service.UserService;
 import com.mldtech.nilapp.helper.CustomResponse;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -366,6 +367,40 @@ public class UserController {
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     "500"
             );
+        }
+    }
+
+
+
+
+
+    @GetMapping("/{userId}/goal-dashboard")
+    public CustomResponse<UserGoalDashboardResponse> getDashboard(@PathVariable Long userId) {
+        try {
+            UserGoalDashboardResponse dashboard = userService.getUserGoalDashboard(userId);
+
+            return new CustomResponse<>(
+                            "Goal dashboard loaded successfully",
+                            dashboard,
+                            HttpStatus.OK,
+                            "200"
+                    );
+
+        } catch (EntityNotFoundException ex) {
+            return new CustomResponse<>(
+                            ex.getMessage(),
+                            null,
+                            HttpStatus.NOT_FOUND,
+                            "404"
+                    );
+
+        } catch (Exception ex) {
+            return new CustomResponse<>(
+                            "Failed to load goal dashboard",
+                            null,
+                            HttpStatus.INTERNAL_SERVER_ERROR,
+                            "500"
+                    );
         }
     }
 

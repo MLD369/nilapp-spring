@@ -17,4 +17,6 @@ public interface UserGoalRepository extends JpaRepository<UserGoal, Long> {
             LocalDateTime start,
             LocalDateTime end
     );
+    List<UserGoal> findByUser_UserId(Long userId);
+
 }

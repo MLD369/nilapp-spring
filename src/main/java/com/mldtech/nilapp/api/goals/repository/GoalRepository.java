@@ -9,7 +9,9 @@ public interface GoalRepository extends JpaRepository<Goal, Long> {
 
 //    List<Goal> findByEntityId(Long entityId);
 
-    List<Goal> findByAchievementId(Long achievementId);
+//    List<Goal> findByAchievementId(Long achievementId);
+List<Goal> findByAchievement_AchievementId(Long achievementId);
+
 
     List<Goal> findByCompletedDateIsNull();
 

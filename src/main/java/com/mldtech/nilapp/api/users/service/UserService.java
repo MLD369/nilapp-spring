@@ -17,6 +17,8 @@ import com.mldtech.nilapp.api.contributions.repository.ContributionRepository;
 import com.mldtech.nilapp.api.entities.children.EntityAchievement.model.EntityAchievement;
 import com.mldtech.nilapp.api.entities.children.EntityAchievement.repository.EntityAchievementRepository;
 import com.mldtech.nilapp.api.friend.repository.FriendRepository;
+import com.mldtech.nilapp.api.goals.children.GoalInstances.model.GoalInstance;
+import com.mldtech.nilapp.api.goals.children.GoalInstances.repository.GoalInstanceRepository;
 import com.mldtech.nilapp.api.group.children.GroupAchievement.model.GroupAchievement;
 import com.mldtech.nilapp.api.group.children.GroupAchievement.repository.GroupAchievementRepository;
 import com.mldtech.nilapp.api.users.children.UserAchievement.model.UserAchievement;
@@ -25,7 +27,9 @@ import com.mldtech.nilapp.api.users.children.UserGoal.repository.UserGoalReposit
 import com.mldtech.nilapp.api.users.dto.*;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
 import com.mldtech.nilapp.helper.CustomResponse;
+import com.mldtech.nilapp.helper.Helper;
 import com.mldtech.nilapp.helper.PeriodKey;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -52,8 +56,10 @@ public class UserService {
     private final EntityAchievementRepository entityAchievementRepository;
     private final GroupAchievementRepository groupAchievementRepository;
     private final UserGoalRepository userGoalRepository;
+    private final GoalInstanceRepository goalInstanceRepository;
 //    private final UserGoalHistoryRepository userGoalHistoryRepository;
     private final FriendRepository friendRepository;
+    Helper helper = new Helper();
 //    @Transactional   /// TODO change this to the right way with dtos
 //    public UserProfileResponse getUserProfile(Long userId) {
 //
@@ -734,10 +740,10 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                             startDate.atStartOfDay(),
                             endDate.plusDays(1).atStartOfDay()
                     );
-            PeriodKey periodKey = new PeriodKey();
+
             // Group contributions by period
             Map<String, List<Contribution>> grouped = contributions.stream()
-                    .collect(Collectors.groupingBy(c -> periodKey.getPeriodKey(c.getCreatedAt(), periodType)));
+                    .collect(Collectors.groupingBy(c -> helper.getPeriodKey(c.getCreatedAt(), periodType)));
 
             // Build per-period stats
             List<UserPeriodStatsDTO> periodStats = grouped.entrySet().stream()
@@ -787,113 +793,327 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
             );
         }
     }
+    public UserGoalDashboardResponse getUserGoalDashboard(Long userId) {
 
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
+        try {
 
+            /*
+             * ============================================================
+             * USER GOALS
+             * Merge duplicate goalIds into a single progress object
+             * ============================================================
+             */
 
-//public UserProfileResponse getUserAchievements(Long userId) {
-//
-//    var user = userRepository.findById(userId)
-//            .orElseThrow(() -> new RuntimeException("User not found"));
-//
-//    return UserProfileResponse.builder()
-//            .userId(userId)
-//            .username(user.getUsername())
-//            .achievements(user.getUserAchievements().stream().toList())
-//            .build();
-//}
-//public UserProfileResponse getUserGoals(Long userId) {
-//
-//    var user = userRepository.findById(userId)
-//            .orElseThrow(() -> new RuntimeException("User not found"));
-//
-//    return UserProfileResponse.builder()
-//            .userId(userId)
-//            .username(user.getUsername())
-//            .goals(user.getUserGoals().stream().toList())
-//            .build();
-//}
-//public UserProfileResponse getUserCompletedGoals(Long userId) {
-//
-//    var user = userRepository.findById(userId)
-//            .orElseThrow(() -> new RuntimeException("User not found"));
-//
-//    var completedGoals = user.getUserGoals()
-//            .stream()
-//            .filter(g -> Boolean.TRUE.equals(g.getIsComplete()))
-//            .toList();
-//
-//
-//    return UserProfileResponse.builder()
-//            .userId(userId)
-//            .username(user.getUsername())
-//            .goals(completedGoals)
-//            .build();
-//}
-//public UserProfileResponse getUserIncompletedGoals(Long userId) {
-//
-//    var user = userRepository.findById(userId)
-//            .orElseThrow(() -> new RuntimeException("User not found"));
-//
-//    var incompletedGoals = user.getUserGoals()
-//            .stream()
-//            .filter(g -> Boolean.FALSE.equals(g.getIsComplete()))
-//            .toList();
-//
-//
-//    return UserProfileResponse.builder()
-//            .userId(userId)
-//            .username(user.getUsername())
-//            .goals(incompletedGoals)
-//            .build();
-//}
-////    public UserProfileResponse getUserGoalHistory(Long userId) {
-////
-////        var user = userRepository.findById(userId)
-////                .orElseThrow(() -> new RuntimeException("User not found"));
-////
-////        return UserProfileResponse.builder()
-////                .userId(userId)
-////                .username(user.getUsername())
-////                .goalHistory(user.getUserGoalHistories().stream().toList())
-////                .build();
-////    }
-//public UserProfileResponse getUserGroups(Long userId) {
-//
-//    var user = userRepository.findById(userId)
-//            .orElseThrow(() -> new RuntimeException("User not found"));
-//
-//    return UserProfileResponse.builder()
-//            .userId(userId)
-//            .username(user.getUsername())
-//            .groups(user.getUserGroups().stream().toList())
-//            .build();
-//}
-//
-//public UserProfileResponse getUserEntities(Long userId) {
-//
-//    var user = userRepository.findById(userId)
-//            .orElseThrow(() -> new RuntimeException("User not found"));
-//
-//    return UserProfileResponse.builder()
-//            .userId(userId)
-//            .username(user.getUsername())
-//            .entities(user.getUserEntities().stream().toList())
-//            .build();
-//}
-//public UserProfileResponse getUserFriends(Long userId) {
-//
-//    var user = userRepository.findById(userId)
-//            .orElseThrow(() -> new RuntimeException("User not found"));
-//
-//    return UserProfileResponse.builder()
-//            .userId(userId)
-//            .username(user.getUsername())
-//            .friends(user.getUserFriends().stream().toList())
-//            .build();
-//}
+            Map<Long, List<GoalProgressDTO>> groupedUserGoals =
+                    user.getUserGoals().stream()
+                            .map(ug -> helper.toGoalProgressDTO(ug.getGoalInstance()))
+                            .collect(Collectors.groupingBy(GoalProgressDTO::getGoalId));
 
+            List<GoalProgressDTO> userGoals =
+                    groupedUserGoals.values().stream()
+                            .map(goalList -> {
 
+                                GoalProgressDTO first = goalList.get(0);
+
+                                long totalSteps = goalList.stream()
+                                        .mapToLong(g ->
+                                                g.getStepsContributed() != null
+                                                        ? g.getStepsContributed()
+                                                        : 0L
+                                        )
+                                        .sum();
+
+                                long totalCoins = goalList.stream()
+                                        .mapToLong(g ->
+                                                g.getCoinsContributed() != null
+                                                        ? g.getCoinsContributed()
+                                                        : 0L
+                                        )
+                                        .sum();
+
+                                BigDecimal totalDollarAmount = goalList.stream()
+                                        .map(g ->
+                                                g.getDollarAmount() != null
+                                                        ? g.getDollarAmount()
+                                                        : BigDecimal.ZERO
+                                        )
+                                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                                Long requiredSteps = first.getRequiredSteps();
+                                Long requiredCoins = first.getRequiredCoins();
+
+                                Long currentAmount = requiredSteps != null
+                                        ? totalSteps
+                                        : totalCoins;
+
+                                double progressPct = 0.0;
+
+                                if (requiredSteps != null && requiredSteps > 0) {
+                                    progressPct = (totalSteps * 100.0) / requiredSteps;
+                                } else if (requiredCoins != null && requiredCoins > 0) {
+                                    progressPct = (totalCoins * 100.0) / requiredCoins;
+                                }
+
+                                return GoalProgressDTO.builder()
+                                        .goalId(first.getGoalId())
+                                        .goalName(first.getGoalName())
+
+                                        .requiredSteps(requiredSteps)
+                                        .requiredCoins(requiredCoins)
+
+                                        .currentAmount(currentAmount)
+                                        .progressPct(progressPct)
+
+                                        .stepsContributed(totalSteps)
+                                        .coinsContributed(totalCoins)
+
+                                        .stepsNeeded(requiredSteps)
+                                        .coinsNeeded(requiredCoins)
+
+                                        .dollarAmount(totalDollarAmount)
+
+                                        .isComplete(progressPct >= 100.0)
+                                        .build();
+                            })
+                            .toList();
+
+            /*
+             * ============================================================
+             * ENTITY GOALS
+             * Remove duplicate entities
+             * Merge duplicate goals inside entity
+             * ============================================================
+             */
+
+            Map<Long, EntityGoalProgressDTO> entityMap = new LinkedHashMap<>();
+
+            for (var ue : user.getUserEntities()) {
+
+                var entity = ue.getEntity();
+
+                // skip duplicates
+                if (entityMap.containsKey(entity.getEntityId())) {
+                    continue;
+                }
+
+                var goalInstances = goalInstanceRepository
+                        .findByEntity_EntityId(entity.getEntityId());
+
+                Map<Long, List<GoalProgressDTO>> groupedGoals =
+                        goalInstances.stream()
+                                .map(helper::toGoalProgressDTO)
+                                .collect(Collectors.groupingBy(GoalProgressDTO::getGoalId));
+
+                List<GoalProgressDTO> mergedGoals =
+                        groupedGoals.values().stream()
+                                .map(goalList -> {
+
+                                    GoalProgressDTO first = goalList.get(0);
+
+                                    long totalSteps = goalList.stream()
+                                            .mapToLong(g ->
+                                                    g.getStepsContributed() != null
+                                                            ? g.getStepsContributed()
+                                                            : 0L
+                                            )
+                                            .sum();
+
+                                    long totalCoins = goalList.stream()
+                                            .mapToLong(g ->
+                                                    g.getCoinsContributed() != null
+                                                            ? g.getCoinsContributed()
+                                                            : 0L
+                                            )
+                                            .sum();
+
+                                    BigDecimal totalDollarAmount = goalList.stream()
+                                            .map(g ->
+                                                    g.getDollarAmount() != null
+                                                            ? g.getDollarAmount()
+                                                            : BigDecimal.ZERO
+                                            )
+                                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                                    Long requiredSteps = first.getRequiredSteps();
+                                    Long requiredCoins = first.getRequiredCoins();
+
+                                    Long currentAmount = requiredSteps != null
+                                            ? totalSteps
+                                            : totalCoins;
+
+                                    double progressPct = 0.0;
+
+                                    if (requiredSteps != null && requiredSteps > 0) {
+                                        progressPct = (totalSteps * 100.0) / requiredSteps;
+                                    } else if (requiredCoins != null && requiredCoins > 0) {
+                                        progressPct = (totalCoins * 100.0) / requiredCoins;
+                                    }
+
+                                    return GoalProgressDTO.builder()
+                                            .goalId(first.getGoalId())
+                                            .goalName(first.getGoalName())
+
+                                            .requiredSteps(requiredSteps)
+                                            .requiredCoins(requiredCoins)
+
+                                            .currentAmount(currentAmount)
+                                            .progressPct(progressPct)
+
+                                            .stepsContributed(totalSteps)
+                                            .coinsContributed(totalCoins)
+
+                                            .stepsNeeded(requiredSteps)
+                                            .coinsNeeded(requiredCoins)
+
+                                            .dollarAmount(totalDollarAmount)
+
+                                            .isComplete(progressPct >= 100.0)
+                                            .build();
+                                })
+                                .toList();
+
+                entityMap.put(
+                        entity.getEntityId(),
+                        EntityGoalProgressDTO.builder()
+                                .entityId(entity.getEntityId())
+                                .entityName(entity.getName())
+                                .goals(mergedGoals)
+                                .build()
+                );
+            }
+
+            List<EntityGoalProgressDTO> entityGoals =
+                    new ArrayList<>(entityMap.values());
+
+            /*
+             * ============================================================
+             * GROUP GOALS
+             * Remove duplicate groups
+             * Merge duplicate goals inside group
+             * ============================================================
+             */
+
+            Map<Long, GroupGoalProgressDTO> groupMap = new LinkedHashMap<>();
+
+            for (var ug : user.getUserGroups()) {
+
+                var group = ug.getGroup();
+
+                // skip duplicates
+                if (groupMap.containsKey(group.getGroupId())) {
+                    continue;
+                }
+
+                var goalInstances = goalInstanceRepository
+                        .findByGroup_GroupId(group.getGroupId());
+
+                Map<Long, List<GoalProgressDTO>> groupedGoals =
+                        goalInstances.stream()
+                                .map(helper::toGoalProgressDTO)
+                                .collect(Collectors.groupingBy(GoalProgressDTO::getGoalId));
+
+                List<GoalProgressDTO> mergedGoals =
+                        groupedGoals.values().stream()
+                                .map(goalList -> {
+
+                                    GoalProgressDTO first = goalList.get(0);
+
+                                    long totalSteps = goalList.stream()
+                                            .mapToLong(g ->
+                                                    g.getStepsContributed() != null
+                                                            ? g.getStepsContributed()
+                                                            : 0L
+                                            )
+                                            .sum();
+
+                                    long totalCoins = goalList.stream()
+                                            .mapToLong(g ->
+                                                    g.getCoinsContributed() != null
+                                                            ? g.getCoinsContributed()
+                                                            : 0L
+                                            )
+                                            .sum();
+
+                                    BigDecimal totalDollarAmount = goalList.stream()
+                                            .map(g ->
+                                                    g.getDollarAmount() != null
+                                                            ? g.getDollarAmount()
+                                                            : BigDecimal.ZERO
+                                            )
+                                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                                    Long requiredSteps = first.getRequiredSteps();
+                                    Long requiredCoins = first.getRequiredCoins();
+
+                                    Long currentAmount = requiredSteps != null
+                                            ? totalSteps
+                                            : totalCoins;
+
+                                    double progressPct = 0.0;
+
+                                    if (requiredSteps != null && requiredSteps > 0) {
+                                        progressPct = (totalSteps * 100.0) / requiredSteps;
+                                    } else if (requiredCoins != null && requiredCoins > 0) {
+                                        progressPct = (totalCoins * 100.0) / requiredCoins;
+                                    }
+
+                                    return GoalProgressDTO.builder()
+                                            .goalId(first.getGoalId())
+                                            .goalName(first.getGoalName())
+
+                                            .requiredSteps(requiredSteps)
+                                            .requiredCoins(requiredCoins)
+
+                                            .currentAmount(currentAmount)
+                                            .progressPct(progressPct)
+
+                                            .stepsContributed(totalSteps)
+                                            .coinsContributed(totalCoins)
+
+                                            .stepsNeeded(requiredSteps)
+                                            .coinsNeeded(requiredCoins)
+
+                                            .dollarAmount(totalDollarAmount)
+
+                                            .isComplete(progressPct >= 100.0)
+                                            .build();
+                                })
+                                .toList();
+
+                groupMap.put(
+                        group.getGroupId(),
+                        GroupGoalProgressDTO.builder()
+                                .groupId(group.getGroupId())
+                                .groupName(group.getName())
+                                .goals(mergedGoals)
+                                .build()
+                );
+            }
+
+            List<GroupGoalProgressDTO> groupGoals =
+                    new ArrayList<>(groupMap.values());
+
+            /*
+             * ============================================================
+             * FINAL RESPONSE
+             * ============================================================
+             */
+
+            return UserGoalDashboardResponse.builder()
+                    .userId(userId)
+                    .username(user.getUsername())
+                    .userGoals(userGoals)
+                    .entityGoals(entityGoals)
+                    .groupGoals(groupGoals)
+                    .build();
+
+        } catch (Exception ex) {
+            throw new RuntimeException("Error building dashboard: " + ex.getMessage());
+        }
+    }
 
 }
 

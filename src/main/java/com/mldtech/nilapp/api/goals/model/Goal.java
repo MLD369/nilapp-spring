@@ -1,5 +1,6 @@
 package com.mldtech.nilapp.api.goals.model;
 
+import com.mldtech.nilapp.api.achievements.model.Achievement;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -10,6 +11,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"achievement"})
 public class Goal {
 
     @Id
@@ -20,8 +22,9 @@ public class Goal {
     @Column(name = "goal_types_id")
     private int goalTypesId;
 
-    @Column(name = "achievement_id")
-    private Long achievementId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "achievement_id", nullable = false)
+    private Achievement achievement;
 
     @Column(length = 255)
     private String goal;
@@ -34,5 +37,6 @@ public class Goal {
 
     @Column(name = "goal_lock_date")
     private LocalDateTime goalLockDate;
+
 }
 

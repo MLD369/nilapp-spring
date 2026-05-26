@@ -36,7 +36,11 @@ public class GoalService {
     public Goal updateGoal(Long goalId, Goal updated) {
         Goal existing = getGoal(goalId);
 
-        existing.setAchievementId(updated.getAchievementId());
+        // FIX: update the Achievement relationship properly
+        if (updated.getAchievement() != null) {
+            existing.setAchievement(updated.getAchievement());
+        }
+
         existing.setGoal(updated.getGoal());
         existing.setDescription(updated.getDescription());
         existing.setGoalLockDate(updated.getGoalLockDate());
@@ -44,6 +48,7 @@ public class GoalService {
 
         return repository.save(existing);
     }
+
 
     public Goal completeGoal(Long goalId) {
         Goal goal = getGoal(goalId);
