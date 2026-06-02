@@ -3,6 +3,7 @@ package com.mldtech.nilapp.api.entities.controller;
 import com.mldtech.nilapp.api.entities.model.Entities;
 import com.mldtech.nilapp.api.entities.service.EntityService;
 import com.mldtech.nilapp.api.users.dto.EntityDTO;
+import com.mldtech.nilapp.api.users.dto.EntityDetailsDTO;
 import com.mldtech.nilapp.helper.CustomResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +25,11 @@ public class EntityController {
     @GetMapping("/{entityId}")
     public Entities getEntity(@PathVariable Long entityId) {
         return service.getEntities(entityId);
+    }
+
+    @GetMapping("/{entityId}/details")
+    public EntityDetailsDTO getEntitiesDetails(@PathVariable Long entityId) {
+        return service.getEntitiesDetails(entityId);
     }
 
     @PostMapping

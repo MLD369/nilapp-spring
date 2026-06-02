@@ -3,6 +3,8 @@ package com.mldtech.nilapp.api.users.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 @Builder
 public class EntityDTO {
@@ -15,4 +17,6 @@ public class EntityDTO {
     private boolean joined;
     private String joinedAt;
     private String leftAt;
+    private List<EntityAffiliationDTO> affiliations;
+    private List<GoalProgressDTO> activeGoals;
 }

@@ -2,12 +2,15 @@ package com.mldtech.nilapp.api.entities.service;
 
 import com.mldtech.nilapp.api.entities.model.Entities;
 import com.mldtech.nilapp.api.entities.repository.EntityRepository;
+import com.mldtech.nilapp.api.goals.children.GoalInstances.repository.GoalInstanceRepository;
 import com.mldtech.nilapp.api.users.children.UserEntity.model.UserEntity;
 import com.mldtech.nilapp.api.users.children.UserEntity.repository.UserEntityRepository;
-import com.mldtech.nilapp.api.users.dto.EntityDTO;
+import com.mldtech.nilapp.api.users.dto.*;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
 import com.mldtech.nilapp.helper.CustomResponse;
+import com.mldtech.nilapp.helper.Helper;
 import com.mldtech.nilapp.mapper.EntityMapper;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.Hibernate;
@@ -26,6 +29,8 @@ public class EntityService {
     private final EntityRepository entityRepository;
     private final UserRepository userRepository;
     private final UserEntityRepository userEntityRepository;
+    private final GoalInstanceRepository goalInstanceRepository;
+    private final Helper helper = new Helper();
 
     public CustomResponse<List<EntityDTO>> getAllEntities() {
         try {
@@ -242,7 +247,49 @@ public class EntityService {
             );
         }
     }
+    public EntityDetailsDTO getEntitiesDetails(Long entityId) {
 
+        Entities entity = entityRepository.findById(entityId)
+                .orElseThrow(() -> new EntityNotFoundException("Entity not found"));
+
+        // ACTIVE GOALS
+        var goalInstances = goalInstanceRepository.findByEntity_EntityId(entityId);
+
+        List<GoalProgressDTO> activeGoals = goalInstances.stream()
+                .map(helper::toGoalProgressDTO)
+                .toList();
+
+        // BUILD DTO
+        return EntityDetailsDTO.builder()
+                .entityId(entity.getEntityId())
+                .name(entity.getName())
+                .abbreviation(entity.getAbbreviation())
+                .associatedSchool(entity.getAssociatedSchool())
+
+                // ENTITY TYPE DTO
+                .entityType(
+                        EntityTypeDTO.builder()
+                                .entityTypesId(entity.getEntityType().getEntityTypesId())
+                                .type(entity.getEntityType().getType())
+                                .description(entity.getEntityType().getDescription())
+                                .build()
+                )
+
+                // AFFILIATIONS DTO
+                .affiliations(
+                        entity.getEntityAffiliations().stream()
+                                .map(a -> EntityAffiliationDTO.builder()
+                                        .id(a.getId())
+                                        .affiliationName(a.getAffiliation().getName())
+                                        .build()
+                                ).toList()
+                )
+
+                // ACTIVE GOALS DTO
+                .activeGoals(activeGoals)
+
+                .build();
+    }
 
 
 }

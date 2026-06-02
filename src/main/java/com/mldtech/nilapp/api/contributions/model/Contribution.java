@@ -1,5 +1,6 @@
 package com.mldtech.nilapp.api.contributions.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.mldtech.nilapp.api.contributions.children.ContributionStatus.model.ContributionStatus;
 import com.mldtech.nilapp.api.contributions.children.ContributionType.model.ContributionType;
 import com.mldtech.nilapp.api.goals.model.Goal;
@@ -59,6 +60,7 @@ public class Contribution {
 
     @ManyToOne
     @JoinColumn(name = "contribution_status_id",nullable = false)
+    @JsonManagedReference
     private ContributionStatus contributionStatus;
 
     @Type(JsonType.class)

@@ -1,5 +1,6 @@
 package com.mldtech.nilapp.api.contributions.children.ContributionStatus.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.entities.model.Entities;
 import jakarta.persistence.*;
@@ -31,6 +32,7 @@ public class ContributionStatus {
     private String description;
 
     @OneToMany(mappedBy = "contributionStatus")
+    @JsonBackReference
     private List<Contribution> contributions;
 }
 

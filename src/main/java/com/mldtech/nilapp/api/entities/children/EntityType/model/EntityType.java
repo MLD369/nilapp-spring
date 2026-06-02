@@ -1,5 +1,7 @@
 package com.mldtech.nilapp.api.entities.children.EntityType.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.mldtech.nilapp.api.entities.model.Entities;
 import jakarta.persistence.*;
@@ -28,7 +30,7 @@ public class EntityType {
     private String description;
 
     @OneToMany(mappedBy = "entityType")
-    @JsonManagedReference
+    @JsonBackReference
     private List<Entities> entities;
 
 }

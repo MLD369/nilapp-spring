@@ -43,6 +43,7 @@ public class Entities {
 
     @ManyToOne
     @JoinColumn(name = "type",nullable = false)
+    @JsonManagedReference
     private EntityType entityType;
 
     @Column(name = "is_active")
