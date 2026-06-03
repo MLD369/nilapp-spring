@@ -1,5 +1,6 @@
 package com.mldtech.nilapp.api.contributions.children.ContributionType.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.entities.model.Entities;
 import jakarta.persistence.*;
@@ -31,5 +32,6 @@ public class ContributionType {
     private String description;
 
     @OneToMany(mappedBy = "contributionType")
+    @JsonIgnore
     private List<Contribution> contributions;
 }

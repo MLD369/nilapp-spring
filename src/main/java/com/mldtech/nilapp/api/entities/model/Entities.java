@@ -8,6 +8,7 @@ import com.mldtech.nilapp.api.entities.children.EntityAffiliation.model.EntityAf
 import com.mldtech.nilapp.api.entities.children.EntityType.model.EntityType;
 import com.mldtech.nilapp.api.friend.model.Friend;
 import com.mldtech.nilapp.api.goals.model.Goal;
+import com.mldtech.nilapp.api.group.children.GroupEntity.model.GroupEntity;
 import com.mldtech.nilapp.api.group.model.Group;
 import com.mldtech.nilapp.api.payout_batches.model.PayoutBatch;
 import com.mldtech.nilapp.api.users.children.UserEntity.model.UserEntity;
@@ -80,6 +81,9 @@ public class Entities {
     @JsonBackReference
     private List<Group> groups;
 
+    @OneToMany(mappedBy = "entities", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonBackReference
+    private List<GroupEntity> groupEntities = new ArrayList<>();
 
 
 //    @OneToMany(cascade = CascadeType.ALL, mappedBy = "entities", orphanRemoval = true)

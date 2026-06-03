@@ -24,6 +24,11 @@ public class GroupController {
         return service.getGroup(groupId);
     }
 
+    @GetMapping("/{groupId}/details")
+    public Group getGroupDetails(@PathVariable Long groupId) {
+        return service.getGroup(groupId);
+    }
+
     @PostMapping
     public Group createGroup(@RequestBody Group group) {
         return service.createGroup(group);

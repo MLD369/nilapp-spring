@@ -27,6 +27,7 @@ DROP Table IF EXISTS user_goals CASCADE;
 DROP Table IF EXISTS user_groups CASCADE;
 DROP Table IF EXISTS user_progress CASCADE;
 DROP Table IF EXISTS users CASCADE ;
+DROP TABLE IF EXISTS public.group_entities;
 -- TODO make sure all tables are in drop list
 
 CREATE TABLE "users" (

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.mldtech.nilapp.api.entities.model.Entities;
 import com.mldtech.nilapp.api.group.children.GroupAchievement.model.GroupAchievement;
 //import com.mldtech.nilapp.api.group.children.GroupGoalHistory.model.GroupGoalHistory;
+import com.mldtech.nilapp.api.group.children.GroupEntity.model.GroupEntity;
 import com.mldtech.nilapp.api.users.children.UserAchievement.model.UserAchievement;
 import com.mldtech.nilapp.api.users.children.UserGoal.model.UserGoal;
 //import com.mldtech.nilapp.api.users.children.UserGoalHistory.model.UserGoalHistory;
@@ -53,6 +54,10 @@ public class Group {
     @JsonIgnore
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "group", orphanRemoval = true)
     private List<UserGroup> userGroups = new ArrayList<>();
+
+    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<GroupEntity> groupEntities = new ArrayList<>();
+
 // USer groups
 //    @OneToMany(cascade = CascadeType.ALL, mappedBy = "user", orphanRemoval = true)
 //    private List<UserGoalHistory> userGoalHistories;

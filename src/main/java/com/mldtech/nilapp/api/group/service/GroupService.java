@@ -1,12 +1,17 @@
 package com.mldtech.nilapp.api.group.service;
 
+import com.mldtech.nilapp.api.entities.model.Entities;
+import com.mldtech.nilapp.api.goals.children.GoalInstances.repository.GoalInstanceRepository;
+import com.mldtech.nilapp.api.group.children.GroupEntity.repository.GroupEntityRepository;
 import com.mldtech.nilapp.api.group.model.Group;
 import com.mldtech.nilapp.api.group.repository.GroupRepository;
 import com.mldtech.nilapp.api.users.children.UserGroup.model.UserGroup;
 import com.mldtech.nilapp.api.users.children.UserGroup.repository.UserGroupRepository;
-import com.mldtech.nilapp.api.users.dto.GroupDTO;
+import com.mldtech.nilapp.api.users.dto.*;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
 import com.mldtech.nilapp.helper.CustomResponse;
+import com.mldtech.nilapp.helper.Helper;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,6 +29,10 @@ public class GroupService {
     private final GroupRepository groupRepository;
     private final UserRepository userRepository;
     private final UserGroupRepository userGroupRepository;
+    private final GroupEntityRepository groupEntityRepository;
+    private final GoalInstanceRepository goalInstanceRepository;
+
+    private final Helper helper = new Helper();
 
     public List<Group> getAllGroups() {
         return groupRepository.findAll();
@@ -182,6 +191,51 @@ public class GroupService {
             );
         }
     }
+    public GroupDetailsDTO getGroupDetails(Long groupId) {
 
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new EntityNotFoundException("Group not found"));
+
+        // 1. SUBGROUPS (empty for now)
+        List<SubGroupDTO> subGroups = List.of();
+
+        // 2. AFFILIATED ENTITIES
+        var groupEntities = groupEntityRepository.findByGroup_GroupId(groupId);
+
+        List<EntityDetailsDTO> affiliatedEntities = groupEntities.stream()
+                .map(ge -> {
+                    Entities e = ge.getEntities();
+                    return EntityDetailsDTO.builder()
+                            .entityId(e.getEntityId())
+                            .name(e.getName())
+                            .abbreviation(e.getAbbreviation())
+                            .associatedSchool(e.getAssociatedSchool())
+                            .entityType(
+                                    EntityTypeDTO.builder()
+                                            .entityTypesId(e.getEntityType().getEntityTypesId())
+                                            .type(e.getEntityType().getType())
+                                            .description(e.getEntityType().getDescription())
+                                            .build()
+                            )
+                            .build();
+                })
+                .toList();
+
+        // 3. ACTIVE GOALS
+        var goalInstances = goalInstanceRepository.findByGroup_GroupId(groupId);
+
+        List<GoalProgressDTO> activeGoals = goalInstances.stream()
+                .map(helper::toGoalProgressDTO)
+                .toList();
+
+        // 4. BUILD DTO
+        return GroupDetailsDTO.builder()
+                .groupId(group.getGroupId())
+                .groupName(group.getName())
+                .subGroups(subGroups)
+                .affiliatedEntities(affiliatedEntities)
+                .activeGoals(activeGoals)
+                .build();
+    }
 
 }

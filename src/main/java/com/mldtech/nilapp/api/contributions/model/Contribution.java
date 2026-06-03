@@ -1,5 +1,6 @@
 package com.mldtech.nilapp.api.contributions.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.mldtech.nilapp.api.contributions.children.ContributionStatus.model.ContributionStatus;
 import com.mldtech.nilapp.api.contributions.children.ContributionType.model.ContributionType;
@@ -78,6 +79,7 @@ public class Contribution {
 //    }
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "contribution_type_id", nullable = false)
+    @JsonBackReference
     private ContributionType contributionType;
 //    @Column(name = "contribution_status_id", nullable = false)
 //    private Long statusId;
