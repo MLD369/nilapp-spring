@@ -191,7 +191,7 @@ public class GroupService {
             );
         }
     }
-    public GroupDetailsDTO getGroupDetails(Long groupId) {
+    public CustomResponse<GroupDetailsDTO> getGroupDetails(Long groupId) {
 
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new EntityNotFoundException("Group not found"));
@@ -228,14 +228,16 @@ public class GroupService {
                 .map(helper::toGoalProgressDTO)
                 .toList();
 
-        // 4. BUILD DTO
-        return GroupDetailsDTO.builder()
+        GroupDetailsDTO dto = GroupDetailsDTO.builder()
                 .groupId(group.getGroupId())
                 .groupName(group.getName())
                 .subGroups(subGroups)
                 .affiliatedEntities(affiliatedEntities)
                 .activeGoals(activeGoals)
                 .build();
+
+        return new CustomResponse<>(dto, HttpStatus.OK, "200");
     }
+
 
 }

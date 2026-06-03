@@ -2,6 +2,8 @@ package com.mldtech.nilapp.api.group.controller;
 
 import com.mldtech.nilapp.api.group.model.Group;
 import com.mldtech.nilapp.api.group.service.GroupService;
+import com.mldtech.nilapp.api.users.dto.GroupDetailsDTO;
+import com.mldtech.nilapp.helper.CustomResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,8 +27,8 @@ public class GroupController {
     }
 
     @GetMapping("/{groupId}/details")
-    public Group getGroupDetails(@PathVariable Long groupId) {
-        return service.getGroup(groupId);
+    public CustomResponse<GroupDetailsDTO> getGroupDetails(@PathVariable Long groupId) {
+        return service.getGroupDetails(groupId);
     }
 
     @PostMapping
