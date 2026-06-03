@@ -28,7 +28,7 @@ public class EntityController {
     }
 
     @GetMapping("/{entityId}/details")
-    public EntityDetailsDTO getEntitiesDetails(@PathVariable Long entityId) {
+    public CustomResponse<EntityDetailsDTO> getEntitiesDetails(@PathVariable Long entityId) {
         return service.getEntitiesDetails(entityId);
     }
 

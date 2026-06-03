@@ -247,7 +247,7 @@ public class EntityService {
             );
         }
     }
-    public EntityDetailsDTO getEntitiesDetails(Long entityId) {
+    public CustomResponse<EntityDetailsDTO> getEntitiesDetails(Long entityId) {
 
         Entities entity = entityRepository.findById(entityId)
                 .orElseThrow(() -> new EntityNotFoundException("Entity not found"));
@@ -259,14 +259,11 @@ public class EntityService {
                 .map(helper::toGoalProgressDTO)
                 .toList();
 
-        // BUILD DTO
-        return EntityDetailsDTO.builder()
+        EntityDetailsDTO dto = EntityDetailsDTO.builder()
                 .entityId(entity.getEntityId())
                 .name(entity.getName())
                 .abbreviation(entity.getAbbreviation())
                 .associatedSchool(entity.getAssociatedSchool())
-
-                // ENTITY TYPE DTO
                 .entityType(
                         EntityTypeDTO.builder()
                                 .entityTypesId(entity.getEntityType().getEntityTypesId())
@@ -274,8 +271,6 @@ public class EntityService {
                                 .description(entity.getEntityType().getDescription())
                                 .build()
                 )
-
-                // AFFILIATIONS DTO
                 .affiliations(
                         entity.getEntityAffiliations().stream()
                                 .map(a -> EntityAffiliationDTO.builder()
@@ -284,12 +279,12 @@ public class EntityService {
                                         .build()
                                 ).toList()
                 )
-
-                // ACTIVE GOALS DTO
                 .activeGoals(activeGoals)
-
                 .build();
+
+        return new CustomResponse<>(dto, HttpStatus.OK, "200");
     }
+
 
 
 }
