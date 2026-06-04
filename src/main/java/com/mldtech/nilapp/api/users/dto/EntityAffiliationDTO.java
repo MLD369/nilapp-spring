@@ -8,5 +8,10 @@ import lombok.Data;
 public class EntityAffiliationDTO {
     private Long id;
     private String affiliationName;
+    private String affiliationType;
+    private Long affiliationId;
+    private String affiliationTypeDescription;
+    private String affiliationTypeName;
+
 }
 
