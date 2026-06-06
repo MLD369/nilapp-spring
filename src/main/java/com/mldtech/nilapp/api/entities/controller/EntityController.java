@@ -32,6 +32,13 @@ public class EntityController {
         return service.getEntitiesDetails(entityId);
     }
 
+    /*
+✔ EntityType → must exist BEFORE creating Entity
+✔ Entity → created FIRST
+✔ EntityAffiliation → created AFTER Entity
+✔ EntityGoals → created AFTER Entity
+✔ GroupEntity → created AFTER Entity AND Group
+     */
     @PostMapping
     public Entities createEntity(@RequestBody Entities entity) {
         return service.createEntities(entity);
