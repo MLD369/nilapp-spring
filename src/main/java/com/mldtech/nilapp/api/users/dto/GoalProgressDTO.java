@@ -26,6 +26,7 @@ public class GoalProgressDTO {
     private BigDecimal dollarAmount;
 
     private Long entityId;
+    private Long groupId;
     private boolean joined;
 }
 

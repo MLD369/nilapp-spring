@@ -10,6 +10,7 @@ import java.util.List;
 public class EntityDetailsDTO {
 
     private Long entityId;
+    private Long groupId;
     private String name;
     private String abbreviation;
     private String associatedSchool;

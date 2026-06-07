@@ -5,6 +5,7 @@ import com.mldtech.nilapp.api.goals.children.GoalInstances.repository.GoalInstan
 import com.mldtech.nilapp.api.group.children.GroupEntity.repository.GroupEntityRepository;
 import com.mldtech.nilapp.api.group.model.Group;
 import com.mldtech.nilapp.api.group.repository.GroupRepository;
+import com.mldtech.nilapp.api.users.children.UserGoal.repository.UserGoalRepository;
 import com.mldtech.nilapp.api.users.children.UserGroup.model.UserGroup;
 import com.mldtech.nilapp.api.users.children.UserGroup.repository.UserGroupRepository;
 import com.mldtech.nilapp.api.users.dto.*;
@@ -19,7 +20,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +34,7 @@ public class GroupService {
     private final UserGroupRepository userGroupRepository;
     private final GroupEntityRepository groupEntityRepository;
     private final GoalInstanceRepository goalInstanceRepository;
+    private final UserGoalRepository userGoalRepository;
 
     private final Helper helper = new Helper();
 
@@ -191,7 +195,7 @@ public class GroupService {
             );
         }
     }
-    public CustomResponse<GroupDetailsDTO> getGroupDetails(Long groupId) {
+    public CustomResponse<GroupDetailsDTO> getGroupDetails(Long groupId, Long userId, boolean includeUserGoals) {
 
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new EntityNotFoundException("Group not found"));
@@ -221,13 +225,44 @@ public class GroupService {
                 })
                 .toList();
 
-        // 3. ACTIVE GOALS
+        /*
+         * ============================================================
+         * 3. ACTIVE GOALS FOR THIS GROUP
+         * ============================================================
+         */
         var goalInstances = goalInstanceRepository.findByGroup_GroupId(groupId);
 
+        // Preload user joined goal instance IDs
+        Set<Long> userJoinedGoalInstanceIds;
+
+        if (includeUserGoals && userId != null) {
+            userJoinedGoalInstanceIds = userGoalRepository.findByUser_UserId(userId).stream()
+                    .filter(ug -> ug.getLeftAt() == null)
+                    .map(ug -> ug.getGoalInstance().getGoalInstanceId())
+                    .collect(Collectors.toSet());
+        } else {
+            userJoinedGoalInstanceIds = new HashSet<>();
+        }
+
         List<GoalProgressDTO> activeGoals = goalInstances.stream()
-                .map(helper::toGoalProgressDTO)
+                .map(gi -> {
+                    GoalProgressDTO dto = helper.toGoalProgressDTO(gi);
+
+                    // ⭐ Correct: set groupId, not entityId
+                    dto.setGroupId(groupId);
+
+                    // ⭐ Add joined flag
+                    dto.setJoined(userJoinedGoalInstanceIds.contains(gi.getGoalInstanceId()));
+
+                    return dto;
+                })
                 .toList();
 
+        /*
+         * ============================================================
+         * FINAL DTO
+         * ============================================================
+         */
         GroupDetailsDTO dto = GroupDetailsDTO.builder()
                 .groupId(group.getGroupId())
                 .groupName(group.getName())
@@ -238,6 +273,8 @@ public class GroupService {
 
         return new CustomResponse<>(dto, HttpStatus.OK, "200");
     }
+
+
 
 
 }

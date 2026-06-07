@@ -27,9 +27,14 @@ public class GroupController {
     }
 
     @GetMapping("/{groupId}/details")
-    public CustomResponse<GroupDetailsDTO> getGroupDetails(@PathVariable Long groupId) {
-        return service.getGroupDetails(groupId);
+    public CustomResponse<GroupDetailsDTO> getGroupDetails(
+            @PathVariable Long groupId,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false, defaultValue = "false") boolean includeUserGoals
+    ) {
+        return service.getGroupDetails(groupId, userId, includeUserGoals);
     }
+
 
     @PostMapping
     public Group createGroup(@RequestBody Group group) {
