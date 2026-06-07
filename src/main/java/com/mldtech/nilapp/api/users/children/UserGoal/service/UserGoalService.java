@@ -12,31 +12,61 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class UserGoalService {
 
-    private final UserGoalRepository repo;
-    private final UserRepository userRepo;
-    private final GoalInstanceRepository instanceRepo;
+    private final UserGoalRepository userGoalRepository;
+    private final UserRepository userRepository;
+    private final GoalInstanceRepository goalInstanceRepository;
 
 //    private final GoalRepository goalRepo;
 
     public List<UserGoal> getActiveGoals(Long userId) {
-        return repo.findByUserUserIdAndIsActiveTrue(userId);
+        return userGoalRepository.findByUserUserIdAndIsActiveTrue(userId);
     }
 
 
     public CustomResponse<?> joinGoal(Long userId, Long instanceId, UserGoal userGoal) {
-        userGoal.setUser(userRepo.getReferenceById(userId));
-        userGoal.setGoalInstance(instanceRepo.getReferenceById(instanceId));
-        return new CustomResponse<>(repo.save(userGoal), HttpStatus.OK, "200");
+
+        // Prevent duplicate join
+        boolean alreadyJoined = userGoalRepository.existsByUser_UserIdAndGoalInstance_GoalInstanceIdAndLeftAtIsNull(
+                userId, instanceId
+        );
+
+        if (alreadyJoined) {
+            return new CustomResponse<>(
+                    "User already joined this goal",
+                    HttpStatus.BAD_REQUEST,
+                    "400"
+            );
+        }
+
+        userGoal.setUser(userRepository.getReferenceById(userId));
+        userGoal.setGoalInstance(goalInstanceRepository.getReferenceById(instanceId));
+        userGoal.setJoinedAt(LocalDateTime.from(Instant.now()));
+        userGoal.setLeftAt(null); // ensure active
+
+        return new CustomResponse<>(userGoalRepository.save(userGoal), HttpStatus.OK, "200");
+    }
+    public CustomResponse<?> leaveGoal(Long userId, Long instanceId) {
+
+        UserGoal userGoal = userGoalRepository
+                .findByUser_UserIdAndGoalInstance_GoalInstanceIdAndLeftAtIsNull(userId, instanceId)
+                .orElseThrow(() -> new RuntimeException("User is not currently joined to this goal"));
+
+        userGoal.setLeftAt(LocalDateTime.now());
+
+        return new CustomResponse<>(userGoalRepository.save(userGoal), HttpStatus.OK, "200");
     }
 
+
     public CustomResponse<?> getAll() {
-        return new CustomResponse<>(repo.findAll(), HttpStatus.OK, "200");
+        return new CustomResponse<>(userGoalRepository.findAll(), HttpStatus.OK, "200");
     }
 //    public UserGoal assignGoal(Long userId, Long goalId, Integer allocationPct) {
 //

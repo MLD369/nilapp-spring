@@ -7,6 +7,8 @@ import com.mldtech.nilapp.api.entities.service.EntityService;
 import com.mldtech.nilapp.api.group.service.GroupService;
 import com.mldtech.nilapp.api.users.children.UserEntity.model.UserEntity;
 import com.mldtech.nilapp.api.users.children.UserEntity.service.UserEntityService;
+import com.mldtech.nilapp.api.users.children.UserGoal.model.UserGoal;
+import com.mldtech.nilapp.api.users.children.UserGoal.service.UserGoalService;
 import com.mldtech.nilapp.api.users.dto.*;
 import com.mldtech.nilapp.api.users.service.UserService;
 import com.mldtech.nilapp.helper.CustomResponse;
@@ -31,6 +33,7 @@ public class UserController {
     private final ContributionService contributionService;
     private final EntityService entityService;
     private final GroupService groupService;
+    private final UserGoalService userGoalService;
 
     /**
      * Retrieves the full user profile including:
@@ -403,6 +406,20 @@ public class UserController {
                     );
         }
     }
-
+    @PostMapping("/{userId}/goal-instance/{instanceId}/join")
+    public Object joinGoal(
+            @PathVariable Long userId,
+            @PathVariable Long instanceId,
+            @RequestBody UserGoal userGoal
+    ) {
+        return userGoalService.joinGoal(userId, instanceId, userGoal);
+    }
+    @PutMapping("/{userId}/goal-instance/{instanceId}/leave")
+    public Object leaveGoal(
+            @PathVariable Long userId,
+            @PathVariable Long instanceId
+    ) {
+        return userGoalService.leaveGoal(userId, instanceId);
+    }
 
 }

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface UserGoalRepository extends JpaRepository<UserGoal, Long> {
     List<UserGoal> findByUserUserIdAndIsActiveTrue(Long userId);
@@ -18,5 +19,7 @@ public interface UserGoalRepository extends JpaRepository<UserGoal, Long> {
             LocalDateTime end
     );
     List<UserGoal> findByUser_UserId(Long userId);
+    boolean existsByUser_UserIdAndGoalInstance_GoalInstanceIdAndLeftAtIsNull(Long userId, Long instanceId);
+    Optional<UserGoal> findByUser_UserIdAndGoalInstance_GoalInstanceIdAndLeftAtIsNull(Long userId, Long instanceId);
 
 }
