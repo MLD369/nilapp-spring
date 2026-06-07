@@ -5,6 +5,8 @@ import com.mldtech.nilapp.api.entities.repository.EntityRepository;
 import com.mldtech.nilapp.api.goals.children.GoalInstances.repository.GoalInstanceRepository;
 import com.mldtech.nilapp.api.users.children.UserEntity.model.UserEntity;
 import com.mldtech.nilapp.api.users.children.UserEntity.repository.UserEntityRepository;
+import com.mldtech.nilapp.api.users.children.UserGoal.model.UserGoal;
+import com.mldtech.nilapp.api.users.children.UserGoal.repository.UserGoalRepository;
 import com.mldtech.nilapp.api.users.dto.*;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
 import com.mldtech.nilapp.helper.CustomResponse;
@@ -18,8 +20,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,6 +34,7 @@ public class EntityService {
     private final UserRepository userRepository;
     private final UserEntityRepository userEntityRepository;
     private final GoalInstanceRepository goalInstanceRepository;
+    private final UserGoalRepository userGoalRepository;
     private final Helper helper = new Helper();
 
     public CustomResponse<List<EntityDTO>> getAllEntities() {
@@ -247,18 +252,49 @@ public class EntityService {
             );
         }
     }
-    public CustomResponse<EntityDetailsDTO> getEntitiesDetails(Long entityId) {
+    public CustomResponse<EntityDetailsDTO> getEntitiesDetails(Long entityId, Long userId, boolean includeUserGoals) {
 
         Entities entity = entityRepository.findById(entityId)
                 .orElseThrow(() -> new EntityNotFoundException("Entity not found"));
 
-        // ACTIVE GOALS
+        /*
+         * ============================================================
+         * ACTIVE GOALS FOR THIS ENTITY
+         * ============================================================
+         */
         var goalInstances = goalInstanceRepository.findByEntity_EntityId(entityId);
 
+        // Preload user joined goals (if requested)
+        Set<Long> userJoinedGoalInstanceIds;
+
+        if (includeUserGoals && userId != null) {
+            userJoinedGoalInstanceIds = userGoalRepository.findByUser_UserId(userId).stream()
+                    .filter(ug -> ug.getLeftAt() == null)
+                    .map(ug -> ug.getGoalInstance().getGoalInstanceId())
+                    .collect(Collectors.toSet());
+        } else {
+            userJoinedGoalInstanceIds = new HashSet<>();
+        }
+
         List<GoalProgressDTO> activeGoals = goalInstances.stream()
-                .map(helper::toGoalProgressDTO)
+                .map(gi -> {
+                    GoalProgressDTO dto = helper.toGoalProgressDTO(gi);
+
+                    // ⭐ Add entityId
+                    dto.setEntityId(entityId);
+
+                    // ⭐ Add joined flag
+                    dto.setJoined(userJoinedGoalInstanceIds.contains(gi.getGoalInstanceId()));
+
+                    return dto;
+                })
                 .toList();
 
+        /*
+         * ============================================================
+         * BUILD DTO
+         * ============================================================
+         */
         EntityDetailsDTO dto = EntityDetailsDTO.builder()
                 .entityId(entity.getEntityId())
                 .name(entity.getName())
@@ -288,6 +324,9 @@ public class EntityService {
 
         return new CustomResponse<>(dto, HttpStatus.OK, "200");
     }
+
+
+
 
 
 

@@ -28,9 +28,14 @@ public class EntityController {
     }
 
     @GetMapping("/{entityId}/details")
-    public CustomResponse<EntityDetailsDTO> getEntitiesDetails(@PathVariable Long entityId) {
-        return service.getEntitiesDetails(entityId);
+    public CustomResponse<EntityDetailsDTO> getEntitiesDetails(
+            @PathVariable Long entityId,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false, defaultValue = "false") boolean includeUserGoals
+    ) {
+        return service.getEntitiesDetails(entityId, userId, includeUserGoals);
     }
+
 
     /*
 ✔ EntityType → must exist BEFORE creating Entity

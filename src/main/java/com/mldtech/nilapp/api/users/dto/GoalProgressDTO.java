@@ -24,5 +24,8 @@ public class GoalProgressDTO {
     private Long stepsNeeded;
     private Long coinsNeeded;
     private BigDecimal dollarAmount;
+
+    private Long entityId;
+    private boolean joined;
 }
 

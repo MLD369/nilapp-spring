@@ -197,3 +197,14 @@ GRANT SELECT, INSERT, UPDATE ON TABLES TO wc_app_user;
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
 GRANT DELETE ON TABLES TO wc_app_user;
+
+/////////////////////
+
+i want to be able to get this api on the  EntityDetailsScreen
+
+i need ViewModel
+ViewModelFactory
+api service update
+model update
+user repository update
+main activity update

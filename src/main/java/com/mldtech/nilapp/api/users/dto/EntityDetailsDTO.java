@@ -20,4 +20,7 @@ public class EntityDetailsDTO {
 
     // OPTIONAL: include raw entity if you want
     // private Entities entity;
+    // if userEntityGoals needed
+//    private List<GoalProgressDTO> userEntityGoals;
 }
+
