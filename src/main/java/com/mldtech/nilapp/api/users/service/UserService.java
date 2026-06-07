@@ -883,14 +883,15 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
             /*
              * ============================================================
              * ENTITY GOALS
-             * Remove duplicate entities
-             * Merge duplicate goals inside entity
+             * ONLY include active memberships (leftAt == null)
              * ============================================================
              */
 
             Map<Long, EntityGoalProgressDTO> entityMap = new LinkedHashMap<>();
 
-            for (var ue : user.getUserEntities()) {
+            for (var ue : user.getUserEntities().stream()
+                    .filter(ue -> ue.getLeftAt() == null)
+                    .toList()) {
 
                 var entity = ue.getEntity();
 
@@ -991,14 +992,15 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
             /*
              * ============================================================
              * GROUP GOALS
-             * Remove duplicate groups
-             * Merge duplicate goals inside group
+             * ONLY include active memberships (leftAt == null)
              * ============================================================
              */
 
             Map<Long, GroupGoalProgressDTO> groupMap = new LinkedHashMap<>();
 
-            for (var ug : user.getUserGroups()) {
+            for (var ug : user.getUserGroups().stream()
+                    .filter(ug -> ug.getLeftAt() == null)
+                    .toList()) {  //  for (var ug : user.getUserGroups()) { to get all groups same as above for entities
 
                 var group = ug.getGroup();
 
