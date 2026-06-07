@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RateLimiter {
 
     private final Map<String, Deque<Long>> requests = new ConcurrentHashMap<>();
-    private final int MAX_REQUESTS = 20; // per minute
+    private final int MAX_REQUESTS = 40; // per minute TODO what is a good limit 20 seems too small
     private final long WINDOW = 60_000;
 
     public boolean isAllowed(String ip) {
