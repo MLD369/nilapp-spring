@@ -426,7 +426,7 @@ CREATE INDEX ON "user_achievements" ("user_id", "achievement_id");
 
 CREATE INDEX ON "entity_achievements" ("entity_id", "achievement_id");
 
-CREATE UNIQUE INDEX ON "user_goals" ("user_id", "goal_instance_id");
+-- CREATE UNIQUE INDEX ON "user_goals" ("user_id", "goal_instance_id"); need duplicate to track history
 
 CREATE INDEX ON "user_groups" ("group_id", "user_id");
 
