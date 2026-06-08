@@ -39,7 +39,7 @@ public class UserGoal {
     @JoinColumn(name = "goal_instance_id")
     private GoalInstance goalInstance;
 
-    @Column(name = "allocation_pct", precision = 5, scale = 2, nullable = false)
+    @Column(name = "allocation_pct", precision = 5, scale = 2, nullable = true)
     private BigDecimal allocationPct;
 
     @Column(name = "joined_at", insertable = false, updatable = false)
