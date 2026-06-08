@@ -253,7 +253,7 @@ public class GroupService {
 
                     // ⭐ Add joined flag
                     dto.setJoined(userJoinedGoalInstanceIds.contains(gi.getGoalInstanceId()));
-
+                    dto.setGoalInstanceId(gi.getGoalInstanceId());
                     return dto;
                 })
                 .toList();
