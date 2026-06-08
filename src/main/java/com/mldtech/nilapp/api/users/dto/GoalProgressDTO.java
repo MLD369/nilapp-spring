@@ -27,6 +27,7 @@ public class GoalProgressDTO {
 
     private Long entityId;
     private Long groupId;
+    private Long goalInstanceId;
     private boolean joined;
 }
 

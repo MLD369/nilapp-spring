@@ -409,10 +409,9 @@ public class UserController {
     @PostMapping("/{userId}/goal-instance/{instanceId}/join")
     public Object joinGoal(
             @PathVariable Long userId,
-            @PathVariable Long instanceId,
-            @RequestBody UserGoal userGoal
+            @PathVariable Long instanceId
     ) {
-        return userGoalService.joinGoal(userId, instanceId, userGoal);
+        return userGoalService.joinGoal(userId, instanceId);
     }
     @PutMapping("/{userId}/goal-instance/{instanceId}/leave")
     public Object leaveGoal(

@@ -26,7 +26,7 @@ public class UserGoalController {
             @PathVariable Long instanceId,
             @RequestBody UserGoal userGoal
     ) {
-        return service.joinGoal(userId, instanceId, userGoal);
+        return service.joinGoal(userId, instanceId);
     }
 
 }

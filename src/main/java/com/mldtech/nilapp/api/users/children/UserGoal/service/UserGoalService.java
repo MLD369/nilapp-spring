@@ -5,6 +5,7 @@ package com.mldtech.nilapp.api.users.children.UserGoal.service;
 import com.mldtech.nilapp.api.goals.children.GoalInstances.repository.GoalInstanceRepository;
 import com.mldtech.nilapp.api.users.children.UserGoal.model.UserGoal;
 import com.mldtech.nilapp.api.users.children.UserGoal.repository.UserGoalRepository;
+import com.mldtech.nilapp.api.users.dto.UserGoalDTO;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
 import com.mldtech.nilapp.helper.CustomResponse;
 import lombok.RequiredArgsConstructor;
@@ -31,12 +32,11 @@ public class UserGoalService {
     }
 
 
-    public CustomResponse<?> joinGoal(Long userId, Long instanceId, UserGoal userGoal) {
+    public CustomResponse<?> joinGoal(Long userId, Long instanceId) {
 
         // Prevent duplicate join
-        boolean alreadyJoined = userGoalRepository.existsByUser_UserIdAndGoalInstance_GoalInstanceIdAndLeftAtIsNull(
-                userId, instanceId
-        );
+        boolean alreadyJoined = userGoalRepository
+                .existsByUser_UserIdAndGoalInstance_GoalInstanceIdAndLeftAtIsNull(userId, instanceId);
 
         if (alreadyJoined) {
             return new CustomResponse<>(
@@ -46,13 +46,38 @@ public class UserGoalService {
             );
         }
 
-        userGoal.setUser(userRepository.getReferenceById(userId));
-        userGoal.setGoalInstance(goalInstanceRepository.getReferenceById(instanceId));
-        userGoal.setJoinedAt(LocalDateTime.from(Instant.now()));
-        userGoal.setLeftAt(null); // ensure active
+        UserGoal userGoal = new UserGoal();
 
-        return new CustomResponse<>(userGoalRepository.save(userGoal), HttpStatus.OK, "200");
+        userGoal.setUser(userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found")));
+
+        userGoal.setGoalInstance(goalInstanceRepository.findById(instanceId)
+                .orElseThrow(() -> new RuntimeException("Goal instance not found")));
+
+        userGoal.setJoinedAt(LocalDateTime.now());
+        userGoal.setLeftAt(null);
+        userGoal.setIsActive(true);
+        userGoal.setIsComplete(false);
+        userGoal.setAllocationPct(BigDecimal.ZERO);
+
+        UserGoal saved = userGoalRepository.save(userGoal);
+
+        // ⭐ Return DTO instead of entity to avoid Hibernate proxy issues
+        UserGoalDTO dto = UserGoalDTO.builder()
+                .userGoalId(saved.getUserGoalId())
+                .userId(userId)
+                .goalInstanceId(instanceId)
+                .joinedAt(saved.getJoinedAt())
+                .leftAt(saved.getLeftAt())
+                .allocationPct(saved.getAllocationPct())
+                .isActive(saved.getIsActive())
+                .isComplete(saved.getIsComplete())
+                .build();
+
+        return new CustomResponse<>(dto, HttpStatus.OK, "200");
     }
+
+
     public CustomResponse<?> leaveGoal(Long userId, Long instanceId) {
 
         UserGoal userGoal = userGoalRepository
@@ -60,9 +85,25 @@ public class UserGoalService {
                 .orElseThrow(() -> new RuntimeException("User is not currently joined to this goal"));
 
         userGoal.setLeftAt(LocalDateTime.now());
+        userGoal.setIsActive(false);
 
-        return new CustomResponse<>(userGoalRepository.save(userGoal), HttpStatus.OK, "200");
+        UserGoal saved = userGoalRepository.save(userGoal);
+
+        // ⭐ Return DTO instead of entity to avoid Hibernate proxy issues
+        UserGoalDTO dto = UserGoalDTO.builder()
+                .userGoalId(saved.getUserGoalId())
+                .userId(userId)
+                .goalInstanceId(instanceId)
+                .joinedAt(saved.getJoinedAt())
+                .leftAt(saved.getLeftAt())
+                .allocationPct(saved.getAllocationPct())
+                .isActive(saved.getIsActive())
+                .isComplete(saved.getIsComplete())
+                .build();
+
+        return new CustomResponse<>(dto, HttpStatus.OK, "200");
     }
+
 
 
     public CustomResponse<?> getAll() {
