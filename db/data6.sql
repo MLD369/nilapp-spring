@@ -51,3 +51,7 @@ VALUES ( 2, 5, 15, now(), 10, now());
 INSERT INTO public.user_streaks(
     user_id, current_streak, longest_streak, last_completed_date, streak_shields, created_at)
 VALUES ( 2, 1, 1, now(), 10, now());
+
+ALTER TABLE users
+    ADD gender VARCHAR(10) DEFAULT 'Unknown',
+ADD CONSTRAINT chk_gender CHECK (gender IN ('Male', 'Female', 'Other', 'Unknown'));

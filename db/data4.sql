@@ -20,6 +20,16 @@ VALUES (1, '2026-04-20', 500, 5, 0, 'phone','2026-04-20 14:30:00' , 0, '2026-04-
 INSERT INTO public.daily_stats(
     user_id, date, total_steps, coins, distance_meters, device_source, sync_timestamp, calories, created_at)
 VALUES (1, '2026-04-19', 500, 50, 0, 'phone','2026-04-19 14:30:00' , 0, '2026-04-19 14:30:00');
+INSERT INTO public.daily_stats(
+    user_id, date, total_steps, coins, distance_meters, device_source, sync_timestamp, calories, created_at)
+VALUES (2, '2026-04-19', 500, 50, 0, 'phone','2026-04-19 14:30:00' , 0, '2026-04-19 14:30:00');
+INSERT INTO public.daily_stats(
+    user_id, date, total_steps, coins, distance_meters, device_source, sync_timestamp, calories, created_at)
+VALUES (3, '2026-04-19', 250, 50, 0, 'phone','2026-04-19 14:30:00' , 0, '2026-04-19 14:30:00');
+
+INSERT INTO public.daily_stats(
+    user_id, date, total_steps, coins, distance_meters, device_source, sync_timestamp, calories, created_at)
+VALUES (4, '2026-04-19', 150, 50, 0, 'phone','2026-04-19 14:30:00' , 0, '2026-04-19 14:30:00');
 
 INSERT INTO public.contributions(
     user_id, entity_id, campaign_id, steps_contributed, coins_contributed, conversion_rate, ad_session_id,  payout_batch_id, contribution_status_id)
