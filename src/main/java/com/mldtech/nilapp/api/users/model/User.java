@@ -74,6 +74,7 @@ public class User {
     private String country;
     private String city;
     private String county;
+    private String gender;
 
     private String language;
     private String timezone;
