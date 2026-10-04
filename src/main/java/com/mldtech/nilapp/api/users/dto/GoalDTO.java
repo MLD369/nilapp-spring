@@ -11,4 +11,5 @@ public class GoalDTO {
     private Boolean isActive;
     private String groupName;
     private String entityName;
+    private String completedAt;
 }
