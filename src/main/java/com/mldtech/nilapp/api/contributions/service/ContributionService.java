@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mldtech.nilapp.api.contributions.children.ContributionStatus.model.ContributionStatus;
 import com.mldtech.nilapp.api.contributions.children.ContributionStatus.repository.ContributionStatusRepository;
+import com.mldtech.nilapp.api.contributions.dto.ContributionTotalDTO;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.contributions.repository.ContributionRepository;
 import com.mldtech.nilapp.api.group.repository.GroupRepository;
@@ -40,6 +41,11 @@ public class ContributionService {
     private final UserRepository userRepository;
     private final UserEntityRepository userEntityRepository;
 
+    public ContributionTotalDTO getUserMonthlyTotals(Long userId,
+                                                           LocalDateTime start,
+                                                           LocalDateTime end) {
+        return contributionRepository.getUserMonthlyTotals(userId,start,end);
+    }
     public List<Contribution> getContributionsForUser(Long userId) {
         return contributionRepository.findByUserId(userId);
     }
