@@ -39,7 +39,7 @@ public class LeaderboardController {
 
     @GetMapping("/streaks")
     public ResponseEntity<CustomResponse<List<StreakLeaderDTO>>> getTopStreaks() {
-        var data = leaderboardService.getTopStreaks();
+            var data = leaderboardService.getTopStreaks();
         return ResponseEntity.ok(new CustomResponse<>(data, HttpStatus.OK, "200"));
     }
 
@@ -63,4 +63,50 @@ public class LeaderboardController {
         var data = leaderboardService.getLeaderboard(startDate, endDate);
         return ResponseEntity.ok(new CustomResponse<>(data, HttpStatus.OK, "200"));
     }
+
+    // TODO add param to say how many users to get in the response this will need conditions in the service
+    // by city,state,gender,age group (separate by ranges?), entity,group, sports conference,region,
+    //
+    //     //TODO add device device(ios,android1) maybe should list per device and overall. maybe go deeper by watch type or brand or provider
+    @GetMapping("/detailed")
+    public CustomResponse<DetailedLeaderboardResponse> getDetailedLeaderboard(
+            @RequestParam String startDate,
+            @RequestParam String endDate,
+            @RequestParam String leaderboardCategory,
+            @RequestParam String filterType,
+            @RequestParam String filterString,
+            @RequestParam(defaultValue = "25") Integer limit
+    ) {
+    // PRINT EVERYTHING
+            System.out.println("=== Detailed Leaderboard paarams ===");
+            System.out.println("Start Date: " + startDate);
+            System.out.println("End Date: " + endDate);
+            System.out.println("Category: " + leaderboardCategory);
+            System.out.println("Filter Type: " + filterType);
+            System.out.println("Filter String: " +filterString);
+            System.out.println("Limit: " + limit);
+
+            System.out.println("====================================");
+        DetailedLeaderboardResponse response = leaderboardService.getLeaderboardFilteredRanks(
+            startDate,
+            endDate,
+            leaderboardCategory,
+            filterType,
+            filterString,
+            limit
+    );
+        // PRINT EVERYTHING
+        System.out.println("=== Detailed Leaderboard Response ===");
+        System.out.println("Start Date: " + response.getStartDate());
+        System.out.println("End Date: " + response.getEndDate());
+        System.out.println("Category: " + response.getLeaderboardCategory());
+        System.out.println("Filter Type: " + response.getFilterType());
+        System.out.println("Filter String: " + response.getFilterString());
+        System.out.println("Limit: " + response.getLimit());
+        System.out.println("Results Count: " + (response.getResults() != null ? response.getResults().size() : 0));
+        System.out.println("Results: " + response.getResults());
+        System.out.println("====================================");
+        return new CustomResponse<>(response, HttpStatus.OK, "200");
+    }
+
 }
