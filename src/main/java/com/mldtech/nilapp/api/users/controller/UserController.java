@@ -1,6 +1,7 @@
 package com.mldtech.nilapp.api.users.controller;
 
 import com.mldtech.nilapp.api.contributions.dto.ContributionSummaryDTO;
+import com.mldtech.nilapp.api.contributions.dto.ContributionTotalDTO;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.contributions.service.ContributionService;
 import com.mldtech.nilapp.api.entities.service.EntityService;
@@ -121,7 +122,7 @@ public class UserController {
      * Retrieves all incomplete goals for a user.
      */
     @GetMapping("/{userId}/goals/incompleted")
-    public UserProfileResponse getUserIncompletedGoals(
+    public CustomResponse<UserProfileResponse> getUserIncompletedGoals(
             @PathVariable Long userId,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate
@@ -420,5 +421,57 @@ public class UserController {
     ) {
         return userGoalService.leaveGoal(userId, instanceId);
     }
+
+    // ---------------------------------------------------------
+    // Stats page api
+    // ---------------------------------------------------------
+    @GetMapping("/{userId}/stat-page")
+    public CustomResponse<UserStatPageResponse> getUserStatPage(
+            @PathVariable Long userId,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
+    ) {
+        try {
+            // 1. Fetch data from all services
+//            CustomResponse<UserStatsResponse> statsResponse = userService.getUserStats(userId, startDate, endDate);
+            UserGoalDashboardResponse dashboardData = userService.getUserGoalDashboard(userId);
+            CustomResponse<UserProfileResponse> completedGoalsResponse = userService.getUserCompletedGoals(userId, startDate, endDate);
+            UserProfileResponse achievementsData = userService.getUserAchievements(userId);
+            LocalDateTime start = LocalDate.parse(startDate).atStartOfDay();
+            LocalDateTime end = LocalDate.parse(endDate).atTime(23, 59, 59, 999999999);
+            ContributionTotalDTO contributionTotalDTO = contributionService.getUserMonthlyTotals(userId, start, end);
+
+            // 2. Extract internal data from wrapped CustomResponses safely
+//            UserStatsResponse statsData = statsResponse != null ? (UserStatsResponse) statsResponse.getObject() : null;
+            UserProfileResponse completedGoalsData = completedGoalsResponse != null ? (UserProfileResponse) completedGoalsResponse.getObject() : null;
+
+            // 3. Assemble the unified page response
+            UserStatPageResponse pageResponse = UserStatPageResponse.builder()
+//                    .stats(statsData)
+                    .dashboard(dashboardData)
+                    .completedGoals(completedGoalsData)
+                    .achievements(achievementsData)
+                    .contributionTotal(contributionTotalDTO)
+                    .build();
+
+            // 4. Return wrapped in your standard API format
+            return new CustomResponse<>(
+                    "User statistics page data fetched successfully.",
+                    pageResponse,
+                    HttpStatus.OK,
+                    "200"
+            );
+
+        } catch (Exception ex) {
+            return new CustomResponse<>(
+                    "Error assembling user statistics page: " + ex.getMessage(),
+                    null,
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "500"
+            );
+        }
+    }
+
+
 
 }

@@ -16,11 +16,13 @@ import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.contributions.repository.ContributionRepository;
 import com.mldtech.nilapp.api.entities.children.EntityAchievement.model.EntityAchievement;
 import com.mldtech.nilapp.api.entities.children.EntityAchievement.repository.EntityAchievementRepository;
+import com.mldtech.nilapp.api.entities.service.EntityService;
 import com.mldtech.nilapp.api.friend.repository.FriendRepository;
 import com.mldtech.nilapp.api.goals.children.GoalInstances.model.GoalInstance;
 import com.mldtech.nilapp.api.goals.children.GoalInstances.repository.GoalInstanceRepository;
 import com.mldtech.nilapp.api.group.children.GroupAchievement.model.GroupAchievement;
 import com.mldtech.nilapp.api.group.children.GroupAchievement.repository.GroupAchievementRepository;
+import com.mldtech.nilapp.api.group.service.GroupService;
 import com.mldtech.nilapp.api.users.children.UserAchievement.model.UserAchievement;
 import com.mldtech.nilapp.api.users.children.UserAchievement.repository.UserAchievementRepository;
 import com.mldtech.nilapp.api.users.children.UserGoal.repository.UserGoalRepository;
@@ -39,6 +41,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -46,6 +49,9 @@ import java.util.stream.Stream;
 @Service
 @RequiredArgsConstructor
 public class UserService {
+
+    private final EntityService entityService;
+    private final GroupService groupService;
 
     private final UserRepository userRepository;
     private final ContributionRepository contributionRepository;
@@ -60,6 +66,10 @@ public class UserService {
 //    private final UserGoalHistoryRepository userGoalHistoryRepository;
     private final FriendRepository friendRepository;
     Helper helper = new Helper();
+
+    // Define a reusable, thread-safe formatter
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
 //    @Transactional   /// TODO change this to the right way with dtos
 //    public UserProfileResponse getUserProfile(Long userId) {
 //
@@ -370,38 +380,130 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                 .goals(goals)
                 .build();
     }
+//    public CustomResponse<UserProfileResponse> getUserCompletedGoals(Long userId, String startDate, String endDate) {
+//        try {
+//            var user = userRepository.findById(userId)
+//                    .orElseThrow(() -> new RuntimeException("User not found"));
+//
+//            LocalDateTime start = (startDate != null)
+//                    ? LocalDate.parse(startDate).atStartOfDay()
+//                    : LocalDate.now().withDayOfMonth(1).atStartOfDay();
+//
+//            LocalDateTime end = (endDate != null)
+//                    ? LocalDate.parse(endDate).atTime(23, 59, 59)
+//                    : LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()).atTime(23, 59, 59);
+//
+//            var completedGoals = userGoalRepository.findByUserUserIdAndIsCompleteTrueAndCompletedAtBetween(userId, start, end)
+//                    .stream()
+//                    .map(g -> GoalDTO.builder()
+//                            .goalId(g.getUserGoalId())
+//                            .goalName(g.getGoalInstance().getGoal().getGoal())
+//                            .entityName(g.getGoalInstance().getEntity() != null ? g.getGoalInstance().getEntity().getName() : null)
+//                            .groupName(g.getGoalInstance().getGroup() != null ? g.getGoalInstance().getGroup().getName() : null)
+//                            .isActive(false)
+//                            .build())
+//                    .toList();
+//
+//            if (completedGoals.isEmpty()) {
+//                return new CustomResponse<>(
+//                        "No completed goals found for the specified date range.",
+//                        null,
+//                        HttpStatus.NO_CONTENT,
+//                        "204"
+//                );
+//            }
+//
+//            var response = UserProfileResponse.builder()
+//                    .userId(userId)
+//                    .username(user.getUsername())
+//                    .goals(completedGoals)
+//                    .build();
+//
+//            return new CustomResponse<>(
+//                    "Completed goals fetched successfully.",
+//                    response,
+//                    HttpStatus.OK,
+//                    "200"
+//            );
+//
+//        } catch (Exception ex) {
+//            return new CustomResponse<>(
+//                    "Error fetching completed goals: " + ex.getMessage(),
+//                    null,
+//                    HttpStatus.INTERNAL_SERVER_ERROR,
+//                    "500"
+//            );
+//        }
+//    }
+
+
     public CustomResponse<UserProfileResponse> getUserCompletedGoals(Long userId, String startDate, String endDate) {
         try {
             var user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            LocalDateTime start = (startDate != null)
-                    ? LocalDate.parse(startDate).atStartOfDay()
-                    : LocalDate.now().withDayOfMonth(1).atStartOfDay();
+            // 1. Establish the date structures
+            LocalDate startLocalDate = (startDate != null)
+                    ? LocalDate.parse(startDate)
+                    : LocalDate.now().withDayOfMonth(1);
 
-            LocalDateTime end = (endDate != null)
-                    ? LocalDate.parse(endDate).atTime(23, 59, 59)
-                    : LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()).atTime(23, 59, 59);
+            LocalDate endLocalDate = (endDate != null)
+                    ? LocalDate.parse(endDate)
+                    : startLocalDate.withDayOfMonth(startLocalDate.lengthOfMonth());
 
-            var completedGoals = userGoalRepository.findByUserUserIdAndIsCompleteTrueAndCompletedAtBetween(userId, start, end)
-                    .stream()
-                    .map(g -> GoalDTO.builder()
-                            .goalId(g.getUserGoalId())
-                            .goalName(g.getGoalInstance().getGoal().getGoal())
-                            .entityName(g.getGoalInstance().getEntity() != null ? g.getGoalInstance().getEntity().getName() : null)
-                            .groupName(g.getGoalInstance().getGroup() != null ? g.getGoalInstance().getGroup().getName() : null)
-                            .isActive(false)
-                            .build())
-                    .toList();
+            LocalDateTime start = startLocalDate.atStartOfDay();
+            LocalDateTime end = endLocalDate.atTime(23, 59, 59, 999999999);
 
-            if (completedGoals.isEmpty()) {
+            var userGoals = userGoalRepository.findByUserUserIdAndIsCompleteTrueAndCompletedAtBetween(userId, start, end);
+
+            // 2. Format custom message with the active date range if empty
+            if (userGoals.isEmpty()) {
+                String emptyMessage = String.format(
+                        "No completed goals found for the specified date range: %s to %s.",
+                        startLocalDate,
+                        endLocalDate
+                );
                 return new CustomResponse<>(
-                        "No completed goals found for the specified date range.",
+                        emptyMessage,
                         null,
-                        HttpStatus.NO_CONTENT,
-                        "204"
+                        HttpStatus.OK,
+                        "200"
                 );
             }
+
+            // 3. Safe Null Navigation Map
+            var completedGoals = userGoals.stream()
+                    .map(g -> {
+                        var instance = g.getGoalInstance();
+
+                        String goalName = (instance != null && instance.getGoal() != null)
+                                ? instance.getGoal().getGoal()
+                                : null;
+
+                        String entityName = (instance != null && instance.getEntity() != null)
+                                ? instance.getEntity().getName()
+                                : null;
+
+                        String groupName = (instance != null && instance.getGroup() != null)
+                                ? instance.getGroup().getName()
+                                : null;
+
+                        // Null-safe date formatting
+                        String formattedCompletedDate = (g.getCompletedAt() != null)
+                                ? g.getCompletedAt().format(DATE_FORMATTER)
+                                : null;
+
+                        return GoalDTO.builder()
+                                .goalId(g.getUserGoalId())
+                                .goalName(goalName)
+                                .entityName(entityName)
+                                .groupName(groupName)
+                                .isActive(g.getIsActive() != null ? g.getIsActive() : false)
+                                // Match your DTO's specific naming convention below:
+                                .completedAt(formattedCompletedDate)
+                                .build();
+                    })
+                    .toList();
 
             var response = UserProfileResponse.builder()
                     .userId(userId)
@@ -426,26 +528,150 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
         }
     }
 
-    public UserProfileResponse getUserIncompletedGoals(Long userId, String startDate, String endDate) {
+    public CustomResponse<UserProfileResponse> getUserIncompletedGoals(Long userId, String startDate, String endDate) {
+        try {
+            var user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
-        var user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+            // 1. Establish the date structures
+            LocalDate startLocalDate = (startDate != null)
+                    ? LocalDate.parse(startDate)
+                    : LocalDate.now().withDayOfMonth(1);
 
-        var incompletedGoals = user.getUserGoals().stream()
-                .filter(g -> Boolean.FALSE.equals(g.getIsComplete()))
-                .map(g -> GoalDTO.builder()
-                        .goalId(g.getUserGoalId())
-//                        .goalName(g.getGoal().getGoal())
-                        .isActive(g.getIsActive())
-                        .build())
-                .toList();
+            LocalDate endLocalDate = (endDate != null)
+                    ? LocalDate.parse(endDate)
+                    : startLocalDate.withDayOfMonth(startLocalDate.lengthOfMonth());
 
-        return UserProfileResponse.builder()
-                .userId(userId)
-                .username(user.getUsername())
-                .goals(incompletedGoals)
-                .build();
+            LocalDateTime start = startLocalDate.atStartOfDay();
+            LocalDateTime end = endLocalDate.atTime(23, 59, 59, 999999999);
+
+            // 2. Filter goals by date range and incompleted status
+            // Note: Using your user object's lazy collection stream just like your original code,
+            // but now filtering it cleanly by the calculated date parameters.
+            var incompletedGoals = user.getUserGoals().stream()
+                    .filter(g -> Boolean.FALSE.equals(g.getIsComplete()))
+                    // Assuming joinedAt or a similar date field determines if it falls in the range
+                    .filter(g -> g.getJoinedAt() != null && !g.getJoinedAt().isBefore(start) && !g.getJoinedAt().isAfter(end))
+                    .map(g -> {
+                        var instanceOpt = Optional.ofNullable(g.getGoalInstance());
+
+                        String goalName = instanceOpt
+                                .map(gi -> gi.getGoal())
+                                .map(goal -> goal.getGoal())
+                                .orElse(null);
+
+                        String entityName = instanceOpt
+                                .map(gi -> gi.getEntity())
+                                .map(entity -> entity.getName())
+                                .orElse(null);
+
+                        String groupName = instanceOpt
+                                .map(gi -> gi.getGroup())
+                                .map(group -> group.getName())
+                                .orElse(null);
+
+                        return GoalDTO.builder()
+                                .goalId(g.getUserGoalId())
+                                .goalName(goalName)
+                                .entityName(entityName)
+                                .groupName(groupName)
+                                .isActive(g.getIsActive() != null ? g.getIsActive() : false)
+                                .build();
+                    })
+                    .toList();
+
+            // 3. Format custom message with the active date range if empty
+            if (incompletedGoals.isEmpty()) {
+                String emptyMessage = String.format(
+                        "No incomplete goals found for the specified date range: %s to %s.",
+                        startLocalDate,
+                        endLocalDate
+                );
+                return new CustomResponse<>(
+                        emptyMessage,
+                        null,
+                        HttpStatus.OK,
+                        "200"
+                );
+            }
+
+            var response = UserProfileResponse.builder()
+                    .userId(userId)
+                    .username(user.getUsername())
+                    .goals(incompletedGoals)
+                    .build();
+
+            return new CustomResponse<>(
+                    "Incomplete goals fetched successfully.",
+                    response,
+                    HttpStatus.OK,
+                    "200"
+            );
+
+        } catch (Exception ex) {
+            return new CustomResponse<>(
+                    "Error fetching incomplete goals: " + ex.getMessage(),
+                    null,
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "500"
+            );
+        }
     }
+
+
+//    public UserProfileResponse getUserIncompletedGoals(Long userId, String startDate, String endDate) {
+//
+//        var user = userRepository.findById(userId)
+//                .orElseThrow(() -> new RuntimeException("User not found"));
+//
+////        var incompletedGoals = user.getUserGoals().stream()
+////                .filter(g -> Boolean.FALSE.equals(g.getIsComplete()))
+////                .map(g -> GoalDTO.builder()
+////                        .goalId(g.getUserGoalId())
+////                        .goalName(g.getGoalInstance().getGoal().getGoal())
+////                        .entityName(g.getGoalInstance().getEntity().getName())
+////                        .groupName(g.getGoalInstance().getGroup().getName())
+////                        .isActive(g.getIsActive())
+////                        .build())
+////                .toList();
+//        var incompletedGoals = user.getUserGoals().stream()
+//                .filter(g -> Boolean.FALSE.equals(g.getIsComplete()))
+//                .map(g -> {
+//                    // Safely resolve GoalInstance since multiple fields depend on it
+//                    var instanceOpt = Optional.ofNullable(g.getGoalInstance());
+//
+//                    String goalName = instanceOpt
+//                            .map(gi -> gi.getGoal())
+//                            .map(goal -> goal.getGoal())
+//                            .orElse(null); // Or use .orElse("No Goal Name")
+//
+//                    String entityName = instanceOpt
+//                            .map(gi -> gi.getEntity())
+//                            .map(entity -> entity.getName())
+//                            .orElse(null);
+//
+//                    String groupName = instanceOpt
+//                            .map(gi -> gi.getGroup())
+//                            .map(group -> group.getName())
+//                            .orElse(null);
+//
+//                    return GoalDTO.builder()
+//                            .goalId(g.getUserGoalId())
+//                            .goalName(goalName)
+//                            .entityName(entityName)
+//                            .groupName(groupName)
+//                            .isActive(g.getIsActive())
+//                            .build();
+//                })
+//                .toList();
+//
+//
+//        return UserProfileResponse.builder()
+//                .userId(userId)
+//                .username(user.getUsername())
+//                .goals(incompletedGoals)
+//                .build();
+//    }
     public UserProfileResponse getUserGroups(Long userId) {
 
         var user = userRepository.findById(userId)
@@ -876,6 +1102,13 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                                         .dollarAmount(totalDollarAmount)
 
                                         .isComplete(progressPct >= 100.0)
+
+                                        // user goals: always joined, entity/group null
+                                        .entityId(null)
+                                        .groupId(null)
+                                        .goalInstanceId(first.getGoalInstanceId())
+                                        .joined(true)
+
                                         .build();
                             })
                             .toList();
@@ -884,6 +1117,7 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
              * ============================================================
              * ENTITY GOALS
              * ONLY include active memberships (leftAt == null)
+             * Reuse getEntitiesDetails to get joined + goalInstanceId
              * ============================================================
              */
 
@@ -900,81 +1134,13 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                     continue;
                 }
 
-                var goalInstances = goalInstanceRepository
-                        .findByEntity_EntityId(entity.getEntityId());
+                // 🔹 Reuse existing API logic
+                CustomResponse<EntityDetailsDTO> entityDetailsResponse =
+                        entityService.getEntitiesDetails(entity.getEntityId(), userId, true);
 
-                Map<Long, List<GoalProgressDTO>> groupedGoals =
-                        goalInstances.stream()
-                                .map(helper::toGoalProgressDTO)
-                                .collect(Collectors.groupingBy(GoalProgressDTO::getGoalId));
+                EntityDetailsDTO entityDetails = (EntityDetailsDTO) entityDetailsResponse.getObject();
 
-                List<GoalProgressDTO> mergedGoals =
-                        groupedGoals.values().stream()
-                                .map(goalList -> {
-
-                                    GoalProgressDTO first = goalList.get(0);
-
-                                    long totalSteps = goalList.stream()
-                                            .mapToLong(g ->
-                                                    g.getStepsContributed() != null
-                                                            ? g.getStepsContributed()
-                                                            : 0L
-                                            )
-                                            .sum();
-
-                                    long totalCoins = goalList.stream()
-                                            .mapToLong(g ->
-                                                    g.getCoinsContributed() != null
-                                                            ? g.getCoinsContributed()
-                                                            : 0L
-                                            )
-                                            .sum();
-
-                                    BigDecimal totalDollarAmount = goalList.stream()
-                                            .map(g ->
-                                                    g.getDollarAmount() != null
-                                                            ? g.getDollarAmount()
-                                                            : BigDecimal.ZERO
-                                            )
-                                            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-                                    Long requiredSteps = first.getRequiredSteps();
-                                    Long requiredCoins = first.getRequiredCoins();
-
-                                    Long currentAmount = requiredSteps != null
-                                            ? totalSteps
-                                            : totalCoins;
-
-                                    double progressPct = 0.0;
-
-                                    if (requiredSteps != null && requiredSteps > 0) {
-                                        progressPct = (totalSteps * 100.0) / requiredSteps;
-                                    } else if (requiredCoins != null && requiredCoins > 0) {
-                                        progressPct = (totalCoins * 100.0) / requiredCoins;
-                                    }
-
-                                    return GoalProgressDTO.builder()
-                                            .goalId(first.getGoalId())
-                                            .goalName(first.getGoalName())
-
-                                            .requiredSteps(requiredSteps)
-                                            .requiredCoins(requiredCoins)
-
-                                            .currentAmount(currentAmount)
-                                            .progressPct(progressPct)
-
-                                            .stepsContributed(totalSteps)
-                                            .coinsContributed(totalCoins)
-
-                                            .stepsNeeded(requiredSteps)
-                                            .coinsNeeded(requiredCoins)
-
-                                            .dollarAmount(totalDollarAmount)
-
-                                            .isComplete(progressPct >= 100.0)
-                                            .build();
-                                })
-                                .toList();
+                List<GoalProgressDTO> mergedGoals = entityDetails.getActiveGoals();
 
                 entityMap.put(
                         entity.getEntityId(),
@@ -993,6 +1159,7 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
              * ============================================================
              * GROUP GOALS
              * ONLY include active memberships (leftAt == null)
+             * Reuse getGroupDetails to get joined + goalInstanceId
              * ============================================================
              */
 
@@ -1000,7 +1167,7 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
 
             for (var ug : user.getUserGroups().stream()
                     .filter(ug -> ug.getLeftAt() == null)
-                    .toList()) {  //  for (var ug : user.getUserGroups()) { to get all groups same as above for entities
+                    .toList()) {
 
                 var group = ug.getGroup();
 
@@ -1009,81 +1176,13 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                     continue;
                 }
 
-                var goalInstances = goalInstanceRepository
-                        .findByGroup_GroupId(group.getGroupId());
+                // 🔹 Reuse existing API logic
+                CustomResponse<GroupDetailsDTO> groupDetailsResponse =
+                        groupService.getGroupDetails(group.getGroupId(), userId, true);
 
-                Map<Long, List<GoalProgressDTO>> groupedGoals =
-                        goalInstances.stream()
-                                .map(helper::toGoalProgressDTO)
-                                .collect(Collectors.groupingBy(GoalProgressDTO::getGoalId));
+                GroupDetailsDTO groupDetails = (GroupDetailsDTO) groupDetailsResponse.getObject();
 
-                List<GoalProgressDTO> mergedGoals =
-                        groupedGoals.values().stream()
-                                .map(goalList -> {
-
-                                    GoalProgressDTO first = goalList.get(0);
-
-                                    long totalSteps = goalList.stream()
-                                            .mapToLong(g ->
-                                                    g.getStepsContributed() != null
-                                                            ? g.getStepsContributed()
-                                                            : 0L
-                                            )
-                                            .sum();
-
-                                    long totalCoins = goalList.stream()
-                                            .mapToLong(g ->
-                                                    g.getCoinsContributed() != null
-                                                            ? g.getCoinsContributed()
-                                                            : 0L
-                                            )
-                                            .sum();
-
-                                    BigDecimal totalDollarAmount = goalList.stream()
-                                            .map(g ->
-                                                    g.getDollarAmount() != null
-                                                            ? g.getDollarAmount()
-                                                            : BigDecimal.ZERO
-                                            )
-                                            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-                                    Long requiredSteps = first.getRequiredSteps();
-                                    Long requiredCoins = first.getRequiredCoins();
-
-                                    Long currentAmount = requiredSteps != null
-                                            ? totalSteps
-                                            : totalCoins;
-
-                                    double progressPct = 0.0;
-
-                                    if (requiredSteps != null && requiredSteps > 0) {
-                                        progressPct = (totalSteps * 100.0) / requiredSteps;
-                                    } else if (requiredCoins != null && requiredCoins > 0) {
-                                        progressPct = (totalCoins * 100.0) / requiredCoins;
-                                    }
-
-                                    return GoalProgressDTO.builder()
-                                            .goalId(first.getGoalId())
-                                            .goalName(first.getGoalName())
-
-                                            .requiredSteps(requiredSteps)
-                                            .requiredCoins(requiredCoins)
-
-                                            .currentAmount(currentAmount)
-                                            .progressPct(progressPct)
-
-                                            .stepsContributed(totalSteps)
-                                            .coinsContributed(totalCoins)
-
-                                            .stepsNeeded(requiredSteps)
-                                            .coinsNeeded(requiredCoins)
-
-                                            .dollarAmount(totalDollarAmount)
-
-                                            .isComplete(progressPct >= 100.0)
-                                            .build();
-                                })
-                                .toList();
+                List<GoalProgressDTO> mergedGoals = groupDetails.getActiveGoals();
 
                 groupMap.put(
                         group.getGroupId(),
@@ -1116,6 +1215,8 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
             throw new RuntimeException("Error building dashboard: " + ex.getMessage());
         }
     }
+
+
 
 }
 
