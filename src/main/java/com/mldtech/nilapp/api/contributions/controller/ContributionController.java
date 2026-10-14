@@ -1,5 +1,6 @@
 package com.mldtech.nilapp.api.contributions.controller;
 
+import com.mldtech.nilapp.api.contributions.dto.ContributionRequestDTO;
 import com.mldtech.nilapp.api.contributions.dto.ContributionSummaryDTO;
 import com.mldtech.nilapp.api.contributions.dto.CreateContributionRequest;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
@@ -65,6 +66,16 @@ public class ContributionController {
                 request.getAdValue(),
                 request.getCoinValue()
         );
+    }
+    @PostMapping("/claim")
+    public Contribution claimContribution(@RequestBody ContributionRequestDTO request) {
+        System.out.println("claimContribution");
+        System.out.println("claimContribution");
+        System.out.println(request);
+        System.out.println("claimContribution");
+        System.out.println("claimContribution");
+        Contribution contribution = contributionService.claimContribution(request);
+        return contribution;//ResponseEntity.ok(contribution);
     }
 
 

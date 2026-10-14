@@ -35,22 +35,22 @@ public class Contribution {
     @Column(name = "user_id", nullable = false)
     private Long userId;  // TODO DTO
 
-    @Column(name = "entity_id", nullable = false)
+    @Column(name = "entity_id", nullable = true)
     private Long entityId;
 
-    @Column(name = "campaign_id", nullable = false)
+    @Column(name = "campaign_id", nullable = true)
     private Long campaignId;
 
-    @Column(name = "steps_contributed")
+    @Column(name = "steps_contributed", nullable = false)
     private Integer stepsContributed;
 
-    @Column(name = "coins_contributed")
+    @Column(name = "coins_contributed", nullable = false)
     private Integer coinsContributed;
 
-    @Column(name = "conversion_rate", precision = 10, scale = 6)
+    @Column(name = "conversion_rate", precision = 10, scale = 6, nullable = false)
     private BigDecimal conversionRate;
 
-    @Column(name = "ad_session_id", length = 100)
+    @Column(name = "ad_session_id", length = 100, nullable = false)
     private String adSessionId;
 
     @Column(name = "created_at", insertable = false, updatable = false)

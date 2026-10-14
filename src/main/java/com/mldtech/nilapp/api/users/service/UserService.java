@@ -791,6 +791,84 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                 .friends(all)
                 .build();
     }
+    // TODO remove
+//    public CustomResponse<ContributionSummaryDTO> getUserContributionSummary(Long userId) {
+//
+//        var user = userRepository.findById(userId).orElse(null);
+//
+//        if (user == null) {
+//            return new CustomResponse<>(
+//                    "User not found",
+//                    HttpStatus.BAD_REQUEST,
+//                    "400"
+//            );
+//        }
+//
+//        // Get all contributions for this user
+//        var contributions = contributionRepository.findByUserId(userId);
+//
+//        // Total NIL coins across all entities
+//        long totalNilCoins = contributions.stream()
+//                .mapToLong(c -> c.getCoinsContributed() != null ? c.getCoinsContributed() : 0)
+//                .sum();
+//
+//        // GROUP AGGREGATION
+//        var groupTotals = user.getUserGroups().stream()
+//                .map(ug -> {
+//                    long steps = contributions.stream()
+//                            .filter(c -> c.getEntityId().equals(ug.getGroup().getGroupId()))
+//                            .mapToLong(c -> c.getStepsContributed() != null ? c.getStepsContributed() : 0)
+//                            .sum();
+//
+//                    long nil = contributions.stream()
+//                            .filter(c -> c.getEntityId().equals(ug.getGroup().getGroupId()))
+//                            .mapToLong(c -> c.getCoinsContributed() != null ? c.getCoinsContributed() : 0)
+//                            .sum();
+//
+//                    return GroupContributionDTO.builder()
+//                            .groupId(ug.getGroup().getGroupId())
+//                            .groupName(ug.getGroup().getName())
+//                            .totalSteps(steps)
+//                            .totalNilCoins(nil)
+//                            .build();
+//                })
+//                .toList();
+//
+//        // ENTITY AGGREGATION
+//        var entityTotals = user.getUserEntities().stream()
+//                .map(ue -> {
+//                    long steps = contributions.stream()
+//                            .filter(c -> c.getEntityId().equals(ue.getEntity().getEntityId()))
+//                            .mapToLong(c -> c.getStepsContributed() != null ? c.getStepsContributed() : 0)
+//                            .sum();
+//
+//                    long nil = contributions.stream()
+//                            .filter(c -> c.getEntityId().equals(ue.getEntity().getEntityId()))
+//                            .mapToLong(c -> c.getCoinsContributed() != null ? c.getCoinsContributed() : 0)
+//                            .sum();
+//
+//                    return EntityContributionDTO.builder()
+//                            .entityId(ue.getEntity().getEntityId())
+//                            .entityName(ue.getEntity().getName())
+//                            .totalSteps(steps)
+//                            .totalNilCoins(nil)
+//                            .build();
+//                })
+//                .toList();
+//
+//        ContributionSummaryDTO summary = ContributionSummaryDTO.builder()
+//                .userId(userId)
+//                .totalNilCoins(totalNilCoins)
+//                .groupContributions(groupTotals)
+//                .entityContributions(entityTotals)
+//                .build();
+//
+//        return new CustomResponse<>(
+//                summary,
+//                HttpStatus.OK,
+//                "200"
+//        );
+//    }
     public CustomResponse<ContributionSummaryDTO> getUserContributionSummary(Long userId) {
 
         var user = userRepository.findById(userId).orElse(null);
@@ -806,49 +884,83 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
         // Get all contributions for this user
         var contributions = contributionRepository.findByUserId(userId);
 
-        // Total NIL coins across all entities
+        // Total NIL coins across all contributions
         long totalNilCoins = contributions.stream()
                 .mapToLong(c -> c.getCoinsContributed() != null ? c.getCoinsContributed() : 0)
                 .sum();
 
-        // GROUP AGGREGATION
-        var groupTotals = user.getUserGroups().stream()
-                .map(ug -> {
+        // GROUP AGGREGATION (Deduplicated by Unique Group ID)
+        Map<Long, String> uniqueGroups = user.getUserGroups().stream()
+                .filter(ug -> ug.getGroup() != null && ug.getGroup().getGroupId() != null)
+                .collect(Collectors.toMap(
+                        ug -> ug.getGroup().getGroupId(),
+                        ug -> ug.getGroup().getName(),
+                        (existing, replacement) -> existing // Safe fallback for duplicate rows
+                ));
+
+        var groupTotals = uniqueGroups.entrySet().stream()
+                .map(entry -> {
+                    Long targetGroupId = entry.getKey();
+                    String groupName = entry.getValue();
+
                     long steps = contributions.stream()
-                            .filter(c -> c.getEntityId().equals(ug.getGroup().getGroupId()))
-                            .mapToLong(c -> c.getStepsContributed() != null ? c.getStepsContributed() : 0)
+                            .mapToLong(c -> {
+                                double share = getGroupPercentageShare(c, targetGroupId);
+                                long totalSteps = c.getStepsContributed() != null ? c.getStepsContributed() : 0;
+                                return Math.round(totalSteps * share);
+                            })
                             .sum();
 
                     long nil = contributions.stream()
-                            .filter(c -> c.getEntityId().equals(ug.getGroup().getGroupId()))
-                            .mapToLong(c -> c.getCoinsContributed() != null ? c.getCoinsContributed() : 0)
+                            .mapToLong(c -> {
+                                double share = getGroupPercentageShare(c, targetGroupId);
+                                long totalCoins = c.getCoinsContributed() != null ? c.getCoinsContributed() : 0;
+                                return Math.round(totalCoins * share);
+                            })
                             .sum();
 
                     return GroupContributionDTO.builder()
-                            .groupId(ug.getGroup().getGroupId())
-                            .groupName(ug.getGroup().getName())
+                            .groupId(targetGroupId)
+                            .groupName(groupName)
                             .totalSteps(steps)
                             .totalNilCoins(nil)
                             .build();
                 })
                 .toList();
 
-        // ENTITY AGGREGATION
-        var entityTotals = user.getUserEntities().stream()
-                .map(ue -> {
+        // ENTITY AGGREGATION (Deduplicated by Unique Entity ID)
+        Map<Long, String> uniqueEntities = user.getUserEntities().stream()
+                .filter(ue -> ue.getEntity() != null && ue.getEntity().getEntityId() != null)
+                .collect(Collectors.toMap(
+                        ue -> ue.getEntity().getEntityId(),
+                        ue -> ue.getEntity().getName(),
+                        (existing, replacement) -> existing // Safe fallback for duplicate rows
+                ));
+
+        var entityTotals = uniqueEntities.entrySet().stream()
+                .map(entry -> {
+                    Long targetEntityId = entry.getKey();
+                    String entityName = entry.getValue();
+
                     long steps = contributions.stream()
-                            .filter(c -> c.getEntityId().equals(ue.getEntity().getEntityId()))
-                            .mapToLong(c -> c.getStepsContributed() != null ? c.getStepsContributed() : 0)
+                            .mapToLong(c -> {
+                                double share = getEntityPercentageShare(c, targetEntityId);
+                                long totalSteps = c.getStepsContributed() != null ? c.getStepsContributed() : 0;
+                                return Math.round(totalSteps * share);
+                            })
                             .sum();
 
                     long nil = contributions.stream()
-                            .filter(c -> c.getEntityId().equals(ue.getEntity().getEntityId()))
-                            .mapToLong(c -> c.getCoinsContributed() != null ? c.getCoinsContributed() : 0)
+                            .mapToLong(c -> {
+                                double share = getEntityPercentageShare(c, targetEntityId);
+                                long totalCoins = c.getCoinsContributed() != null ? c.getCoinsContributed() : 0;
+                                return Math.round(totalCoins * share);
+                            })
                             .sum();
 
                     return EntityContributionDTO.builder()
-                            .entityId(ue.getEntity().getEntityId())
-                            .entityName(ue.getEntity().getName())
+                            .entityId(targetEntityId)
+                            .entityName(entityName)
                             .totalSteps(steps)
                             .totalNilCoins(nil)
                             .build();
@@ -868,6 +980,64 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                 "200"
         );
     }
+
+    @SuppressWarnings("unchecked")
+    private double getEntityPercentageShare(Contribution c, Long targetEntityId) {
+        if (c == null) return 0.0;
+
+        // Fallback 1: Legacy columns. If direct matching column exists, get 100% allocation
+        if (c.getEntityId() != null) {
+            return c.getEntityId().equals(targetEntityId) ? 1.0 : 0.0;
+        }
+
+        // Fallback 2: Look into new JSON snapshot percentages
+        Map<String, Object> snapshot = c.getAllocationSnapshot();
+        if (snapshot == null || !snapshot.containsKey("entityAllocations")) return 0.0;
+
+        try {
+            var allocations = (List<Map<String, Object>>) snapshot.get("entityAllocations");
+            for (Map<String, Object> alloc : allocations) {
+                Number entityIdNum = (Number) alloc.get("entityId");
+                if (entityIdNum != null && entityIdNum.longValue() == targetEntityId.longValue()) {
+                    Number percentage = (Number) alloc.get("percentage");
+                    return percentage != null ? percentage.doubleValue() / 100.0 : 0.0;
+                }
+            }
+        } catch (Exception e) {
+            // Safe ignore catch block for malformed JSON formats
+        }
+        return 0.0;
+    }
+
+    @SuppressWarnings("unchecked")
+    private double getGroupPercentageShare(Contribution c, Long targetGroupId) {
+        if (c == null) return 0.0;
+
+        // Fallback 1: Legacy columns.
+        if (c.getEntityId() != null) {
+            return c.getEntityId().equals(targetGroupId) ? 1.0 : 0.0;
+        }
+
+        // Fallback 2: Look into new JSON snapshot percentages
+        Map<String, Object> snapshot = c.getAllocationSnapshot();
+        if (snapshot == null || !snapshot.containsKey("groupAllocations")) return 0.0;
+
+        try {
+            var allocations = (List<Map<String, Object>>) snapshot.get("groupAllocations");
+            for (Map<String, Object> alloc : allocations) {
+                Number groupIdNum = (Number) alloc.get("groupId");
+                if (groupIdNum != null && groupIdNum.longValue() == targetGroupId.longValue()) {
+                    Number percentage = (Number) alloc.get("percentage");
+                    return percentage != null ? percentage.doubleValue() / 100.0 : 0.0;
+                }
+            }
+        } catch (Exception e) {
+            // Safe ignore catch block for malformed JSON formats
+        }
+        return 0.0;
+    }
+
+
 
     public CustomResponse<UserStatsResponse> getUserStats(Long userId, String startDate, String endDate) {
         try {

@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mldtech.nilapp.api.contributions.children.ContributionStatus.model.ContributionStatus;
 import com.mldtech.nilapp.api.contributions.children.ContributionStatus.repository.ContributionStatusRepository;
+import com.mldtech.nilapp.api.contributions.children.ContributionType.model.ContributionType;
+import com.mldtech.nilapp.api.contributions.dto.ContributionRequestDTO;
 import com.mldtech.nilapp.api.contributions.dto.ContributionTotalDTO;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.contributions.repository.ContributionRepository;
@@ -40,6 +42,11 @@ public class ContributionService {
     private final GroupRepository groupRepository;
     private final UserRepository userRepository;
     private final UserEntityRepository userEntityRepository;
+
+
+    // Define your default IDs as constants
+    private static final Integer DEFAULT_STATUS_ID = 1; // e.g., PENDING
+    private static final Integer DEFAULT_TYPE_ID = 1;   // e.g., Advertisement
 
     public ContributionTotalDTO getUserMonthlyTotals(Long userId,
                                                            LocalDateTime start,
@@ -197,7 +204,7 @@ public class ContributionService {
         );
     }
 
-
+    // TODO not used delete?
     @Transactional
     public Contribution createContribution(
             Long userId,
@@ -293,6 +300,59 @@ public class ContributionService {
         System.out.println(dtoList);
 
         return new CustomResponse<>(dtoList, HttpStatus.OK, "200");
+    }
+    @Transactional
+    public Contribution claimContribution(ContributionRequestDTO dto) {
+
+        // 1) Validate and fallback to default for Status
+        Integer statusId = (dto.getContributionStatusId() != null && dto.getContributionStatusId() > 0)
+                ? dto.getContributionStatusId()
+                : DEFAULT_STATUS_ID;
+
+        // 2) Validate and fallback to default for Type
+        Integer typeId = (dto.getContributionTypeId() != null && dto.getContributionTypeId() > 0)
+                ? dto.getContributionTypeId()
+                : DEFAULT_TYPE_ID;
+
+        // 3) Create stub objects using an ID-only constructor
+        ContributionStatus statusStub = new ContributionStatus();
+        statusStub.setContributionStatusId(statusId); // Assuming you have setId or an ID constructor
+
+        ContributionType typeStub = new ContributionType();
+        typeStub.setContributionTypeId(typeId);
+
+        // Convert the stringified JSON into a Map for your JSONB field
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, Object> parsedSnapshot = null;
+        if (dto.getAllocationSnapshot() != null && !dto.getAllocationSnapshot().isBlank()) {
+            try {
+                parsedSnapshot = objectMapper.readValue(
+                        dto.getAllocationSnapshot(),
+                        new TypeReference<Map<String, Object>>() {}
+                );
+            } catch (Exception e) {
+                // Log exception and fallback to empty map if parsing fails
+                parsedSnapshot = new HashMap<>();
+            }
+        } else {
+            parsedSnapshot = new HashMap<>();
+        }
+        // 4) Build and Save
+        Contribution contribution = Contribution.builder()
+                .userId(dto.getUserId())
+                .entityId(dto.getEntityId())
+                .campaignId(dto.getCampaignId())
+                .stepsContributed(dto.getStepsContributed())
+                .coinsContributed(dto.getCoinsContributed())
+                .conversionRate(dto.getConversionRate())
+                .adSessionId(dto.getAdSessionId())
+                .payoutBatchId(dto.getPayoutBatchId())
+                .contributionStatus(statusStub) // Injected stub
+                .contributionType(typeStub)     // Injected stub
+                .allocationSnapshot(parsedSnapshot)
+                .build();
+
+        return contributionRepository.save(contribution);
     }
 
 
