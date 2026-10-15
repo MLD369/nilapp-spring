@@ -31,4 +31,8 @@ public class EntityAchievement {
 
     @Column(name = "earned_at")
     private LocalDateTime earnedAt;
+
+    @Column(name = "min_coins_required")
+    private Integer minCoinsRequired;
+
 }

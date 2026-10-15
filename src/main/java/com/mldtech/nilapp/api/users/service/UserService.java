@@ -17,12 +17,14 @@ import com.mldtech.nilapp.api.contributions.repository.ContributionRepository;
 import com.mldtech.nilapp.api.entities.children.EntityAchievement.model.EntityAchievement;
 import com.mldtech.nilapp.api.entities.children.EntityAchievement.repository.EntityAchievementRepository;
 import com.mldtech.nilapp.api.entities.service.EntityService;
+import com.mldtech.nilapp.api.entitystat.repository.EntityStatsRepository;
 import com.mldtech.nilapp.api.friend.repository.FriendRepository;
 import com.mldtech.nilapp.api.goals.children.GoalInstances.model.GoalInstance;
 import com.mldtech.nilapp.api.goals.children.GoalInstances.repository.GoalInstanceRepository;
 import com.mldtech.nilapp.api.group.children.GroupAchievement.model.GroupAchievement;
 import com.mldtech.nilapp.api.group.children.GroupAchievement.repository.GroupAchievementRepository;
 import com.mldtech.nilapp.api.group.service.GroupService;
+import com.mldtech.nilapp.api.groupstat.repository.GroupStatsRepository;
 import com.mldtech.nilapp.api.users.children.UserAchievement.model.UserAchievement;
 import com.mldtech.nilapp.api.users.children.UserAchievement.repository.UserAchievementRepository;
 import com.mldtech.nilapp.api.users.children.UserGoal.repository.UserGoalRepository;
@@ -65,6 +67,8 @@ public class UserService {
     private final GoalInstanceRepository goalInstanceRepository;
 //    private final UserGoalHistoryRepository userGoalHistoryRepository;
     private final FriendRepository friendRepository;
+    private final GroupStatsRepository groupStatsRepository;
+    private final EntityStatsRepository entityStatsRepository;
     Helper helper = new Helper();
 
     // Define a reusable, thread-safe formatter
@@ -204,6 +208,145 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
     );
 }
 
+//    public UserProfileResponse getUserAchievements(Long userId) {
+//
+//        var user = userRepository.findById(userId)
+//                .orElseThrow(() -> new RuntimeException("User not found"));
+//
+//        Map<String, AchievementDTO> compiled = new LinkedHashMap<>();
+//
+//        // =====================================================
+//        // 1. USER ACHIEVEMENTS
+//        // =====================================================
+//        var userAchievements = userAchievementRepository.findByUser_UserId(userId);
+//
+//        for (var ua : userAchievements) {
+//
+//            var achievement = ua.getAchievement();
+//
+//            String key = "USER-" + achievement.getAchievementId();
+//
+//            AchievementDTO dto = compiled.computeIfAbsent(key, k ->
+//                    AchievementDTO.builder()
+//                            .achievementId(achievement.getAchievementId())
+//                            .achievementName(achievement.getAchievement())
+//                            .description(achievement.getDescription())
+//                            .badge(achievement.getBadge())
+//                            .timesEarned(0L)
+//                            .entityName(null)
+//                            .groupName(null)
+//                            .earnedAt(ua.getEarnedAt())
+//                            .lastEarnedAt(ua.getEarnedAt())
+//                            .build()
+//            );
+//
+//            dto.setTimesEarned(dto.getTimesEarned() + 1);
+//
+//            updateDates(dto, ua.getEarnedAt());
+//        }
+//
+//        // =====================================================
+//        // 2. ENTITY ACHIEVEMENTS
+//        // =====================================================
+//        Set<Long> processedEntityAchievements = new HashSet<>();
+//
+//        for (var ue : user.getUserEntities()) {
+//
+//            var entity = ue.getEntity();
+//
+//            var entityAchievements =
+//                    entityAchievementRepository.findByEntity_EntityId(entity.getEntityId());
+//
+//            for (var ea : entityAchievements) {
+//
+//                // prevents duplicate rows
+//                if (!processedEntityAchievements.add(ea.getEntityAchievementId())) {
+//                    continue;
+//                }
+//
+//                var achievement = ea.getAchievement();
+//
+//                String key =
+//                        "ENTITY-" +
+//                                achievement.getAchievementId() +
+//                                "-" +
+//                                entity.getEntityId();
+//
+//                AchievementDTO dto = compiled.computeIfAbsent(key, k ->
+//                        AchievementDTO.builder()
+//                                .achievementId(achievement.getAchievementId())
+//                                .achievementName(achievement.getAchievement())
+//                                .description(achievement.getDescription())
+//                                .badge(achievement.getBadge())
+//                                .timesEarned(0L)
+//                                .entityName(entity.getName())
+//                                .groupName(null)
+//                                .earnedAt(ea.getEarnedAt())
+//                                .lastEarnedAt(ea.getEarnedAt())
+//                                .build()
+//                );
+//
+//                dto.setTimesEarned(dto.getTimesEarned() + 1);
+//
+//                updateDates(dto, ea.getEarnedAt());
+//            }
+//        }
+//
+//        // =====================================================
+//        // 3. GROUP ACHIEVEMENTS
+//        // =====================================================
+//        Set<Long> processedGroupAchievements = new HashSet<>();
+//
+//        for (var ug : user.getUserGroups()) {
+//
+//            var group = ug.getGroup();
+//
+//            var groupAchievements =
+//                    groupAchievementRepository.findByGroup_GroupId(group.getGroupId());
+//
+//            for (var ga : groupAchievements) {
+//
+//                // prevents duplicate rows
+//                if (!processedGroupAchievements.add(ga.getGroupAchievementsId())) {
+//                    continue;
+//                }
+//
+//                var achievement = ga.getAchievement();
+//
+//                String key =
+//                        "GROUP-" +
+//                                achievement.getAchievementId() +
+//                                "-" +
+//                                group.getGroupId();
+//
+//                AchievementDTO dto = compiled.computeIfAbsent(key, k ->
+//                        AchievementDTO.builder()
+//                                .achievementId(achievement.getAchievementId())
+//                                .achievementName(achievement.getAchievement())
+//                                .description(achievement.getDescription())
+//                                .badge(achievement.getBadge())
+//                                .timesEarned(0L)
+//                                .entityName(null)
+//                                .groupName(group.getName())
+//                                .earnedAt(ga.getEarnedAt())
+//                                .lastEarnedAt(ga.getEarnedAt())
+//                                .build()
+//                );
+//
+//                dto.setTimesEarned(dto.getTimesEarned() + 1);
+//
+//                updateDates(dto, ga.getEarnedAt());
+//            }
+//        }
+//
+//        return UserProfileResponse.builder()
+//                .userId(userId)
+//                .username(user.getUsername())
+//                .achievements(new ArrayList<>(compiled.values()))
+//                .build();
+//    }
+
+    @Transactional
     public UserProfileResponse getUserAchievements(Long userId) {
 
         var user = userRepository.findById(userId)
@@ -212,14 +355,12 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
         Map<String, AchievementDTO> compiled = new LinkedHashMap<>();
 
         // =====================================================
-        // 1. USER ACHIEVEMENTS
+        // 1. INDIVIDUAL USER ACHIEVEMENTS
         // =====================================================
         var userAchievements = userAchievementRepository.findByUser_UserId(userId);
 
         for (var ua : userAchievements) {
-
             var achievement = ua.getAchievement();
-
             String key = "USER-" + achievement.getAchievementId();
 
             AchievementDTO dto = compiled.computeIfAbsent(key, k ->
@@ -237,83 +378,90 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
             );
 
             dto.setTimesEarned(dto.getTimesEarned() + 1);
-
             updateDates(dto, ua.getEarnedAt());
         }
 
         // =====================================================
-        // 2. ENTITY ACHIEVEMENTS
+        // 2. ENTITY ACHIEVEMENTS (Financial Contribution Verified)
         // =====================================================
         Set<Long> processedEntityAchievements = new HashSet<>();
 
         for (var ue : user.getUserEntities()) {
-
             var entity = ue.getEntity();
+            if (entity == null) continue;
 
-            var entityAchievements =
-                    entityAchievementRepository.findByEntity_EntityId(entity.getEntityId());
+            var entityAchievements = entityAchievementRepository.findByEntity_EntityId(entity.getEntityId());
 
             for (var ea : entityAchievements) {
+                // 1. Identify what the minimum coin threshold rule is
+                int minCoinsRequired = (ea.getMinCoinsRequired() != null) ? ea.getMinCoinsRequired() : 1;
 
-                // prevents duplicate rows
+                // 2. Query the actual sum of coins this specific user contributed to this entity
+                long coinsContributed = entityStatsRepository.sumCoinsByUserAndEntity(userId, entity.getEntityId());
+
+                // 3. Financial Gate
+                if (coinsContributed < minCoinsRequired) {
+                    continue;
+                }
+
+                // 4. Duplicate Gate
                 if (!processedEntityAchievements.add(ea.getEntityAchievementId())) {
                     continue;
                 }
 
                 var achievement = ea.getAchievement();
-
-                String key =
-                        "ENTITY-" +
-                                achievement.getAchievementId() +
-                                "-" +
-                                entity.getEntityId();
-
+                String key = "ENTITY-" + achievement.getAchievementId() + "-" + entity.getEntityId();
                 AchievementDTO dto = compiled.computeIfAbsent(key, k ->
-                        AchievementDTO.builder()
-                                .achievementId(achievement.getAchievementId())
-                                .achievementName(achievement.getAchievement())
-                                .description(achievement.getDescription())
-                                .badge(achievement.getBadge())
-                                .timesEarned(0L)
-                                .entityName(entity.getName())
-                                .groupName(null)
-                                .earnedAt(ea.getEarnedAt())
-                                .lastEarnedAt(ea.getEarnedAt())
-                                .build()
+                AchievementDTO.builder()
+                        .achievementId(achievement.getAchievementId())
+                        .achievementName(achievement.getAchievement())
+                        .description(achievement.getDescription())
+                        .badge(achievement.getBadge())
+                        .timesEarned(0L)
+                        .entityName(entity.getName())
+                        .groupName(null)
+                        .earnedAt(ea.getEarnedAt())
+                        .lastEarnedAt(ea.getEarnedAt())
+                        .build()
                 );
 
+                // 7. NOW DTO EXISTS AND CAN SAFELY BE UPDATED
                 dto.setTimesEarned(dto.getTimesEarned() + 1);
-
                 updateDates(dto, ea.getEarnedAt());
             }
         }
 
+
         // =====================================================
-        // 3. GROUP ACHIEVEMENTS
+        // 3. GROUP ACHIEVEMENTS (Financial Contribution Verified)
         // =====================================================
         Set<Long> processedGroupAchievements = new HashSet<>();
 
         for (var ug : user.getUserGroups()) {
-
             var group = ug.getGroup();
+            if (group == null) continue;
 
-            var groupAchievements =
-                    groupAchievementRepository.findByGroup_GroupId(group.getGroupId());
+            var groupAchievements = groupAchievementRepository.findByGroup_GroupId(group.getGroupId());
 
             for (var ga : groupAchievements) {
+                // 1. Identify what the minimum coin threshold rule is
+                int minCoinsRequired = (ga.getMinCoinsRequired() != null) ? ga.getMinCoinsRequired() : 1;
 
-                // prevents duplicate rows
+                // 2. Query the actual sum of coins this user contributed to this group
+                long coinsContributed = groupStatsRepository.sumCoinsByUserAndGroup(userId, group.getGroupId());
+
+                // 3. Financial Gate
+                if (coinsContributed < minCoinsRequired) {
+                    continue;
+                }
+
+                // 4. Duplicate Gate
                 if (!processedGroupAchievements.add(ga.getGroupAchievementsId())) {
                     continue;
                 }
 
                 var achievement = ga.getAchievement();
-
-                String key =
-                        "GROUP-" +
-                                achievement.getAchievementId() +
-                                "-" +
-                                group.getGroupId();
+                String key = "GROUP-" + achievement.getAchievementId() + "-" + group.getGroupId();
 
                 AchievementDTO dto = compiled.computeIfAbsent(key, k ->
                         AchievementDTO.builder()
@@ -330,7 +478,6 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                 );
 
                 dto.setTimesEarned(dto.getTimesEarned() + 1);
-
                 updateDates(dto, ga.getEarnedAt());
             }
         }
@@ -342,24 +489,15 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                 .build();
     }
 
-    private void updateDates(AchievementDTO dto, LocalDateTime earnedAt) {
-
-        if (earnedAt == null) {
-            return;
+    private void updateDates(AchievementDTO dto, java.time.LocalDateTime date) {
+        if (dto.getEarnedAt() == null || date.isBefore(dto.getEarnedAt())) {
+            dto.setEarnedAt(date);
         }
-
-        if (dto.getEarnedAt() == null ||
-                earnedAt.isBefore(dto.getEarnedAt())) {
-
-            dto.setEarnedAt(earnedAt);
-        }
-
-        if (dto.getLastEarnedAt() == null ||
-                earnedAt.isAfter(dto.getLastEarnedAt())) {
-
-            dto.setLastEarnedAt(earnedAt);
+        if (dto.getLastEarnedAt() == null || date.isAfter(dto.getLastEarnedAt())) {
+            dto.setLastEarnedAt(date);
         }
     }
+
 
     public UserProfileResponse getUserGoals(Long userId) {
 
