@@ -25,24 +25,42 @@ public class UserStreak {
     private User user;
 
     @Column(name = "current_streak", nullable = false)
+    @Builder.Default
     private Integer currentStreak = 0;
 
     @Column(name = "longest_streak", nullable = false)
+    @Builder.Default
     private Integer longestStreak = 0;
 
     @Column(name = "last_completed_date")
     private LocalDate lastCompletedDate;
 
     @Column(name = "streak_shields", nullable = false)
+    @Builder.Default
     private Integer streakShields = 0;
 
     @Column(name = "streak_savers", nullable = false)
+    @Builder.Default
     private Integer streakSavers = 0;
 
+    // --- NEW LIFETIME AUDITING COLUMNS ---
+    @Column(name = "total_shields_earned", nullable = false)
+    @Builder.Default
+    private Integer totalShieldsEarned = 0;
+
+    @Column(name = "total_shields_used", nullable = false)
+    @Builder.Default
+    private Integer totalShieldsUsed = 0;
+
+    @Column(name = "total_video_savers_used", nullable = false)
+    @Builder.Default
+    private Integer totalVideoSaversUsed = 0;
+
     @Column(name = "created_at")
+    @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @Column(name = "updated_at")
+    @Builder.Default
     private LocalDateTime updatedAt = LocalDateTime.now();
 }
-
