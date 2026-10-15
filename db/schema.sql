@@ -7,6 +7,7 @@ DROP Table IF EXISTS daily_stats CASCADE;
 DROP Table IF EXISTS entities CASCADE;
 DROP Table IF EXISTS entity_achievements CASCADE;
 DROP Table IF EXISTS entity_affiliations CASCADE;
+DROP Table IF EXISTS entity_stats CASCADE;
 DROP Table IF EXISTS entity_types CASCADE;
 DROP Table IF EXISTS friend_statuses CASCADE;
 DROP Table IF EXISTS friends CASCADE;
@@ -17,6 +18,7 @@ DROP Table IF EXISTS group_achievements CASCADE;
 DROP Table IF EXISTS group_goal_histories CASCADE; -- deleted
 DROP Table IF EXISTS group_goals CASCADE; -- deleted
 DROP Table IF EXISTS groups CASCADE;
+DROP Table IF EXISTS group_stats CASCADE;
 DROP Table IF EXISTS payout_batches CASCADE;
 DROP Table IF EXISTS sponsor_campaigns CASCADE;
 DROP Table IF EXISTS sponsors CASCADE;
@@ -338,6 +340,14 @@ CREATE TABLE user_streaks (
 -- // TODO make sure this works
 ALTER TABLE contributions
     ADD COLUMN allocation_snapshot JSONB;
+
+ALTER TABLE contributions
+    ALTER COLUMN entity_id DROP NOT NULL,
+    ALTER COLUMN campaign_id DROP NOT NULL,
+    ALTER COLUMN steps_contributed SET NOT NULL,
+    ALTER COLUMN conversion_rate SET NOT NULL,
+    ALTER COLUMN ad_session_id SET NOT NULL;
+
 -- {
 -- "entityAllocations": [
 --     { "entityId": 1, "percentage": 25 },

@@ -223,3 +223,61 @@ INSERT INTO public.affiliations (name, affiliation_type_id, description) VALUES
 ('Goodwill Industries', v_org_net_id, 'Community-based workforce development organization network'),
 ('The Nature Conservancy', v_org_net_id, 'Global environmental non-profit network body');
 END $$;
+
+-- TODO make sure these are working
+-- 1. Create the entity_stats table
+CREATE TABLE entity_stats (
+                              entity_stat_id BIGSERIAL PRIMARY KEY,
+                              contribution_id BIGINT NOT NULL,
+                              entity_id BIGINT NOT NULL,
+                              user_id BIGINT NOT NULL,
+                              coins BIGINT DEFAULT 0,
+                              steps BIGINT DEFAULT 0,
+                              allocation_percentage INT NOT NULL,
+                              created_at TIMESTAMP DEFAULT NOW(),
+
+    -- Foreign Key Constraints
+                              CONSTRAINT fk_entity_stats_contribution FOREIGN KEY (contribution_id) REFERENCES contributions(contribution_id) ON DELETE CASCADE,
+                              CONSTRAINT fk_entity_stats_entity FOREIGN KEY (entity_id) REFERENCES entities(entity_id),
+                              CONSTRAINT fk_entity_stats_user FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+-- 2. Create the group_stats table
+CREATE TABLE group_stats (
+                             group_stat_id BIGSERIAL PRIMARY KEY,
+                             contribution_id BIGINT NOT NULL,
+                             group_id BIGINT NOT NULL,
+                             user_id BIGINT NOT NULL,
+                             coins BIGINT DEFAULT 0,
+                             steps BIGINT DEFAULT 0,
+                             allocation_percentage INT NOT NULL,
+                             created_at TIMESTAMP DEFAULT NOW(),
+
+    -- Foreign Key Constraints
+                             CONSTRAINT fk_group_stats_contribution FOREIGN KEY (contribution_id) REFERENCES contributions(contribution_id) ON DELETE CASCADE,
+                             CONSTRAINT fk_group_stats_group FOREIGN KEY (group_id) REFERENCES groups(group_id),
+                             CONSTRAINT fk_group_stats_user FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+-- Speeds up calculating goal progress for specific entities over time windows
+CREATE INDEX idx_entity_stats_lookup ON entity_stats (entity_id, created_at);
+
+-- Speeds up calculating goal progress for specific friend groups over time windows
+CREATE INDEX idx_group_stats_lookup ON group_stats (group_id, created_at);
+
+-- Prevents slow cascading checks when looking up a specific user's historic allocations
+CREATE INDEX idx_entity_stats_user ON entity_stats (user_id);
+CREATE INDEX idx_group_stats_user ON group_stats (user_id);
+
+ALTER TABLE user_achievements
+    ADD CONSTRAINT unique_user_achievement_run UNIQUE (user_id, achievement_id, earned_at);
+
+ALTER TABLE goal_instances ADD COLUMN completed_at TIMESTAMP;
+
+-- Adds customizable validation rules per challenge
+ALTER TABLE entity_achievements ADD COLUMN min_coins_required INT DEFAULT NULL;
+ALTER TABLE group_achievements ADD COLUMN min_coins_required INT DEFAULT NULL;
+ALTER TABLE user_streaks
+    ADD COLUMN total_shields_earned INT DEFAULT 0,
+ADD COLUMN total_shields_used INT DEFAULT 0,
+ADD COLUMN total_video_savers_used INT DEFAULT 0;
+

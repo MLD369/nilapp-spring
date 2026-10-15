@@ -31,17 +31,17 @@ INSERT INTO public.daily_stats(
     user_id, date, total_steps, coins, distance_meters, device_source, sync_timestamp, calories, created_at)
 VALUES (4, '2026-04-19', 150, 50, 0, 'phone','2026-04-19 14:30:00' , 0, '2026-04-19 14:30:00');
 
-INSERT INTO public.contributions(
-    user_id, entity_id, campaign_id, steps_contributed, coins_contributed, conversion_rate, ad_session_id,  payout_batch_id, contribution_status_id)
-VALUES (1, 1, 1, 500, 5, .001, 'ad1', null, 1);
--- // TODO make sure this works
-INSERT INTO public.contributions(
-    user_id, entity_id, campaign_id, steps_contributed, coins_contributed, conversion_rate, ad_session_id,  payout_batch_id, contribution_status_id)
-VALUES (1, 1, 1, 100, 10, .001, 'ad1', null, 1);
-
-INSERT INTO public.contributions(
-    user_id, entity_id, campaign_id, steps_contributed, coins_contributed, conversion_rate, ad_session_id,  payout_batch_id, contribution_status_id)
-VALUES (1, 2, 1, 100, 10, .001, 'ad1', null, 1);
+-- INSERT INTO public.contributions(
+--     user_id, entity_id, campaign_id, steps_contributed, coins_contributed, conversion_rate, ad_session_id,  payout_batch_id, contribution_status_id)
+-- VALUES (1, 1, 1, 500, 5, .001, 'ad1', null, 1);
+-- -- // TODO make sure this works
+-- INSERT INTO public.contributions(
+--     user_id, entity_id, campaign_id, steps_contributed, coins_contributed, conversion_rate, ad_session_id,  payout_batch_id, contribution_status_id)
+-- VALUES (1, 1, 1, 100, 10, .001, 'ad1', null, 1);
+--
+-- INSERT INTO public.contributions(
+--     user_id, entity_id, campaign_id, steps_contributed, coins_contributed, conversion_rate, ad_session_id,  payout_batch_id, contribution_status_id)
+-- VALUES (1, 2, 1, 100, 10, .001, 'ad1', null, 1);
 
 INSERT INTO public.friend_statuses(
     status, description)
