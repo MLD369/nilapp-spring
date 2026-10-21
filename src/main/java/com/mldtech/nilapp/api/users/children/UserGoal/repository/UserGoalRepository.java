@@ -3,6 +3,9 @@ package com.mldtech.nilapp.api.users.children.UserGoal.repository;
 
 import com.mldtech.nilapp.api.users.children.UserGoal.model.UserGoal;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,5 +24,24 @@ public interface UserGoalRepository extends JpaRepository<UserGoal, Long> {
     List<UserGoal> findByUser_UserId(Long userId);
     boolean existsByUser_UserIdAndGoalInstance_GoalInstanceIdAndLeftAtIsNull(Long userId, Long instanceId);
     Optional<UserGoal> findByUser_UserIdAndGoalInstance_GoalInstanceIdAndLeftAtIsNull(Long userId, Long instanceId);
+
+    @Modifying
+    @Query(value = """
+        INSERT INTO user_goals (user_id, goal_instance_id, target_type, target_amount, allocation_pct, is_active, is_complete, joined_at)
+        SELECT :userId, :goalInstanceId, :targetType, :targetAmount, :allocationPct, true, false, NOW()
+        WHERE NOT EXISTS (
+            SELECT 1 FROM user_goals 
+            WHERE user_id = :userId 
+              AND goal_instance_id = :goalInstanceId 
+              AND is_active = true
+        );
+        """, nativeQuery = true)
+    int manuallyRejoinGoalChallenge(
+            @Param("userId") Long userId,
+            @Param("goalInstanceId") Long goalInstanceId,
+            @Param("targetType") String targetType,
+            @Param("targetAmount") int targetAmount,
+            @Param("allocationPct") double allocationPct
+    );
 
 }

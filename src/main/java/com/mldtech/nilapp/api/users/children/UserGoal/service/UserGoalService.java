@@ -5,9 +5,11 @@ package com.mldtech.nilapp.api.users.children.UserGoal.service;
 import com.mldtech.nilapp.api.goals.children.GoalInstances.repository.GoalInstanceRepository;
 import com.mldtech.nilapp.api.users.children.UserGoal.model.UserGoal;
 import com.mldtech.nilapp.api.users.children.UserGoal.repository.UserGoalRepository;
+import com.mldtech.nilapp.api.users.children.UserStreak.repository.UserStreakRepository;
 import com.mldtech.nilapp.api.users.dto.UserGoalDTO;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
 import com.mldtech.nilapp.helper.CustomResponse;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -109,6 +111,22 @@ public class UserGoalService {
     public CustomResponse<?> getAll() {
         return new CustomResponse<>(userGoalRepository.findAll(), HttpStatus.OK, "200");
     }
+
+    /**
+     * Executes the manual rejoin logic inside a transactional boundary.
+     * Throws an exception if the user already has an active instance running.
+     */
+    @Transactional
+    public void rejoinGoalChallenge(Long userId, Long goalInstanceId, String targetType, int targetAmount, double allocationPct) {
+        int result = userGoalRepository.manuallyRejoinGoalChallenge(
+                userId, goalInstanceId, targetType, targetAmount, allocationPct
+        );
+
+        if (result == 0) {
+            throw new IllegalStateException("ALREADY_ACTIVE: You are already actively participating in this goal challenge instance.");
+        }
+    }
+
 //    public UserGoal assignGoal(Long userId, Long goalId, Integer allocationPct) {
 //
 //        UserGoal ug = UserGoal.builder()
