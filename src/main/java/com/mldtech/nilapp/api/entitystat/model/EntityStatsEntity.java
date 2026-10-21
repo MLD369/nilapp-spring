@@ -1,6 +1,8 @@
 package com.mldtech.nilapp.api.entitystat.model;
 
 import jakarta.persistence.*;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -33,8 +35,27 @@ public class EntityStatsEntity {
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "revenue_generated", precision = 15, scale = 6)
+    private BigDecimal revenueGenerated = BigDecimal.ZERO;
+
+    @Column(name = "company_profit_retained", precision = 15, scale = 6)
+    private BigDecimal companyProfitRetained = BigDecimal.ZERO;
+
     // --- Constructor Definitions ---
     public EntityStatsEntity() {}
+
+    public EntityStatsEntity(Long entityStatId, Long contributionId, Long entityId, Long userId, Long coins, Long steps, Integer allocationPercentage, LocalDateTime createdAt, BigDecimal revenueGenerated, BigDecimal companyProfitRetained) {
+        this.entityStatId = entityStatId;
+        this.contributionId = contributionId;
+        this.entityId = entityId;
+        this.userId = userId;
+        this.coins = coins;
+        this.steps = steps;
+        this.allocationPercentage = allocationPercentage;
+        this.createdAt = createdAt;
+        this.revenueGenerated = revenueGenerated;
+        this.companyProfitRetained = companyProfitRetained;
+    }
 
     public EntityStatsEntity(Long contributionId, Long entityId, Long userId, Long coins, Long steps, Integer allocationPercentage) {
         this.contributionId = contributionId;
@@ -69,5 +90,21 @@ public class EntityStatsEntity {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public BigDecimal getRevenueGenerated() {
+        return revenueGenerated;
+    }
+
+    public void setRevenueGenerated(BigDecimal revenueGenerated) {
+        this.revenueGenerated = revenueGenerated;
+    }
+
+    public BigDecimal getCompanyProfitRetained() {
+        return companyProfitRetained;
+    }
+
+    public void setCompanyProfitRetained(BigDecimal companyProfitRetained) {
+        this.companyProfitRetained = companyProfitRetained;
+    }
 }
 
