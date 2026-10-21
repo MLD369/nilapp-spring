@@ -299,3 +299,51 @@ CREATE UNIQUE INDEX idx_unique_active_user_goal
     ON user_goals (user_id, goal_instance_id)
     WHERE is_active = true;
 
+BEGIN;
+
+-- 1. Add precise revenue tracking fields STRICTLY to your entity layers
+ALTER TABLE public.entity_stats ADD COLUMN IF NOT EXISTS revenue_generated DECIMAL(15,6) DEFAULT 0.000000;
+ALTER TABLE public.entity_stats ADD COLUMN IF NOT EXISTS company_profit_retained DECIMAL(15,6) DEFAULT 0.000000;
+
+-- 2. Add an analytical health indicator to track ad delivery pacing metrics on campaigns
+ALTER TABLE public.goal_instances ADD COLUMN IF NOT EXISTS pacing_status VARCHAR(30) DEFAULT 'ON_TRACK';
+ALTER TABLE public.goal_instances ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;
+
+-- 3. Link your payout tracking batches directly back to your completed campaign identifiers
+ALTER TABLE public.payout_batches ADD COLUMN IF NOT EXISTS goal_instance_id BIGINT;
+
+-- 4. Clean up daily stats definitions to distinguish total walking volume from claimed volume
+ALTER TABLE public.daily_stats RENAME COLUMN total_steps TO total_device_steps;
+ALTER TABLE public.daily_stats ADD COLUMN IF NOT EXISTS total_claimed_steps INT DEFAULT 0;
+
+-- 5. Establish unique partial index to allow users to redo individual goals manually
+DROP INDEX IF EXISTS idx_unique_active_user_goal;
+CREATE UNIQUE INDEX idx_unique_active_user_goal
+    ON public.user_goals (user_id, goal_instance_id)
+    WHERE is_active = true;
+
+-- 6. Add composite tracking constraints for repeatable milestone runs
+ALTER TABLE public.user_achievements DROP CONSTRAINT IF EXISTS unique_user_achievement_run;
+ALTER TABLE public.user_achievements ADD CONSTRAINT unique_user_achievement_run UNIQUE (user_id, achievement_id, earned_at);
+
+-- 7. High-Performance Optimization Indexes for high-volume execution windows
+CREATE INDEX IF NOT EXISTS idx_entity_stats_financials ON public.entity_stats (entity_id, created_at) INCLUDE (revenue_generated);
+CREATE INDEX IF NOT EXISTS idx_contributions_pacing ON public.contributions (user_id, contribution_status_id, created_at);
+
+COMMIT;
+
+
+BEGIN;
+
+-- 1. Add banking rails and settlement tracking metadata
+ALTER TABLE public.payout_batches ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'ACH'; -- 'ACH', 'WIRE', 'CHECK'
+ALTER TABLE public.payout_batches ADD COLUMN IF NOT EXISTS tracking_number VARCHAR(100);             -- Check check#, ACH trace id, wire reference
+ALTER TABLE public.payout_batches ADD COLUMN IF NOT EXISTS payout_status VARCHAR(30) DEFAULT 'DRAFT'; -- 'DRAFT', 'PROCESSING', 'SETTLED', 'FAILED'
+ALTER TABLE public.payout_batches ADD COLUMN IF NOT EXISTS total_coins_processed BIGINT DEFAULT 0;
+ALTER TABLE public.payout_batches ADD COLUMN IF NOT EXISTS total_steps_processed BIGINT DEFAULT 0;
+ALTER TABLE public.payout_batches ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+COMMIT;
+
+ALTER TABLE public.payout_batches
+    ADD COLUMN IF NOT EXISTS recommended_payout_date DATE;

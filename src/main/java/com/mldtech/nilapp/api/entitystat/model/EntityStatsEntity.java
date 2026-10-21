@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-
+// TODO use lombook
 @Entity
 @Table(name = "entity_stats", schema = "public")
 public class EntityStatsEntity {
