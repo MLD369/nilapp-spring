@@ -16,39 +16,76 @@ public class BatchService {
         this.contributionRepository = contributionRepository;
     }
 
-
     @Transactional
     public int executeContributionsAllocationBatch() {
         log.info("Starting master metrics evaluation and allocation batch pipeline...");
+
         try {
             // 1. Run Entity Goal evaluation
             int entityGoals = contributionRepository.evaluateEntityGoals();
-            log.info("Pipeline Step 1 Complete: Entity goals updated. Impacted rows: {}", entityGoals);
 
             // 2. Run Group Goal evaluation
             int groupGoals = contributionRepository.evaluateGroupGoals();
-            log.info("Pipeline Step 2 Complete: Group goals updated. Impacted rows: {}", groupGoals);
 
-            // 3. sync individual contract rows right after parent instances update
+            // 3. Sync individual contract rows right after parent instances update
             int userGoalsFinalized = contributionRepository.finalizeUserGoalsFromInstances();
-            log.info("Pipeline Step 3 Complete: User goals updated. Impacted rows: {}", userGoalsFinalized);
 
             // 4. Process, unnest JSON arrays, and move records into entity_stats and group_stats
             int rowsUpdated = contributionRepository.processPendingContributions();
-            log.info("Pipeline Step 4 Complete: Processed master records and flipped status: {}", rowsUpdated);
 
-            // 5. Check and grant achievements based on updated statistics
+            // 5. Evaluate individual user-driven goals if master records were modified
+            int individualUserGoalsProcessed = 0;
+            int achievementsEarned = 0;
+
             if (rowsUpdated > 0) {
-                int achievementsEarned = contributionRepository.assignUserAchievements();
-                log.info("Pipeline Step 5 Complete: User achievements evaluated. Unlocked: {}", achievementsEarned);
+                individualUserGoalsProcessed = contributionRepository.evaluateUserGoalsBatch();
+                achievementsEarned = contributionRepository.assignUserAchievements();
             }
 
+            // Consolidated summary log block prevents raw SQL lines from cluttering your output
+            log.info("""
+                
+                ======================================================================
+                📈 BATCH PROCESSING PIPELINE COMPLETE SUMMARY
+                ======================================================================
+                🔹 Step 1: Entity Goals Updated        -> [ {} rows ]
+                🔹 Step 2: Group Goals Updated         -> [ {} rows ]
+                🔹 Step 3: User Goals Finalized        -> [ {} rows ]
+                🔹 Step 4: Master Ingestions Approved Entity/Group stats   -> [ {} rows ]
+                🔹 Step 5: User Tiers Evaluated        -> [ {} rows ]
+                🔹 Step 6: Non-Free-Rider Medals/Achievements Earned -> [ {} badges ]
+                ======================================================================
+                """,
+                    entityGoals,
+                    groupGoals,
+                    userGoalsFinalized,
+                    rowsUpdated,
+                    individualUserGoalsProcessed,
+                    achievementsEarned
+            );
+
             return rowsUpdated;
+
         } catch (Exception e) {
             log.error("Batch processing pipeline failed. All operations rolled back structural states automatically.", e);
             throw e;
         }
     }
-
 }
+/*
 
+API to allocate claims to groups and entities - done
+change contributions - done
+
+Todo	Api to check entity goals - done
+Todo	Api to check group goals - done
+Todo	Api to assign achievements - done
+
+
+Todo	Notification that goal or achievement reached (ui maybe when user opens app or push notificatookmn)
+
+
+    Api to save total steps - once a day when user opens app - done - TODO ui
+	Api to save user streak - once a day when user opens app - done - todo ui
+	shield /streak saver
+  */

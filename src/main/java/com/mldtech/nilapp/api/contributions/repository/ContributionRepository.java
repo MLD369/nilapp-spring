@@ -240,23 +240,54 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
         """, nativeQuery = true)
     int assignUserAchievements();
 
+    @Modifying
+    @Query(value = """
+        WITH calculated_progress AS (
+            SELECT 
+                c.user_id,
+                SUM(c.steps_contributed) AS daily_steps,
+                SUM(c.coins_contributed) AS daily_coins
+            FROM contributions c
+            WHERE c.contribution_status_id = 2 -- APPROVED
+              AND DATE_TRUNC('day', c.created_at) = CURRENT_DATE
+            GROUP BY c.user_id
+        ),
+        updated_user_goals AS (
+            UPDATE user_goals ug
+            SET 
+                current_steps_progress = ug.current_steps_progress + COALESCE(cp.daily_steps, 0),
+                current_coins_progress = ug.current_coins_progress + COALESCE(cp.daily_coins, 0),
+                -- Close the goal immediately if they cross the target coin or step threshold
+                is_complete = CASE 
+                    WHEN ug.target_type = 'COINS' AND (ug.current_coins_progress + COALESCE(cp.daily_coins, 0)) >= ug.target_amount THEN true
+                    WHEN ug.target_type = 'STEPS' AND (ug.current_steps_progress + COALESCE(cp.daily_steps, 0)) >= ug.target_amount THEN true
+                    ELSE false 
+                END,
+                is_active = CASE 
+                    WHEN ug.target_type = 'COINS' AND (ug.current_coins_progress + COALESCE(cp.daily_coins, 0)) >= ug.target_amount THEN false
+                    WHEN ug.target_type = 'STEPS' AND (ug.current_steps_progress + COALESCE(cp.daily_steps, 0)) >= ug.target_amount THEN false
+                    ELSE true 
+                END,
+                completed_at = CASE 
+                    WHEN ug.completed_at IS NULL AND (
+                        (ug.target_type = 'COINS' AND (ug.current_coins_progress + COALESCE(cp.daily_coins, 0)) >= ug.target_amount) OR
+                        (ug.target_type = 'STEPS' AND (ug.current_steps_progress + COALESCE(cp.daily_steps, 0)) >= ug.target_amount)
+                    ) THEN NOW()
+                    ELSE ug.completed_at
+                END
+            FROM calculated_progress cp
+            WHERE ug.user_id = cp.user_id AND ug.is_active = true
+            RETURNING ug.user_id, ug.is_complete, ug.goal_instance_id
+        )
+        -- Mint a unique user achievement entry instantly for the completed row run
+        INSERT INTO user_achievements (user_id, achievement_id, earned_at)
+        SELECT uug.user_id, 101, NOW() -- 101 = Standard Individual Goal Cleared Badge ID
+        FROM updated_user_goals uug
+        WHERE uug.is_complete = true
+        ON CONFLICT (user_id, achievement_id, earned_at) DO NOTHING;
+        """, nativeQuery = true)
+    int evaluateUserGoalsBatch();
 
-/*
 
-API to allocate claims to groups and entities - done
-change contributions - done
-
-	Api to check entity goals - ?
-	Api to check group goals - ?
-	Api to assign achievements - ?
-
-
-	Notification that goal or achievement reached
-
-
-    Api to save total steps - once a day when user opens app
-	Api to save user streak - once a day when user opens app
-	shield /streak saver
-  */
 }
 
