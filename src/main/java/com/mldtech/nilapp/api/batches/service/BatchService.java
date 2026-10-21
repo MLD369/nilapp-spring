@@ -18,22 +18,25 @@ public class BatchService {
 
     @Transactional
     public int executeContributionsAllocationBatch() {
-        log.info("Starting master metrics evaluation and allocation batch pipeline...");
+        log.info("Starting master metrics evaluation and financial allocation batch pipeline...");
 
         try {
-            // 1. Run Entity Goal evaluation
-            int entityGoals = contributionRepository.evaluateEntityGoals();
-
-            // 2. Run Group Goal evaluation
-            int groupGoals = contributionRepository.evaluateGroupGoals();
-
-            // 3. Sync individual contract rows right after parent instances update
-            int userGoalsFinalized = contributionRepository.finalizeUserGoalsFromInstances();
-
-            // 4. Process, unnest JSON arrays, and move records into entity_stats and group_stats
+            // 1. Process and Flatten Ingestion Layers (Calculates Entity Revenue & Platform Profit)
             int rowsUpdated = contributionRepository.processPendingContributions();
 
-            // 5. Evaluate individual user-driven goals if master records were modified
+            // 2. Evaluate Entity Campaigns (Updates coins, steps, real dollar totals, and handles status transformations)
+            int entityGoals = contributionRepository.evaluateEntityGoals();
+
+            // 3. Evaluate Group Campaigns (Pure gamification - tracks steps and coins ONLY)
+            int groupGoals = contributionRepository.evaluateGroupGoals();
+
+            // 4. Update pacing status indicators across all active initiatives
+            int pacingUpdates = contributionRepository.recalculateGoalPacingStatuses();
+
+            // 5. Sync individual contract rows right after parent instances update
+            int userGoalsFinalized = contributionRepository.finalizeUserGoalsFromInstances();
+
+            // 6. Evaluate individual user-driven goals if master records were modified
             int individualUserGoalsProcessed = 0;
             int achievementsEarned = 0;
 
@@ -42,32 +45,36 @@ public class BatchService {
                 achievementsEarned = contributionRepository.assignUserAchievements();
             }
 
-            // Consolidated summary log block prevents raw SQL lines from cluttering your output
+            // Consolidated summary analytics log block prevents raw SQL lines from cluttering output
+            // Consolidated summary analytics log block tells you exactly what closed or updated
             log.info("""
                 
                 ======================================================================
-                📈 BATCH PROCESSING PIPELINE COMPLETE SUMMARY
+                📈 REVENUE-ALIGNED BATCH PIPELINE SUCCESS SUMMARY
                 ======================================================================
-                🔹 Step 1: Entity Goals Updated        -> [ {} rows ]
-                🔹 Step 2: Group Goals Updated         -> [ {} rows ]
-                🔹 Step 3: User Goals Finalized        -> [ {} rows ]
-                🔹 Step 4: Master Ingestions Approved Entity/Group stats   -> [ {} rows ]
-                🔹 Step 5: User Tiers Evaluated        -> [ {} rows ]
-                🔹 Step 6: Non-Free-Rider Medals/Achievements Earned -> [ {} badges ]
+                🔹 Pending Ad Claims Approved   -> [ {} records processed ]
+                🔹 Entity Financial + Goals       -> [ {} goals updated ]
+                🔹 Group Social Goals           -> [ {} goals evaluated ]
+                🔹 Campaign Pacing Adjusted     -> [ {} statuses calibrated ]
+                🔹 Team Goals Closed & Synced   -> [ {} user_goals closed ]
+                🔹 Individual User Goals Closed -> [ {} goals closed & archived ]
+                🔹 Accolades & Badges Minted     -> [ {} achievements earned ]
                 ======================================================================
                 """,
+                    rowsUpdated,
                     entityGoals,
                     groupGoals,
+                    pacingUpdates,
                     userGoalsFinalized,
-                    rowsUpdated,
                     individualUserGoalsProcessed,
                     achievementsEarned
             );
 
+
             return rowsUpdated;
 
         } catch (Exception e) {
-            log.error("Batch processing pipeline failed. All operations rolled back structural states automatically.", e);
+            log.error("Batch processing pipeline failed. All structural and financial changes rolled back automatically.", e);
             throw e;
         }
     }
