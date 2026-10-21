@@ -281,3 +281,21 @@ ALTER TABLE user_streaks
 ADD COLUMN total_shields_used INT DEFAULT 0,
 ADD COLUMN total_video_savers_used INT DEFAULT 0;
 
+ALTER TABLE user_goals
+    ADD COLUMN target_type VARCHAR(20) DEFAULT 'COINS', -- 'STEPS' or 'COINS'
+ADD COLUMN target_amount INT NOT NULL DEFAULT 1000, -- e.g., 1,000 coins needed
+ADD COLUMN current_steps_progress INT DEFAULT 0,
+ADD COLUMN current_coins_progress INT DEFAULT 0,
+ADD COLUMN tier_level INT DEFAULT 1; -- For progressive tier goals (Level 1, Level 2, etc.) TODO not sure if needed but could be used as indicator for need recalculation
+
+ALTER TABLE goals
+    ADD COLUMN metric_type VARCHAR(20) DEFAULT 'COINS'; -- 'STEPS' or 'COINS'
+
+-- TODO this is a breaking change make sure it works
+-- this change makes it so a user can only join a goal once that is active
+-- that mean the batch need to be self reliant on making new levels so we do not need to manually create each goal everytime
+-- check there are no duplicat user goals
+CREATE UNIQUE INDEX idx_unique_active_user_goal
+    ON user_goals (user_id, goal_instance_id)
+    WHERE is_active = true;
+
