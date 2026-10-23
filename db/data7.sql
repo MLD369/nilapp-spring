@@ -313,8 +313,8 @@ ALTER TABLE public.goal_instances ADD COLUMN IF NOT EXISTS completed_at TIMESTAM
 ALTER TABLE public.payout_batches ADD COLUMN IF NOT EXISTS goal_instance_id BIGINT;
 
 -- 4. Clean up daily stats definitions to distinguish total walking volume from claimed volume
-ALTER TABLE public.daily_stats RENAME COLUMN total_steps TO total_device_steps;
-ALTER TABLE public.daily_stats ADD COLUMN IF NOT EXISTS total_claimed_steps INT DEFAULT 0;
+ALTER TABLE public.daily_stats RENAME COLUMN total_steps TO total_claimed_steps;
+ALTER TABLE public.daily_stats ADD COLUMN IF NOT EXISTS total_device_steps INT DEFAULT 0;
 
 -- 5. Establish unique partial index to allow users to redo individual goals manually
 DROP INDEX IF EXISTS idx_unique_active_user_goal;
@@ -347,3 +347,28 @@ COMMIT;
 
 ALTER TABLE public.payout_batches
     ADD COLUMN IF NOT EXISTS recommended_payout_date DATE;
+ALTER TABLE public.payout_batches ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
+
+BEGIN;
+
+-- Convert the column type to match Hibernate's expectation
+ALTER TABLE public.payout_batches
+ALTER COLUMN entity_id TYPE BIGINT;
+
+COMMIT;
+
+ALTER TABLE public.payout_batches RENAME COLUMN total_steps_processed TO total_claimed_steps_processed;
+
+
+ALTER TABLE public.goal_instances ALTER COLUMN pacing_status TYPE VARCHAR(50);
+
+BEGIN;
+
+-- 1. Inject audit timestamps with default parameters
+ALTER TABLE public.goal_instances ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
+ALTER TABLE public.goal_instances ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+-- 2. Build a performant sorting index for time-sensitive audits
+CREATE INDEX IF NOT EXISTS idx_goal_instances_timestamps ON public.goal_instances (updated_at DESC);
+
+COMMIT;
