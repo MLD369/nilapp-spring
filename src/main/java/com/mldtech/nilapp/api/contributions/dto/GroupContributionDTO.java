@@ -8,7 +8,8 @@ import lombok.Data;
 public class GroupContributionDTO {
     private Long groupId;
     private String groupName;
-    private Long totalSteps;
+    private Long totalClaimedSteps;
+    private Long totalDeviceSteps;
     private Long totalNilCoins;
 }
 

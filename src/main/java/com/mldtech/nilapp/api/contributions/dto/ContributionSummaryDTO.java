@@ -9,8 +9,9 @@ import java.util.List;
 public class ContributionSummaryDTO {
 
     private Long userId;
-    private Long totalNilCoins;   // sum of all coins contributed
-    private Long totalSteps;
+    private Long totalNilCoins;   // Sum of all coins contributed
+    private Long totalDeviceSteps; // Raw fitness tracking steps from mobile sensor
+    private Long totalClaimedSteps; // Total steps backed by validated ad views
     private List<GroupContributionDTO> groupContributions;
     private List<EntityContributionDTO> entityContributions;
 }

@@ -25,6 +25,16 @@ public interface UserGoalRepository extends JpaRepository<UserGoal, Long> {
     boolean existsByUser_UserIdAndGoalInstance_GoalInstanceIdAndLeftAtIsNull(Long userId, Long instanceId);
     Optional<UserGoal> findByUser_UserIdAndGoalInstance_GoalInstanceIdAndLeftAtIsNull(Long userId, Long instanceId);
 
+
+    /**
+     * Checks if a user is actively participating in a specific goal challenge right now.
+     */
+    boolean existsByUser_UserIdAndGoalInstance_GoalInstanceIdAndIsActiveTrue(Long userId, Long goalInstanceId);
+
+    /**
+     * Finds the user's currently active row for a specific challenge instance.
+     */
+    Optional<UserGoal> findByUser_UserIdAndGoalInstance_GoalInstanceIdAndIsActiveTrue(Long userId, Long goalInstanceId);
     @Modifying
     @Query(value = """
         INSERT INTO user_goals (user_id, goal_instance_id, target_type, target_amount, allocation_pct, is_active, is_complete, joined_at)

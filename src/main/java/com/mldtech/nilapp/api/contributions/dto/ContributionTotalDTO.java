@@ -12,6 +12,6 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ContributionTotalDTO {
 
-    private Long totalSteps;
+    private Long totalClaimedSteps;
     private Long totalNilCoins;
 }

@@ -54,7 +54,7 @@ public class PayoutService {
                 .entityId(entityId)
                 .goalInstanceId(goalInstanceId)
                 .amountPaid(amountPaid)
-                .totalStepsProcessed(totalSteps)
+                .totalClaimedStepsProcessed(totalSteps)
                 .totalCoinsProcessed(totalCoins)
                 .paymentMethod(paymentMethod)
                 .trackingNumber(trackingNumber)

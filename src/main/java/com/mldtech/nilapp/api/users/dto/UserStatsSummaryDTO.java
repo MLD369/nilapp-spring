@@ -12,8 +12,10 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserStatsSummaryDTO {
-    private Double avgSteps;
+    private Double avgDeviceSteps;
+    private Double avgClaimedSteps;
     private Double avgCoins;
+    private Double avgClaimRatio;
     private List<UserPeriodStatsDTO> periodStats;
 }
 

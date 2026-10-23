@@ -15,56 +15,30 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class UserGoalController {
 
-    private final UserGoalService service;
+    private final UserGoalService userGoalService;
 
     @GetMapping
     public Object getAll() {
-        return service.getAll();
-    }
-
-    @PostMapping("/{userId}/{instanceId}")
-    public Object joinGoal(
-            @PathVariable Long userId,
-            @PathVariable Long instanceId,
-            @RequestBody UserGoal userGoal
-    ) {
-        return service.joinGoal(userId, instanceId);
+        return userGoalService.getAll();
     }
 
     /**
-     * Endpoint hit manually when a user clicks "Start This Challenge Again" on their phone UI.
+     * Endpoint hit when a user clicks to start an individual challenge or restart a completed one.
      */
-    // TODO customresponse
-    @PostMapping("/{userId}/rejoin-challenge")
-    public ResponseEntity<Map<String, Object>> userRequestedGoalRejoin(
+    @PostMapping("/{userId}/join/{instanceId}")
+    public ResponseEntity<?> joinChallengeInstance(
             @PathVariable("userId") Long userId,
-            @RequestBody Map<String, Object> payload) {
-
-        Long goalInstanceId = payload.get("goalInstanceId") != null ? Long.valueOf(payload.get("goalInstanceId").toString()) : null;
-        String targetType = payload.get("targetType").toString(); // 'COINS' or 'STEPS'
-        int targetAmount = Integer.parseInt(payload.get("targetAmount").toString());
-        double allocationPct = Double.parseDouble(payload.get("allocationPct").toString());
-
-        try {
-            service.rejoinGoalChallenge(userId, goalInstanceId, targetType, targetAmount, allocationPct);
-
-            return ResponseEntity.ok(Map.of(
-                    "status", "SUCCESS",
-                    "message", "Fresh challenge timeline initialized successfully back at zero progress."
-            ));
-        } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "status", "ALREADY_ACTIVE",
-                    "message", e.getMessage().replace("ALREADY_ACTIVE: ", "")
-            ));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of(
-                    "status", "ERROR",
-                    "message", "An unexpected error occurred while rejoining the challenge."
-            ));
-        }
+            @PathVariable("instanceId") Long instanceId) {
+        return ResponseEntity.ok(userGoalService.joinGoal(userId, instanceId));
     }
 
-
-
+    /**
+     * Endpoint hit when a user explicitly abandons an active challenge early.
+     */
+    @PostMapping("/{userId}/leave/{instanceId}")
+    public ResponseEntity<?> leaveChallengeInstance(
+            @PathVariable("userId") Long userId,
+            @PathVariable("instanceId") Long instanceId) {
+        return ResponseEntity.ok(userGoalService.leaveGoal(userId, instanceId));
+    }
 }

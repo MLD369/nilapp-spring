@@ -50,16 +50,19 @@ public class PayoutBatch {
     private String payoutStatus;
 
     @Column(name = "total_coins_processed")
-    private Long totalCoinsProcessed;
+    @Builder.Default
+    private Long totalCoinsProcessed = 0L;
 
-    @Column(name = "total_steps_processed")
-    private Long totalStepsProcessed;
+    @Column(name = "total_claimed_steps_processed")
+    @Builder.Default
+    private Long totalClaimedStepsProcessed = 0L;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    @Builder.Default
+    private LocalDateTime updatedAt = LocalDateTime.now();
 
     @Column(name = "recommended_payout_date")
     private LocalDate recommendedPayoutDate;

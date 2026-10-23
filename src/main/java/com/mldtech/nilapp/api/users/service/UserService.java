@@ -14,6 +14,8 @@ import com.mldtech.nilapp.api.contributions.dto.EntityContributionDTO;
 import com.mldtech.nilapp.api.contributions.dto.GroupContributionDTO;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.contributions.repository.ContributionRepository;
+import com.mldtech.nilapp.api.daily_stat.model.DailyStat;
+import com.mldtech.nilapp.api.daily_stat.repository.DailyStatRepository;
 import com.mldtech.nilapp.api.entities.children.EntityAchievement.model.EntityAchievement;
 import com.mldtech.nilapp.api.entities.children.EntityAchievement.repository.EntityAchievementRepository;
 import com.mldtech.nilapp.api.entities.service.EntityService;
@@ -69,6 +71,7 @@ public class UserService {
     private final FriendRepository friendRepository;
     private final GroupStatsRepository groupStatsRepository;
     private final EntityStatsRepository entityStatsRepository;
+    private final DailyStatRepository dailyStatRepository;
     Helper helper = new Helper();
 
     // Define a reusable, thread-safe formatter
@@ -1007,6 +1010,14 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
 //                "200"
 //        );
 //    }
+    /**
+     * Retrieves an itemized summary breakdown of a user's contributions across their groups and entities.
+     * Computes the exact proportional share of claimed steps and coins using allocation percentages,
+     * alongside the absolute lifetime device steps walked.
+     *
+     * @param userId the unique tracking identifier of the target user
+     * @return a wrapped custom response container housing the aggregated contributions breakdown
+     */
     public CustomResponse<ContributionSummaryDTO> getUserContributionSummary(Long userId) {
 
         var user = userRepository.findById(userId).orElse(null);
@@ -1027,13 +1038,21 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                 .mapToLong(c -> c.getCoinsContributed() != null ? c.getCoinsContributed() : 0)
                 .sum();
 
+        // 🔹 Extract overall monetized claimed steps across all records
+        long totalClaimedSteps = contributions.stream()
+                .mapToLong(c -> c.getStepsContributed() != null ? c.getStepsContributed() : 0)
+                .sum();
+
+        // 🔹 Fetch lifetime raw sensor steps from daily stats history records
+        long totalDeviceSteps = dailyStatRepository.sumLifetimeDeviceStepsByUserId(userId);
+
         // GROUP AGGREGATION (Deduplicated by Unique Group ID)
-        Map<Long, String> uniqueGroups = user.getUserGroups().stream()
+        java.util.Map<Long, String> uniqueGroups = user.getUserGroups().stream()
                 .filter(ug -> ug.getGroup() != null && ug.getGroup().getGroupId() != null)
-                .collect(Collectors.toMap(
+                .collect(java.util.stream.Collectors.toMap(
                         ug -> ug.getGroup().getGroupId(),
                         ug -> ug.getGroup().getName(),
-                        (existing, replacement) -> existing // Safe fallback for duplicate rows
+                        (existing, replacement) -> existing
                 ));
 
         var groupTotals = uniqueGroups.entrySet().stream()
@@ -1041,7 +1060,7 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                     Long targetGroupId = entry.getKey();
                     String groupName = entry.getValue();
 
-                    long steps = contributions.stream()
+                    long claimedSteps = contributions.stream()
                             .mapToLong(c -> {
                                 double share = getGroupPercentageShare(c, targetGroupId);
                                 long totalSteps = c.getStepsContributed() != null ? c.getStepsContributed() : 0;
@@ -1060,19 +1079,19 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                     return GroupContributionDTO.builder()
                             .groupId(targetGroupId)
                             .groupName(groupName)
-                            .totalSteps(steps)
+                            .totalClaimedSteps(claimedSteps)
                             .totalNilCoins(nil)
                             .build();
                 })
                 .toList();
 
         // ENTITY AGGREGATION (Deduplicated by Unique Entity ID)
-        Map<Long, String> uniqueEntities = user.getUserEntities().stream()
+        java.util.Map<Long, String> uniqueEntities = user.getUserEntities().stream()
                 .filter(ue -> ue.getEntity() != null && ue.getEntity().getEntityId() != null)
-                .collect(Collectors.toMap(
+                .collect(java.util.stream.Collectors.toMap(
                         ue -> ue.getEntity().getEntityId(),
                         ue -> ue.getEntity().getName(),
-                        (existing, replacement) -> existing // Safe fallback for duplicate rows
+                        (existing, replacement) -> existing
                 ));
 
         var entityTotals = uniqueEntities.entrySet().stream()
@@ -1080,7 +1099,7 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                     Long targetEntityId = entry.getKey();
                     String entityName = entry.getValue();
 
-                    long steps = contributions.stream()
+                    long claimedSteps = contributions.stream()
                             .mapToLong(c -> {
                                 double share = getEntityPercentageShare(c, targetEntityId);
                                 long totalSteps = c.getStepsContributed() != null ? c.getStepsContributed() : 0;
@@ -1099,7 +1118,7 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                     return EntityContributionDTO.builder()
                             .entityId(targetEntityId)
                             .entityName(entityName)
-                            .totalSteps(steps)
+                            .totalClaimedSteps(claimedSteps)
                             .totalNilCoins(nil)
                             .build();
                 })
@@ -1108,6 +1127,8 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
         ContributionSummaryDTO summary = ContributionSummaryDTO.builder()
                 .userId(userId)
                 .totalNilCoins(totalNilCoins)
+                .totalDeviceSteps(totalDeviceSteps)   // Mapped physical movement
+                .totalClaimedSteps(totalClaimedSteps) // Mapped ad reward volume
                 .groupContributions(groupTotals)
                 .entityContributions(entityTotals)
                 .build();
@@ -1118,6 +1139,9 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                 "200"
         );
     }
+
+
+
 
     @SuppressWarnings("unchecked")
     private double getEntityPercentageShare(Contribution c, Long targetEntityId) {
@@ -1177,6 +1201,15 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
 
 
 
+    /**
+     * Fetches consolidated user statistics across a scoped monthly or custom date range template.
+     * Maps split tracking properties separating total physical device movement metrics from monetized ad claims.
+     *
+     * @param userId    the unique tracking identifier of the target user
+     * @param startDate optional range open boundary string (defaults to the 1st of the current month)
+     * @param endDate   optional range close boundary string (defaults to the end of the current month)
+     * @return a wrapped custom response container housing the structured user metrics dashboard profile
+     */
     public CustomResponse<UserStatsResponse> getUserStats(Long userId, String startDate, String endDate) {
         try {
             var user = userRepository.findById(userId)
@@ -1190,8 +1223,13 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                     ? LocalDate.parse(endDate).atTime(23, 59, 59)
                     : LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth()).atTime(23, 59, 59);
 
-            // Total steps and coins for the month
+            // 1. Fetch total monetized claimed steps and coins for the month from your contributions ledger
             var contributionTotalDTO = contributionRepository.getUserMonthlyTotals(userId, start, end);
+
+            // TODO probabaly not needed
+            // 2. Fetch raw sensor device steps from your daily stats history records over the same time window
+            // (Assumes a simple SUM custom query exists or is added to your DailyStatRepository)
+            long totalDeviceSteps = dailyStatRepository.sumDeviceStepsByUserIdAndDateRange(userId, start.toLocalDate(), end.toLocalDate());
 
             // Active goals for the month
             var activeGoals = userGoalRepository.findByUserUserIdAndIsActiveTrue(userId)
@@ -1232,10 +1270,12 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                     .toList();
 
 
+            // Assemble the final split-aligned response card mapping values cleanly
             var response = UserStatsResponse.builder()
                     .userId(userId)
                     .username(user.getUsername())
-                    .totalSteps(contributionTotalDTO.getTotalSteps())
+                    .totalDeviceSteps(totalDeviceSteps)
+                    .totalClaimedSteps(contributionTotalDTO.getTotalClaimedSteps()) // From your working contributions total tracker
                     .totalCoins(contributionTotalDTO.getTotalNilCoins())
                     .activeGoals(activeGoals)
                     .completedGoals(completedGoals)
@@ -1258,6 +1298,18 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
             );
         }
     }
+
+    /**
+     * Retrieves aggregated user physical and transactional metrics broken down by a specific period key.
+     * Separates raw phone sensor tracker metrics from active ad claim conversions across timelines,
+     * calculating a real-time conversion efficiency claim ratio.
+     *
+     * @param userId     the unique tracking identifier of the target user
+     * @param startDate  the calendar start date parameter boundary
+     * @param endDate    the calendar end date parameter boundary
+     * @param periodType the timeline slicing type configuration indicator ("DAILY", "WEEKLY", "MONTHLY", "YEARLY")
+     * @return a wrapped custom response container housing the historical chart summaries
+     */
     public CustomResponse<UserStatsSummaryDTO> getUserStatsByPeriod(
             Long userId,
             LocalDate startDate,
@@ -1268,6 +1320,7 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
             var user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
+            // 1. Load raw contribution claims for the requested date range
             List<Contribution> contributions =
                     contributionRepository.findByUserIdAndDateRange(
                             userId,
@@ -1275,39 +1328,71 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                             endDate.plusDays(1).atStartOfDay()
                     );
 
-            // Group contributions by period
-            Map<String, List<Contribution>> grouped = contributions.stream()
+            // 2. Load pre-aggregated analytical device records over the same time window
+            List<DailyStat> dailyStats =
+                    dailyStatRepository.findByUserIdAndDateBetween(userId, startDate, endDate);
+
+            // Group contributions by period key (Claimed Steps and Coins)
+            Map<String, List<Contribution>> groupedContributions = contributions.stream()
                     .collect(Collectors.groupingBy(c -> helper.getPeriodKey(c.getCreatedAt(), periodType)));
 
-            // Build per-period stats
-            List<UserPeriodStatsDTO> periodStats = grouped.entrySet().stream()
-                    .map(entry -> {
-                        String key = entry.getKey();
-                        List<Contribution> list = entry.getValue();
+            // Group raw daily device statistics by period key
+            Map<String, List<DailyStat>> groupedDailyStats = dailyStats.stream()
+                    .collect(Collectors.groupingBy(d -> helper.getPeriodKey(d.getDate().atStartOfDay(), periodType)));
 
-                        long totalSteps = list.stream().mapToLong(Contribution::getStepsContributed).sum();
-                        long totalCoins = list.stream().mapToLong(Contribution::getCoinsContributed).sum();
+            // Combine distinct period keys from both streams to ensure no data gaps
+            Set<String> allPeriodKeys = new java.util.HashSet<>();
+            allPeriodKeys.addAll(groupedContributions.keySet());
+            allPeriodKeys.addAll(groupedDailyStats.keySet());
+
+            // Build per-period stats matrix
+            List<UserPeriodStatsDTO> periodStats = allPeriodKeys.stream()
+                    .map(key -> {
+                        List<Contribution> contribList = groupedContributions.getOrDefault(key, java.util.Collections.emptyList());
+                        List<DailyStat> statList = groupedDailyStats.getOrDefault(key, java.util.Collections.emptyList());
+
+                        long totalClaimedSteps = contribList.stream().mapToLong(Contribution::getStepsContributed).sum();
+                        long totalCoins = contribList.stream().mapToLong(Contribution::getCoinsContributed).sum();
+                        long totalDeviceSteps = statList.stream().mapToLong(DailyStat::getTotalDeviceSteps).sum();
+
+                        // 🔹 Calculate itemized interval conversion ratio safely
+                        double claimRatio = totalDeviceSteps == 0
+                                ? 0.0
+                                : ((double) totalClaimedSteps / totalDeviceSteps) * 100.0;
 
                         return UserPeriodStatsDTO.builder()
                                 .period(key)
-                                .totalSteps(totalSteps)
+                                .totalDeviceSteps(totalDeviceSteps)
+                                .totalClaimedSteps(totalClaimedSteps)
                                 .totalCoins(totalCoins)
+                                .claimRatio(Math.round(claimRatio * 100.0) / 100.0) // Round to 2 decimal places
                                 .build();
                     })
                     .sorted(Comparator.comparing(UserPeriodStatsDTO::getPeriod))
                     .toList();
 
-            // Global averages across periods
-            long totalStepsAll = periodStats.stream().mapToLong(UserPeriodStatsDTO::getTotalSteps).sum();
+            // Global totals across intervals
+            long totalDeviceStepsAll = periodStats.stream().mapToLong(UserPeriodStatsDTO::getTotalDeviceSteps).sum();
+            long totalClaimedStepsAll = periodStats.stream().mapToLong(UserPeriodStatsDTO::getTotalClaimedSteps).sum();
             long totalCoinsAll = periodStats.stream().mapToLong(UserPeriodStatsDTO::getTotalCoins).sum();
             int numberOfPeriods = periodStats.size();
 
-            double avgStepsPerPeriod = numberOfPeriods == 0 ? 0 : (double) totalStepsAll / numberOfPeriods;
+            // Calculate exact averages mapping to the split updates
+            double avgDeviceStepsPerPeriod = numberOfPeriods == 0 ? 0 : (double) totalDeviceStepsAll / numberOfPeriods;
+            double avgClaimedStepsPerPeriod = numberOfPeriods == 0 ? 0 : (double) totalClaimedStepsAll / numberOfPeriods;
             double avgCoinsPerPeriod = numberOfPeriods == 0 ? 0 : (double) totalCoinsAll / numberOfPeriods;
 
+            // 🔹 Calculate global average claim conversion ratio across all periods safely
+            double avgClaimRatio = totalDeviceStepsAll == 0
+                    ? 0.0
+                    : ((double) totalClaimedStepsAll / totalDeviceStepsAll) * 100.0;
+
+            // Build response layout wrapper card
             UserStatsSummaryDTO summary = UserStatsSummaryDTO.builder()
-                    .avgSteps(avgStepsPerPeriod)
+                    .avgDeviceSteps(avgDeviceStepsPerPeriod)
+                    .avgClaimedSteps(avgClaimedStepsPerPeriod)
                     .avgCoins(avgCoinsPerPeriod)
+                    .avgClaimRatio(Math.round(avgClaimRatio * 100.0) / 100.0) // Round to 2 decimal places
                     .periodStats(periodStats)
                     .build();
 
@@ -1327,6 +1412,8 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
             );
         }
     }
+
+
     public UserGoalDashboardResponse getUserGoalDashboard(Long userId) {
 
         var user = userRepository.findById(userId)

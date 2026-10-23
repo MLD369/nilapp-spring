@@ -10,6 +10,8 @@ import java.util.List;
 public class UserStatsResponse {
     private Long userId;
     private String username;
+    private Long totalDeviceSteps;
+    private Long totalClaimedSteps;
     private Long totalSteps;
     private Long totalCoins;
     private List<GoalDTO> activeGoals;

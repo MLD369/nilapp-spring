@@ -33,8 +33,87 @@ public class UserGoalService {
         return userGoalRepository.findByUserUserIdAndIsActiveTrue(userId);
     }
 
-
+    /**
+     * API for user to join or manually restart a challenge instance.
+     * Checks for a currently active row; if none exists, it provisions a zero-based timeline record.
+     */
+    @Transactional
     public CustomResponse<?> joinGoal(Long userId, Long instanceId) {
+
+        // Precise Fix: Prevent duplicate joins ONLY if their previous run is still active
+        boolean alreadyActive = userGoalRepository.existsByUser_UserIdAndGoalInstance_GoalInstanceIdAndIsActiveTrue(userId, instanceId);
+
+        if (alreadyActive) {
+            return new CustomResponse<>(
+                    "User is already actively participating in this goal challenge instance.",
+                    HttpStatus.BAD_REQUEST,
+                    "400"
+            );
+        }
+
+        UserGoal userGoal = new UserGoal();
+        userGoal.setUser(userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found")));
+        userGoal.setGoalInstance(goalInstanceRepository.findById(instanceId)
+                .orElseThrow(() -> new RuntimeException("Goal instance not found")));
+
+        // Baseline initialization
+        userGoal.setJoinedAt(LocalDateTime.now());
+        userGoal.setLeftAt(null);
+        userGoal.setIsActive(true);
+        userGoal.setIsComplete(false);
+        userGoal.setAllocationPct(BigDecimal.ZERO);
+
+        // Match the columns added from our progress updates conversation
+        userGoal.setCurrentStepsProgress(0);
+        userGoal.setCurrentCoinsProgress(0);
+
+        UserGoal saved = userGoalRepository.save(userGoal);
+
+        UserGoalDTO dto = UserGoalDTO.builder()
+                .userGoalId(saved.getUserGoalId())
+                .userId(userId)
+                .goalInstanceId(instanceId)
+                .joinedAt(saved.getJoinedAt())
+                .leftAt(saved.getLeftAt())
+                .allocationPct(saved.getAllocationPct())
+                .isActive(saved.getIsActive())
+                .isComplete(saved.getIsComplete())
+                .build();
+
+        return new CustomResponse<>(dto, HttpStatus.OK, "200");
+    }
+
+    /**
+     * API for a user to explicitly walk away from an active challenge early.
+     */
+    @Transactional
+    public CustomResponse<?> leaveGoal(Long userId, Long instanceId) {
+
+        // Precise Fix: Find the row that is currently active (where is_active = true)
+        UserGoal userGoal = userGoalRepository
+                .findByUser_UserIdAndGoalInstance_GoalInstanceIdAndIsActiveTrue(userId, instanceId)
+                .orElseThrow(() -> new RuntimeException("User is not currently active in this goal"));
+
+        userGoal.setLeftAt(LocalDateTime.now());
+        userGoal.setIsActive(false);
+
+        UserGoal saved = userGoalRepository.save(userGoal);
+
+        UserGoalDTO dto = UserGoalDTO.builder()
+                .userGoalId(saved.getUserGoalId())
+                .userId(userId)
+                .goalInstanceId(instanceId)
+                .joinedAt(saved.getJoinedAt())
+                .leftAt(saved.getLeftAt())
+                .allocationPct(saved.getAllocationPct())
+                .isActive(saved.getIsActive())
+                .isComplete(saved.getIsComplete())
+                .build();
+
+        return new CustomResponse<>(dto, HttpStatus.OK, "200");
+    }
+    public CustomResponse<?> joinGoal1(Long userId, Long instanceId) {
 
         // Prevent duplicate join
         boolean alreadyJoined = userGoalRepository
@@ -80,7 +159,7 @@ public class UserGoalService {
     }
 
 
-    public CustomResponse<?> leaveGoal(Long userId, Long instanceId) {
+    public CustomResponse<?> leaveGoal1(Long userId, Long instanceId) {
 
         UserGoal userGoal = userGoalRepository
                 .findByUser_UserIdAndGoalInstance_GoalInstanceIdAndLeftAtIsNull(userId, instanceId)
@@ -119,7 +198,7 @@ public class UserGoalService {
     @Transactional
     public void rejoinGoalChallenge(Long userId, Long goalInstanceId, String targetType, int targetAmount, double allocationPct) {
         int result = userGoalRepository.manuallyRejoinGoalChallenge(
-                userId, goalInstanceId, targetType, targetAmount, allocationPct
+                userId, goalInstanceId, targetType, targetAmount, 0
         );
 
         if (result == 0) {

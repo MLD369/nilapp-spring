@@ -30,8 +30,11 @@ public class DailyStat {
     @Column(nullable = false)
     private LocalDate date;
 
-    @Column(name = "total_steps")
-    private Integer totalSteps;
+    @Column(name = "total_claimed_steps")
+    private Integer totalClaimedSteps;
+
+    @Column(name = "total_device_steps")
+    private Integer totalDeviceSteps;
 
     private Integer coins;
 

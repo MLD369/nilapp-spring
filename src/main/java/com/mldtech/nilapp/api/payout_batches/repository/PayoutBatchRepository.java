@@ -66,8 +66,8 @@ public interface PayoutBatchRepository extends JpaRepository<PayoutBatch, Long> 
     @Query(value = """
         INSERT INTO payout_batches (
             goal_instance_id, entity_id, amount_paid, total_coins_processed, 
-            total_steps_processed, payout_status, payment_method, transaction_ref, 
-            period_start, period_end, s3_manifest_url, recommended_payout_date
+            total_claimed_steps_processed, payout_status, payment_method, transaction_ref, 
+            period_start, period_end, s3_manifest_url, recommended_payout_date, updated_at
         )
         SELECT 
             gi.goal_instance_id,
@@ -75,14 +75,16 @@ public interface PayoutBatchRepository extends JpaRepository<PayoutBatch, Long> 
             gi.dollar_amount,
             gi.coins_contributed,
             gi.steps_contributed,
-            'PENDING_FINANCE_RELEASE' AS payout_status,
-            'ACH' AS payment_method,
+            'PENDING_FINANCE_RELEASE',
+            'ACH',
             'AUTO_GEN_' || gi.goal_instance_id || '_' || TO_CHAR(NOW(), 'YYYYMMDD'),
             gi.start_date,
             gi.end_date,
-            's3://nil-app-settlements/manifests/goal-' || gi.goal_instance_id || '-audit.json' AS s3_manifest_url,
-            -- Secure Cash-Flow Guardrail: Calculate payment target as 60 days post-completion
-            (gi.completed_at\\:\\:date + INTERVAL '60 days')\\:\\:date AS recommended_payout_date
+            's3://nil-app-settlements/manifests/goal-' || gi.goal_instance_id || '-audit.json',
+             -- Secure Cash-Flow Guardrail: Calculate payment target as 60 days post-completion
+            (gi.completed_at\\:\\:date + INTERVAL '60 days')\\:\\:date,
+            -- SEED UPDATED_AT METRIC:
+            NOW()
         FROM goal_instances gi
         LEFT JOIN payout_batches pb ON pb.goal_instance_id = gi.goal_instance_id
         WHERE gi.pacing_status = 'CLOSED_PENDING_AUDIT'
@@ -90,6 +92,8 @@ public interface PayoutBatchRepository extends JpaRepository<PayoutBatch, Long> 
           AND pb.payout_batch_id IS NULL;
         """, nativeQuery = true)
     int autoInitializeDefaultPayoutBatches();
+
+
 
     /**
      * Retrieves all pending payout batches that have reached or passed their recommended cash-clearing date.

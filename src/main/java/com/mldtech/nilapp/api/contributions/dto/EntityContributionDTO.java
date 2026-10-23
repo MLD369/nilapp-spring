@@ -8,7 +8,8 @@ import lombok.Data;
 public class EntityContributionDTO {
     private Long entityId;
     private String entityName;
-    private Long totalSteps;
+    private Long totalClaimedSteps;
+    private Long totalDeviceSteps;
     private Long totalNilCoins;
 }
 

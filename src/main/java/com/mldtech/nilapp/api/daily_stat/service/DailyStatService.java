@@ -33,7 +33,8 @@ public class DailyStatService {
         // If exists, update instead of creating a duplicate
         return dailyStatRepository.findByUserIdAndDate(stat.getUserId(), stat.getDate())
                 .map(existing -> {
-                    existing.setTotalSteps(stat.getTotalSteps());
+                    existing.setTotalDeviceSteps(stat.getTotalDeviceSteps());
+                    existing.setTotalClaimedSteps(stat.getTotalClaimedSteps());
                     existing.setCoins(stat.getCoins());
                     existing.setDistanceMeters(stat.getDistanceMeters());
                     existing.setDeviceSource(stat.getDeviceSource());

@@ -57,4 +57,12 @@ public class UserGoal {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    @Column(name = "current_steps_progress", nullable = false)
+    @Builder.Default
+    private Integer currentStepsProgress = 0;
+
+    @Column(name = "current_coins_progress", nullable = false)
+    @Builder.Default
+    private Integer currentCoinsProgress = 0;
+
 }
