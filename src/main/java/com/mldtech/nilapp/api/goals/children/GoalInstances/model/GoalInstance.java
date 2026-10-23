@@ -9,6 +9,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "goal_instances")
@@ -67,6 +68,21 @@ public class GoalInstance {
 
     @Column(name = "dollar_amount", nullable = false)
     private BigDecimal dollarAmount = BigDecimal.ZERO;
+
+    @Column(name = "created_at", insertable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    /**
+     * Entity lifecycle hook executed right before a standard row merge update command drops into PostgreSQL.
+     * Ensures our app-layer modifications keep timestamps accurate without manual configuration parameters.
+     */
+    @PreUpdate
+    protected void onRowUpdateLifecycleAction() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }
 
 
