@@ -338,7 +338,7 @@ BEGIN;
 -- 1. Add banking rails and settlement tracking metadata
 ALTER TABLE public.payout_batches ADD COLUMN IF NOT EXISTS payment_method VARCHAR(20) DEFAULT 'ACH'; -- 'ACH', 'WIRE', 'CHECK'
 ALTER TABLE public.payout_batches ADD COLUMN IF NOT EXISTS tracking_number VARCHAR(100);             -- Check check#, ACH trace id, wire reference
-ALTER TABLE public.payout_batches ADD COLUMN IF NOT EXISTS payout_status VARCHAR(30) DEFAULT 'DRAFT'; -- 'DRAFT', 'PROCESSING', 'SETTLED', 'FAILED'
+ALTER TABLE public.payout_batches ADD COLUMN IF NOT EXISTS payout_status VARCHAR(30) DEFAULT 'DRAFT'; -- 'DRAFT', 'PROCESSING', 'SETTLED', 'FAILED', 'PAID'
 ALTER TABLE public.payout_batches ADD COLUMN IF NOT EXISTS total_coins_processed BIGINT DEFAULT 0;
 ALTER TABLE public.payout_batches ADD COLUMN IF NOT EXISTS total_steps_processed BIGINT DEFAULT 0;
 ALTER TABLE public.payout_batches ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
@@ -372,3 +372,6 @@ ALTER TABLE public.goal_instances ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP 
 CREATE INDEX IF NOT EXISTS idx_goal_instances_timestamps ON public.goal_instances (updated_at DESC);
 
 COMMIT;
+
+-- // TODO payout batch needs something to stop duplicates payout batch id, enitity id , transaction ref, tracking number,
+-- todo I DONT THINK THERE SHOULD BE DUPLICATES entity and goal instances  also the batch need to change the status of the goal isntance
