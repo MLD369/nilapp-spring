@@ -255,19 +255,27 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
      */
     @Modifying
     @Query(value = """
-        UPDATE goal_instances gi
-        SET 
-            steps_contributed = gi.steps_contributed + COALESCE((SELECT SUM(es.steps) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 1), 0),
-            coins_contributed = gi.coins_contributed + COALESCE((SELECT SUM(es.coins) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 1), 0),
-            dollar_amount = gi.dollar_amount + COALESCE((SELECT SUM(es.revenue_generated) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 1), 0.000000),
-            is_complete = CASE WHEN (gi.coins_contributed + COALESCE((SELECT SUM(es.coins) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 1), 0)) >= gi.coins_needed THEN true ELSE gi.is_complete END,
-            is_active = CASE WHEN (gi.coins_contributed + COALESCE((SELECT SUM(es.coins) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 1), 0)) >= gi.coins_needed THEN false ELSE gi.is_active END,
-            completed_at = CASE WHEN (gi.coins_contributed + COALESCE((SELECT SUM(es.coins) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 1), 0)) >= gi.coins_needed AND gi.is_complete = false THEN NOW() ELSE gi.completed_at END,
-            pacing_status = CASE WHEN (gi.coins_contributed + COALESCE((SELECT SUM(es.coins) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 1), 0)) >= gi.coins_needed THEN 'CLOSED_PENDING_AUDIT' ELSE gi.pacing_status END,
-            -- STAMP UPDATED TIME ON WRITE RUNS:
-            updated_at = NOW()
-        WHERE gi.is_active = true AND gi.entity_id IS NOT NULL
-        """, nativeQuery = true)
+       UPDATE goal_instances gi
+       SET
+           steps_contributed = gi.steps_contributed + COALESCE((SELECT SUM(es.steps) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 2), 0),
+           coins_contributed = gi.coins_contributed + COALESCE((SELECT SUM(es.coins) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 2), 0),
+           dollar_amount     = gi.dollar_amount + COALESCE((SELECT SUM(es.revenue_generated) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 2), 0.000000),
+           
+           is_complete   = CASE WHEN (gi.coins_contributed + COALESCE((SELECT SUM(es.coins) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 2), 0)) >= gi.coins_needed THEN true ELSE gi.is_complete END,
+           is_active     = CASE WHEN (gi.coins_contributed + COALESCE((SELECT SUM(es.coins) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 2), 0)) >= gi.coins_needed THEN false ELSE gi.is_active END,
+           completed_at  = CASE WHEN (gi.coins_contributed + COALESCE((SELECT SUM(es.coins) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 2), 0)) >= gi.coins_needed AND gi.is_complete = false THEN NOW() ELSE gi.completed_at END,
+           
+           pacing_status = CASE WHEN (gi.coins_contributed + COALESCE((SELECT SUM(es.coins) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 2), 0)) >= gi.coins_needed THEN 'COMPLETED' ELSE gi.pacing_status END,
+           end_date      = CASE WHEN (gi.coins_contributed + COALESCE((SELECT SUM(es.coins) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 2), 0)) >= gi.coins_needed THEN CURRENT_DATE ELSE gi.end_date END,
+           updated_at    = NOW()
+       WHERE gi.is_active = true 
+         AND gi.entity_id IS NOT NULL
+         AND EXISTS (
+             SELECT 1 FROM entity_stats es 
+             JOIN contributions c ON es.contribution_id = c.contribution_id 
+             WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 2
+         )
+       """, nativeQuery = true)
     int evaluateEntityGoals();
 
     /**
@@ -302,19 +310,18 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
      */
     @Modifying
     @Query(value = """
-        UPDATE goal_instances
-        SET pacing_status = CASE 
-                WHEN NOW() > (start_date + ((end_date - start_date) * INTERVAL '1 day' * 0.90)) AND coins_contributed < (coins_needed * 0.88) THEN 'NEAR_EXPIRATION_ALERT'
-                WHEN NOW() > (start_date + ((end_date - start_date) * INTERVAL '1 day' * 0.80)) AND coins_contributed < (coins_needed * 0.75) THEN 'HIGH_RISK_FAILURE'
-                WHEN NOW() > (start_date + ((end_date - start_date) * INTERVAL '1 day' * 0.75)) AND coins_contributed < (coins_needed * 0.65) THEN 'CRITICAL_LAGGING'
-                WHEN NOW() > (start_date + ((end_date - start_date) * INTERVAL '1 day' * 0.50)) AND coins_contributed < (coins_needed * 0.40) THEN 'BEHIND_NEED_RECALCULATION'
-                WHEN NOW() > (start_date + ((end_date - start_date) * INTERVAL '1 day' * 0.25)) AND coins_contributed < (coins_needed * 0.15) THEN 'SLIGHTLY_BEHIND'
-                ELSE 'ON_TRACK'
-            END,
-            -- STAMP UPDATED TIME ON WRITE RUNS:
-            updated_at = NOW()
-        WHERE is_active = true AND pacing_status NOT IN ('CLOSED_PENDING_AUDIT', 'SETTLED')
-        """, nativeQuery = true)
+       UPDATE goal_instances
+       SET pacing_status = CASE
+               WHEN NOW() > (start_date + ((end_date - start_date) * INTERVAL '1 day' * 0.90)) AND coins_contributed < (coins_needed * 0.88) THEN 'NEAR_EXPIRATION_ALERT'
+               WHEN NOW() > (start_date + ((end_date - start_date) * INTERVAL '1 day' * 0.80)) AND coins_contributed < (coins_needed * 0.75) THEN 'HIGH_RISK_FAILURE'
+               WHEN NOW() > (start_date + ((end_date - start_date) * INTERVAL '1 day' * 0.75)) AND coins_contributed < (coins_needed * 0.65) THEN 'CRITICAL_LAGGING'
+               WHEN NOW() > (start_date + ((end_date - start_date) * INTERVAL '1 day' * 0.50)) AND coins_contributed < (coins_needed * 0.40) THEN 'BEHIND_NEED_RECALCULATION'
+               WHEN NOW() > (start_date + ((end_date - start_date) * INTERVAL '1 day' * 0.25)) AND coins_contributed < (coins_needed * 0.15) THEN 'SLIGHTLY_BEHIND'
+               ELSE 'ON_TRACK'
+           END,
+           updated_at = NOW()
+       WHERE is_active = true AND pacing_status NOT IN ('CLOSED_PENDING_AUDIT', 'SETTLED', 'COMPLETED')
+       """, nativeQuery = true)
     int recalculateGoalPacingStatuses();
 
     @Modifying
@@ -405,6 +412,32 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
         ON CONFLICT (user_id, achievement_id, earned_at) DO NOTHING;
         """, nativeQuery = true)
     int evaluateUserGoalsBatch();
+
+    /**
+     * Retrieves all unique primary identifiers for goal instances that have reached
+     * terminal completion conditions within the current processing timeframe.
+     * <p>
+     * Filters strictly for records marked as inactive (is_active = false) matching the
+     * 'COMPLETED' pacing workflow status. This serves as the internal ingestion
+     * vector for the automated bank settlement and payout dispatching module.
+     *
+     * @return a {@link List} of {@link Long} primary key tokens awaiting treasury release
+     */
+    /**
+     * Retrieves unique primary identifiers for goal instances that have reached
+     * terminal completion conditions within the current timeframe.
+     */
+    @Query(value = """
+       SELECT goal_instance_id 
+       FROM goal_instances 
+       WHERE pacing_status = 'COMPLETED' 
+         AND is_active = false
+       """, nativeQuery = true)
+    List<Long> findNewlyClosedGoalInstanceIds();
+
+    @Modifying
+    @Query(value = "UPDATE goal_instances SET pacing_status = :status WHERE goal_instance_id = :id", nativeQuery = true)
+    void updatePacingStatus(@Param("id") Long id, @Param("status") String status);
 
 
 }
