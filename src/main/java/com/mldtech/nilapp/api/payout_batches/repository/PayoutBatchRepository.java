@@ -9,9 +9,19 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Repository
 public interface PayoutBatchRepository extends JpaRepository<PayoutBatch, Long> {
+
+    /**
+     * Locates a payout tracking batch using its mapped parent goal instance identifier.
+     * Used to advance records through the DRAFT -> PROCESSING -> SETTLED pipeline lifecycle.
+     *
+     * @param goalInstanceId the primary identifier of the parent campaign instance
+     * @return an {@link Optional} containing the matching batch tracking entity if found
+     */
+    Optional<PayoutBatch> findByGoalInstanceId(Long goalInstanceId);
 
     /**
      * Scans and aggregates un-payout data for a closed goal instance challenge.

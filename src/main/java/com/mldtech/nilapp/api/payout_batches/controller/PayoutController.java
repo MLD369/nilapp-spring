@@ -27,20 +27,6 @@ public class PayoutController {
     }
 
     /**
-     * Execution settlement button submission router endpoint.
-     */
-    @PostMapping("/settle/{goalInstanceId}")
-    public ResponseEntity<PayoutBatch> settleGoalCampaign(
-            @PathVariable("goalInstanceId") Long goalInstanceId,
-            @RequestBody Map<String, String> payload) {
-
-        String method = payload.getOrDefault("paymentMethod", "ACH");
-        String tracking = payload.getOrDefault("trackingNumber", "TRACE_PENDING");
-
-        PayoutBatch finalReceipt = payoutService.executeFinancialSettlement(goalInstanceId, method, tracking);
-        return ResponseEntity.ok(finalReceipt);
-    }
-    /**
      * REST Endpoint called by the administrative treasury dashboard.
      * Retrieves all finalized entity payout batches that are legally/financially cleared for bank release.
      *
@@ -52,6 +38,31 @@ public class PayoutController {
         return ResponseEntity.ok(maturedPayouts);
     }
 
+    /**
+     * Phase 1 manual endpoint: Transition a DRAFT payout batch into a working queue
+     * signaling that a manager has initiated bank routing/clearing operations.
+     */
+    @PostMapping("/process/{goalInstanceId}")
+    public ResponseEntity<PayoutBatch> markPayoutAsProcessing(@PathVariable("goalInstanceId") Long goalInstanceId) {
+        PayoutBatch updatedReceipt = payoutService.transitionToProcessing(goalInstanceId);
+        return ResponseEntity.ok(updatedReceipt);
+    }
+
+    /**
+     * Phase 2 manual endpoint: Final execution settlement button submission.
+     * Finalizes the record with real tracking/wire sequence IDs and transitions state to SETTLED.
+     */
+    @PostMapping("/settle/{goalInstanceId}")
+    public ResponseEntity<PayoutBatch> settleGoalCampaign(
+            @PathVariable("goalInstanceId") Long goalInstanceId,
+            @RequestBody Map<String, String> payload) {
+
+        String method = payload.getOrDefault("paymentMethod", "ACH");
+        String tracking = payload.getOrDefault("trackingNumber", "TRACE_CLEAR_" + System.currentTimeMillis());
+
+        PayoutBatch finalReceipt = payoutService.executeFinalSettlement(goalInstanceId, method, tracking);
+        return ResponseEntity.ok(finalReceipt);
+    }
+
 
 }
-

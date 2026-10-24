@@ -1,9 +1,12 @@
 package com.mldtech.nilapp.api.payout_batches.service;
 
 import com.mldtech.nilapp.api.contributions.repository.ContributionRepository;
+import com.mldtech.nilapp.api.goals.children.GoalInstances.model.GoalInstance;
+import com.mldtech.nilapp.api.goals.children.GoalInstances.repository.GoalInstanceRepository;
 import com.mldtech.nilapp.api.payout_batches.model.PayoutBatch;
 import com.mldtech.nilapp.api.payout_batches.repository.PayoutBatchRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -16,10 +19,12 @@ public class PayoutService {
 
     private final PayoutBatchRepository payoutBatchRepository;
     private final ContributionRepository contributionRepository;
+    private final GoalInstanceRepository goalInstanceRepository;
 
-    public PayoutService(PayoutBatchRepository payoutBatchRepository, ContributionRepository contributionRepository) {
+    public PayoutService(PayoutBatchRepository payoutBatchRepository, ContributionRepository contributionRepository, GoalInstanceRepository goalInstanceRepository) {
         this.payoutBatchRepository = payoutBatchRepository;
         this.contributionRepository = contributionRepository;
+        this.goalInstanceRepository = goalInstanceRepository;
     }
 
     /**
@@ -35,49 +40,97 @@ public class PayoutService {
     }
 
     /**
-     * Processes financial clear closures. Creates the payout sheet, links contributions, and advances state.
+     * Drops an unfinalized record into the ledger database layer, defaulting to DRAFT.
      */
     @Transactional
-    public PayoutBatch executeFinancialSettlement(Long goalInstanceId, String paymentMethod, String trackingNumber) {
-        Map<String, Object> metrics = payoutBatchRepository.calculatePotentialGoalPayoutMetrics(goalInstanceId);
-        if (metrics.isEmpty()) {
-            throw new IllegalStateException("Goal challenge is not in CLOSED_PENDING_AUDIT state.");
-        }
+    public PayoutBatch createInitialPayoutDraft(Long goalInstanceId) {
+        Map<String, Object> preview = getPayoutPreviewMetrics(goalInstanceId);
+        Long entityId = (Long) preview.get("entityid");
+        BigDecimal amountPaid = (BigDecimal) preview.get("potentialpayoutamount");
+        Long totalSteps = (Long) preview.get("totalsteps");
+        Long totalCoins = (Long) preview.get("totalcoins");
 
-        Long entityId = ((Number) metrics.get("entityid")).longValue();
-        BigDecimal amountPaid = new BigDecimal(metrics.get("potentialpayoutamount").toString());
-        Long totalSteps = ((Number) metrics.get("totalsteps")).longValue();
-        Long totalCoins = ((Number) metrics.get("totalcoins")).longValue();
+        GoalInstance goalInstance = goalInstanceRepository.findById(goalInstanceId)
+                .orElseThrow(() -> new IllegalArgumentException("Goal Instance not found"));
 
-        // 1. Initialize complete structural record row
-        PayoutBatch batch = PayoutBatch.builder()
+        PayoutBatch draftBatch = PayoutBatch.builder()
                 .entityId(entityId)
                 .goalInstanceId(goalInstanceId)
                 .amountPaid(amountPaid)
                 .totalClaimedStepsProcessed(totalSteps)
                 .totalCoinsProcessed(totalCoins)
-                .paymentMethod(paymentMethod)
-                .trackingNumber(trackingNumber)
-                .payoutStatus("SETTLED")
-                .periodStart(LocalDate.now().minusDays(30)) // Adjust dynamically as required
-                .periodEnd(LocalDate.now())
-                .transactionRef("TX_REF_" + goalInstanceId + "_" + System.currentTimeMillis())
-                .s3ManifestUrl("s3://nil-app-settlements/manifests/goal-" + goalInstanceId + ".json")
+                .paymentMethod("ACH")
+                .trackingNumber("TRACE_PENDING_AUDIT")
+                .payoutStatus("DRAFT") // Default state
+                .periodStart(goalInstance.getStartDate())
+                .periodEnd(goalInstance.getEndDate())
+                .transactionRef("TX_DRAFT_" + goalInstanceId + "_" + System.currentTimeMillis())
+                .s3ManifestUrl("s3://nil-app-settlements/manifests/draft-goal-" + goalInstanceId + ".json")
                 .updatedAt(java.time.LocalDateTime.now())
+                .recommendedPayoutDate(goalInstance.getEndDate().plusDays(60))
                 .build();
 
-        batch = payoutBatchRepository.save(batch);
-
-        // 2. Lock matching transactional rows forever
-        payoutBatchRepository.bindContributionsToPayoutBatch(
-                batch.getPayoutBatchId(), entityId, batch.getPeriodStart(), batch.getPeriodEnd()
-        );
-
-        // 3. Mark master campaign row as fully SETTLED inside the DB catalog
-        // Assuming a native mapping or update loop execution here to turn pacing_status to 'SETTLED'
-
-        return batch;
+        return payoutBatchRepository.save(draftBatch);
     }
+
+    /**
+     * Fallback tracking generator called when internal calculation exceptions arise.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordProcessingFailure(Long goalInstanceId, String errorMessage) {
+        PayoutBatch failedLog = PayoutBatch.builder()
+                .goalInstanceId(goalInstanceId)
+                .amountPaid(BigDecimal.ZERO)
+                .paymentMethod("NONE")
+                .trackingNumber("ERROR_LOGGED")
+                .payoutStatus("FAILED") // Captured exception status
+                .transactionRef("ERR_" + goalInstanceId + "_" + System.currentTimeMillis())
+                .s3ManifestUrl("none")
+                .updatedAt(java.time.LocalDateTime.now())
+                .build();
+        payoutBatchRepository.save(failedLog);
+    }
+
+    /**
+     * Transitions a record from DRAFT to PROCESSING when a manager begins file generation.
+     */
+    @Transactional
+    public PayoutBatch transitionToProcessing(Long goalInstanceId) {
+        PayoutBatch batch = payoutBatchRepository.findByGoalInstanceId(goalInstanceId)
+                .orElseThrow(() -> new IllegalStateException("No payout record found for this instance."));
+
+        if (!"DRAFT".equals(batch.getPayoutStatus())) {
+            throw new IllegalStateException("Cannot process payout. Status must be DRAFT but was: " + batch.getPayoutStatus());
+        }
+
+        batch.setPayoutStatus("PROCESSING");
+        batch.setUpdatedAt(java.time.LocalDateTime.now());
+        return payoutBatchRepository.save(batch);
+    }
+
+    /**
+     * Finalizes the record with payment tracking IDs and updates its state to SETTLED.
+     */
+    @Transactional
+    public PayoutBatch executeFinalSettlement(Long goalInstanceId, String paymentMethod, String trackingNumber) {
+        PayoutBatch batch = payoutBatchRepository.findByGoalInstanceId(goalInstanceId)
+                .orElseThrow(() -> new IllegalStateException("No active payout record found for execution."));
+
+        if (!"PROCESSING".equals(batch.getPayoutStatus())) {
+            throw new IllegalStateException("Cannot settle payout. Status must be PROCESSING to authorize wire clearing.");
+        }
+
+        batch.setPaymentMethod(paymentMethod);
+        batch.setTrackingNumber(trackingNumber);
+        batch.setPayoutStatus("SETTLED");
+        batch.setUpdatedAt(java.time.LocalDateTime.now());
+
+        // Pull the goal_instance out of the active audit loop completely
+        contributionRepository.updatePacingStatus(goalInstanceId, "SETTLED");
+
+        return payoutBatchRepository.save(batch);
+    }
+
     /**
      * Scans closed campaign instances and auto-generates baseline draft records
      * inside the payout registry for your financial management teams to view.
