@@ -40,6 +40,10 @@ public class UserAchievement {
 
     @Column(name = "earned_at")
     private LocalDateTime earnedAt;
+
+    @Column(name = "goal_instance_id")
+    private Long goalInstanceId;
+
 }
 
 

@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/streaks")
+@RequestMapping("/api/v1/user-streaks")
 @AllArgsConstructor
 public class UserStreakController {
 

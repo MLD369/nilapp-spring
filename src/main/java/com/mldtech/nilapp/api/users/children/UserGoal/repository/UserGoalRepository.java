@@ -54,4 +54,25 @@ public interface UserGoalRepository extends JpaRepository<UserGoal, Long> {
             @Param("allocationPct") double allocationPct
     );
 
+    @Modifying
+    @Query(value = """
+    UPDATE public.user_goals 
+    SET user_goal_status_id = (SELECT user_goal_status_id FROM public.user_goal_statuses WHERE code = :statusCode)
+    WHERE user_goal_id = :id
+    """, nativeQuery = true)
+    void updateUserGoalStatusByCode(@Param("id") Long id, @Param("statusCode") String statusCode);
+
+    /**
+     * Locates all child user goal contract primary keys tied to a parent challenge instance.
+     *
+     * @param goalInstanceId the parent instance identifier
+     * @return a {@link List} of {@link Long} user goal IDs
+     */
+    @Query(value = """
+   SELECT user_goal_id 
+   FROM public.user_goals 
+   WHERE goal_instance_id = :goalInstanceId
+   """, nativeQuery = true)
+    List<Long> findUserGoalIdsByInstanceId(@Param("goalInstanceId") Long goalInstanceId);
+
 }

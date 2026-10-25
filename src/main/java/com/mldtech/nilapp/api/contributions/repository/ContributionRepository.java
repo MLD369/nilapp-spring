@@ -237,7 +237,7 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
             CROSS JOIN LATERAL jsonb_array_elements(lc.allocation_snapshot->'groupAllocations') AS alloc
         )
         UPDATE contributions
-        SET contribution_status_id = 2
+        SET contribution_status_id = 5
         WHERE contribution_id IN (SELECT contribution_id FROM locked_contributions)
         """, nativeQuery = true)
     int processPendingContributions();
@@ -257,24 +257,30 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
     @Query(value = """
        UPDATE goal_instances gi
        SET
-           steps_contributed = gi.steps_contributed + COALESCE((SELECT SUM(es.steps) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 2), 0),
-           coins_contributed = gi.coins_contributed + COALESCE((SELECT SUM(es.coins) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 2), 0),
-           dollar_amount     = gi.dollar_amount + COALESCE((SELECT SUM(es.revenue_generated) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 2), 0.000000),
-           
-           is_complete   = CASE WHEN (gi.coins_contributed + COALESCE((SELECT SUM(es.coins) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 2), 0)) >= gi.coins_needed THEN true ELSE gi.is_complete END,
-           is_active     = CASE WHEN (gi.coins_contributed + COALESCE((SELECT SUM(es.coins) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 2), 0)) >= gi.coins_needed THEN false ELSE gi.is_active END,
-           completed_at  = CASE WHEN (gi.coins_contributed + COALESCE((SELECT SUM(es.coins) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 2), 0)) >= gi.coins_needed AND gi.is_complete = false THEN NOW() ELSE gi.completed_at END,
-           
-           pacing_status = CASE WHEN (gi.coins_contributed + COALESCE((SELECT SUM(es.coins) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 2), 0)) >= gi.coins_needed THEN 'COMPLETED' ELSE gi.pacing_status END,
-           end_date      = CASE WHEN (gi.coins_contributed + COALESCE((SELECT SUM(es.coins) FROM entity_stats es JOIN contributions c ON es.contribution_id = c.contribution_id WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 2), 0)) >= gi.coins_needed THEN CURRENT_DATE ELSE gi.end_date END,
+           steps_contributed = gi.steps_contributed + sub.total_steps,
+           coins_contributed = gi.coins_contributed + sub.total_coins,
+           dollar_amount     = gi.dollar_amount + sub.total_rev,
+       
+           -- SYSTEM EVALUATION TERMINATION LOGIC:
+           is_complete   = CASE WHEN (gi.coins_contributed + sub.total_coins) >= gi.coins_needed THEN true ELSE gi.is_complete END,
+           is_active     = CASE WHEN (gi.coins_contributed + sub.total_coins) >= gi.coins_needed THEN false ELSE gi.is_active END,
+           completed_at  = CASE WHEN (gi.coins_contributed + sub.total_coins) >= gi.coins_needed AND gi.is_complete = false THEN NOW() ELSE gi.completed_at END,
+       
+           -- Link back to Catalog ID 7 (COMPLETED)
+           pacing_status_id = CASE WHEN (gi.coins_contributed + sub.total_coins) >= gi.coins_needed THEN 7 ELSE gi.pacing_status_id END,
+           end_date      = CASE WHEN (gi.coins_contributed + sub.total_coins) >= gi.coins_needed THEN CURRENT_DATE ELSE gi.end_date END,
            updated_at    = NOW()
-       WHERE gi.is_active = true 
-         AND gi.entity_id IS NOT NULL
-         AND EXISTS (
-             SELECT 1 FROM entity_stats es 
-             JOIN contributions c ON es.contribution_id = c.contribution_id 
-             WHERE es.entity_id = gi.entity_id AND c.contribution_status_id = 2
-         )
+       FROM (
+           SELECT entity_id,\s
+                  SUM(steps) as total_steps,\s
+                  SUM(coins) as total_coins,\s
+                  SUM(revenue_generated) as total_rev
+           FROM entity_stats
+           WHERE is_processed = false -- Reads only fresh data
+           GROUP BY entity_id
+       ) sub
+       WHERE gi.entity_id = sub.entity_id\s
+       AND gi.is_active = true;
        """, nativeQuery = true)
     int evaluateEntityGoals();
 
@@ -288,16 +294,27 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
      */
     @Modifying
     @Query(value = """
-        UPDATE goal_instances gi
-        SET 
-            steps_contributed = gi.steps_contributed + COALESCE((SELECT SUM(gs.steps) FROM group_stats gs JOIN contributions c ON gs.contribution_id = c.contribution_id WHERE gs.group_id = gi.group_id AND c.contribution_status_id = 1), 0),
-            coins_contributed = gi.coins_contributed + COALESCE((SELECT SUM(gs.coins) FROM group_stats gs JOIN contributions c ON gs.contribution_id = c.contribution_id WHERE gs.group_id = gi.group_id AND c.contribution_status_id = 1), 0),
-            is_complete = CASE WHEN (gi.coins_contributed + COALESCE((SELECT SUM(gs.coins) FROM group_stats gs JOIN contributions c ON gs.contribution_id = c.contribution_id WHERE gs.group_id = gi.group_id AND c.contribution_status_id = 1), 0)) >= gi.coins_needed THEN true ELSE gi.is_complete END,
-            is_active = CASE WHEN (gi.coins_contributed + COALESCE((SELECT SUM(gs.coins) FROM group_stats gs JOIN contributions c ON gs.contribution_id = c.contribution_id WHERE gs.group_id = gi.group_id AND c.contribution_status_id = 1), 0)) >= gi.coins_needed THEN false ELSE gi.is_active END,
-            completed_at = CASE WHEN (gi.coins_contributed + COALESCE((SELECT SUM(gs.coins) FROM group_stats gs JOIN contributions c ON gs.contribution_id = c.contribution_id WHERE gs.group_id = gi.group_id AND c.contribution_status_id = 1), 0)) >= gi.coins_needed AND gi.is_complete = false THEN NOW() ELSE gi.completed_at END,
-            -- STAMP UPDATED TIME ON WRITE RUNS:
-            updated_at = NOW()
-        WHERE gi.is_active = true AND gi.group_id IS NOT NULL
+
+       UPDATE goal_instances gi
+       SET
+           steps_contributed = gi.steps_contributed + sub.total_steps,
+           coins_contributed = gi.coins_contributed + sub.total_coins,
+           is_complete       = CASE WHEN (gi.coins_contributed + sub.total_coins) >= gi.coins_needed THEN true ELSE gi.is_complete END,
+           is_active         = CASE WHEN (gi.coins_contributed + sub.total_coins) >= gi.coins_needed THEN false ELSE gi.is_active END,
+           completed_at      = CASE WHEN (gi.coins_contributed + sub.total_coins) >= gi.coins_needed AND gi.is_complete = false THEN NOW() ELSE gi.completed_at END,
+           pacing_status_id  = CASE WHEN (gi.coins_contributed + sub.total_coins) >= gi.coins_needed THEN (SELECT pacing_status_id FROM public.pacing_statuses WHERE code = 'COMPLETED') ELSE gi.pacing_status_id END,
+           end_date          = CASE WHEN (gi.coins_contributed + sub.total_coins) >= gi.coins_needed THEN CURRENT_DATE ELSE gi.end_date END,
+           updated_at        = NOW()
+       FROM (
+           SELECT group_id,\s
+                  SUM(steps) as total_steps,\s
+                  SUM(coins) as total_coins
+           FROM group_stats
+           WHERE is_processed = false -- FIXED: Pulls fresh logs only
+           GROUP BY group_id
+       ) sub
+       WHERE gi.group_id = sub.group_id\s
+         AND gi.is_active = true
         """, nativeQuery = true)
     int evaluateGroupGoals();
 
@@ -310,19 +327,39 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
      */
     @Modifying
     @Query(value = """
-       UPDATE goal_instances
-       SET pacing_status = CASE
-               WHEN NOW() > (start_date + ((end_date - start_date) * INTERVAL '1 day' * 0.90)) AND coins_contributed < (coins_needed * 0.88) THEN 'NEAR_EXPIRATION_ALERT'
-               WHEN NOW() > (start_date + ((end_date - start_date) * INTERVAL '1 day' * 0.80)) AND coins_contributed < (coins_needed * 0.75) THEN 'HIGH_RISK_FAILURE'
-               WHEN NOW() > (start_date + ((end_date - start_date) * INTERVAL '1 day' * 0.75)) AND coins_contributed < (coins_needed * 0.65) THEN 'CRITICAL_LAGGING'
-               WHEN NOW() > (start_date + ((end_date - start_date) * INTERVAL '1 day' * 0.50)) AND coins_contributed < (coins_needed * 0.40) THEN 'BEHIND_NEED_RECALCULATION'
-               WHEN NOW() > (start_date + ((end_date - start_date) * INTERVAL '1 day' * 0.25)) AND coins_contributed < (coins_needed * 0.15) THEN 'SLIGHTLY_BEHIND'
-               ELSE 'ON_TRACK'
-           END,
-           updated_at = NOW()
-       WHERE is_active = true AND pacing_status NOT IN ('CLOSED_PENDING_AUDIT', 'SETTLED', 'COMPLETED')
-       """, nativeQuery = true)
+   UPDATE public.goal_instances gi
+   SET pacing_status_id = (
+       SELECT pacing_status_id FROM public.pacing_statuses WHERE code = CASE
+           WHEN NOW() > (gi.start_date + ((gi.end_date - gi.start_date) * INTERVAL '1 day' * 0.90)) AND gi.coins_contributed < (gi.coins_needed * 0.88) THEN 'NEAR_EXPIRATION_ALERT'
+           WHEN NOW() > (gi.start_date + ((gi.end_date - gi.start_date) * INTERVAL '1 day' * 0.80)) AND gi.coins_contributed < (gi.coins_needed * 0.75) THEN 'HIGH_RISK_FAILURE'
+           WHEN NOW() > (gi.start_date + ((gi.end_date - gi.start_date) * INTERVAL '1 day' * 0.75)) AND gi.coins_contributed < (gi.coins_needed * 0.65) THEN 'CRITICAL_LAGGING'
+           WHEN NOW() > (gi.start_date + ((gi.end_date - gi.start_date) * INTERVAL '1 day' * 0.50)) AND gi.coins_contributed < (gi.coins_needed * 0.40) THEN 'BEHIND_NEED_RECALCULATION'
+           WHEN NOW() > (gi.start_date + ((gi.end_date - gi.start_date) * INTERVAL '1 day' * 0.25)) AND gi.coins_contributed < (gi.coins_needed * 0.15) THEN 'SLIGHTLY_BEHIND'
+           ELSE 'ON_TRACK'
+       END
+   ),
+   updated_at = NOW() -- FIXED: Removed 'gi.' prefix to satisfy PostgreSQL strict SET syntax rules
+   WHERE gi.is_active = true 
+     -- Exclude finalized states from changing using the locked subquery mapping IDs
+     AND gi.pacing_status_id NOT IN (
+         SELECT pacing_status_id FROM public.pacing_statuses 
+         WHERE code IN ('CLOSED_PENDING_AUDIT', 'SETTLED', 'COMPLETED')
+     )
+     -- IDEMPOTENCY SAFETY: Avoid blind writes by confirming the calculation actually changes the current state
+     AND gi.pacing_status_id <> (
+         SELECT pacing_status_id FROM public.pacing_statuses WHERE code = CASE
+             WHEN NOW() > (gi.start_date + ((gi.end_date - gi.start_date) * INTERVAL '1 day' * 0.90)) AND gi.coins_contributed < (gi.coins_needed * 0.88) THEN 'NEAR_EXPIRATION_ALERT'
+             WHEN NOW() > (gi.start_date + ((gi.end_date - gi.start_date) * INTERVAL '1 day' * 0.80)) AND gi.coins_contributed < (gi.coins_needed * 0.75) THEN 'HIGH_RISK_FAILURE'
+             WHEN NOW() > (gi.start_date + ((gi.end_date - gi.start_date) * INTERVAL '1 day' * 0.75)) AND gi.coins_contributed < (gi.coins_needed * 0.65) THEN 'CRITICAL_LAGGING'
+             WHEN NOW() > (gi.start_date + ((gi.end_date - gi.start_date) * INTERVAL '1 day' * 0.50)) AND gi.coins_contributed < (gi.coins_needed * 0.40) THEN 'BEHIND_NEED_RECALCULATION'
+             WHEN NOW() > (gi.start_date + ((gi.end_date - gi.start_date) * INTERVAL '1 day' * 0.25)) AND gi.coins_contributed < (gi.coins_needed * 0.15) THEN 'SLIGHTLY_BEHIND'
+             ELSE 'ON_TRACK'
+         END
+     )
+   """, nativeQuery = true)
     int recalculateGoalPacingStatuses();
+
+
 
     @Modifying
     @Query(value = """
@@ -347,15 +384,19 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
      */
     @Modifying
     @Query(value = """
-        INSERT INTO user_achievements (user_id, achievement_id, earned_at)
-        SELECT es.user_id, a.achievement_id, NOW()
-        FROM entity_stats es
-        CROSS JOIN achievements a
-        GROUP BY es.user_id, a.achievement_id, a.required_steps
-        HAVING SUM(es.steps) >= a.required_steps
-        ON CONFLICT (user_id, achievement_id, earned_at) DO NOTHING;
-        """, nativeQuery = true)
+   INSERT INTO public.user_achievements (user_id, achievement_id, goal_instance_id, earned_at)
+   SELECT ug.user_id, g.achievement_id, gi.goal_instance_id, NOW()
+   FROM public.user_goals ug
+   JOIN public.goal_instances gi ON ug.goal_instance_id = gi.goal_instance_id
+   JOIN public.goals g ON gi.goal_id = g.goal_id
+   WHERE ug.is_complete = true 
+     AND ug.user_goal_status_id = (SELECT user_goal_status_id FROM public.user_goal_statuses WHERE code = 'TRACKING')
+   -- FIXED: Safe database-level upsert blocks duplicate writes across multiple records smoothly
+   ON CONFLICT (user_id, goal_instance_id) DO NOTHING
+   """, nativeQuery = true)
     int assignUserAchievements();
+
+
 
     /**
      * Evaluates and updates independent, user-driven individual goal tasks.
@@ -367,51 +408,65 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
      */
     @Modifying
     @Query(value = """
-        WITH calculated_progress AS (
-            SELECT 
-                c.user_id,
-                SUM(c.steps_contributed) AS daily_steps,
-                SUM(c.coins_contributed) AS daily_coins
-            FROM contributions c
-            WHERE c.contribution_status_id = 2 -- APPROVED
-              AND DATE_TRUNC('day', c.created_at) = CURRENT_DATE
-            GROUP BY c.user_id
-        ),
-        updated_user_goals AS (
-            UPDATE user_goals ug
-            SET 
-                current_steps_progress = ug.current_steps_progress + COALESCE(cp.daily_steps, 0),
-                current_coins_progress = ug.current_coins_progress + COALESCE(cp.daily_coins, 0),
-                -- Close the goal immediately if they cross the target coin or step threshold
-                is_complete = CASE 
-                    WHEN ug.target_type = 'COINS' AND (ug.current_coins_progress + COALESCE(cp.daily_coins, 0)) >= ug.target_amount THEN true
-                    WHEN ug.target_type = 'STEPS' AND (ug.current_steps_progress + COALESCE(cp.daily_steps, 0)) >= ug.target_amount THEN true
-                    ELSE false 
-                END,
-                is_active = CASE 
-                    WHEN ug.target_type = 'COINS' AND (ug.current_coins_progress + COALESCE(cp.daily_coins, 0)) >= ug.target_amount THEN false
-                    WHEN ug.target_type = 'STEPS' AND (ug.current_steps_progress + COALESCE(cp.daily_steps, 0)) >= ug.target_amount THEN false
-                    ELSE true 
-                END,
-                completed_at = CASE 
-                    WHEN ug.completed_at IS NULL AND (
-                        (ug.target_type = 'COINS' AND (ug.current_coins_progress + COALESCE(cp.daily_coins, 0)) >= ug.target_amount) OR
-                        (ug.target_type = 'STEPS' AND (ug.current_steps_progress + COALESCE(cp.daily_steps, 0)) >= ug.target_amount)
-                    ) THEN NOW()
-                    ELSE ug.completed_at
-                END
-            FROM calculated_progress cp
-            WHERE ug.user_id = cp.user_id AND ug.is_active = true
-            RETURNING ug.user_id, ug.is_complete, ug.goal_instance_id
-        )
-        -- Mint a unique user achievement entry instantly for the completed row run
-        INSERT INTO user_achievements (user_id, achievement_id, earned_at)
-        SELECT uug.user_id, 101, NOW() -- 101 = Standard Individual Goal Cleared Badge ID
-        FROM updated_user_goals uug
-        WHERE uug.is_complete = true
-        ON CONFLICT (user_id, achievement_id, earned_at) DO NOTHING;
-        """, nativeQuery = true)
+    WITH calculated_progress AS (
+        SELECT 
+            c.user_id,
+            SUM(c.steps_contributed) AS daily_steps,
+            SUM(c.coins_contributed) AS daily_coins
+        FROM contributions c
+        WHERE c.contribution_status_id = 2 -- VERIFIED
+          AND DATE_TRUNC('day', c.created_at) = CURRENT_DATE
+        GROUP BY c.user_id
+    ),
+    updated_user_goals AS (
+        UPDATE user_goals ug
+        SET 
+            current_steps_progress = ug.current_steps_progress + COALESCE(cp.daily_steps, 0),
+            current_coins_progress = ug.current_coins_progress + COALESCE(cp.daily_coins, 0),
+            
+            -- Close the goal immediately if they cross the target coin or step threshold
+            is_complete = CASE 
+                WHEN ug.target_type = 'COINS' AND (ug.current_coins_progress + COALESCE(cp.daily_coins, 0)) >= ug.target_amount THEN true
+                WHEN ug.target_type = 'STEPS' AND (ug.current_steps_progress + COALESCE(cp.daily_steps, 0)) >= ug.target_amount THEN true
+                ELSE false 
+            END,
+            is_active = CASE 
+                WHEN ug.target_type = 'COINS' AND (ug.current_coins_progress + COALESCE(cp.daily_coins, 0)) >= ug.target_amount THEN false
+                WHEN ug.target_type = 'STEPS' AND (ug.current_steps_progress + COALESCE(cp.daily_steps, 0)) >= ug.target_amount THEN false
+                ELSE true 
+            END,
+            completed_at = CASE 
+                WHEN ug.completed_at IS NULL AND (
+                    (ug.target_type = 'COINS' AND (ug.current_coins_progress + COALESCE(cp.daily_coins, 0)) >= ug.target_amount) OR
+                    (ug.target_type = 'STEPS' AND (ug.current_steps_progress + COALESCE(cp.daily_steps, 0)) >= ug.target_amount)
+                ) THEN NOW()
+                ELSE ug.completed_at
+            END,
+            
+            -- FIXED: Advance status code to METRICS_MET upon crossing target boundary thresholds
+            user_goal_status_id = CASE 
+                WHEN (ug.target_type = 'COINS' AND (ug.current_coins_progress + COALESCE(cp.daily_coins, 0)) >= ug.target_amount) OR
+                     (ug.target_type = 'STEPS' AND (ug.current_steps_progress + COALESCE(cp.daily_steps, 0)) >= ug.target_amount)
+                THEN (SELECT user_goal_status_id FROM public.user_goal_statuses WHERE code = 'METRICS_MET')
+                ELSE ug.user_goal_status_id
+            END
+        FROM calculated_progress cp
+        WHERE ug.user_id = cp.user_id 
+          -- FIXED: Process ONLY records actively progressing down the tracking pipeline
+          AND ug.user_goal_status_id = (SELECT user_goal_status_id FROM public.user_goal_statuses WHERE code = 'TRACKING')
+          AND ug.is_active = true
+        RETURNING ug.user_id, ug.is_complete, ug.goal_instance_id
+    )
+    -- Mint a unique user achievement entry instantly for the completed row run
+    INSERT INTO public.user_achievements (user_id, achievement_id, goal_instance_id, earned_at)
+    SELECT uug.user_id, 101, uug.goal_instance_id, NOW() -- 101 = Standard Individual Goal Cleared Badge ID
+    FROM updated_user_goals uug
+    WHERE uug.is_complete = true
+    -- FIXED: Aligned targeting specifications with your new reliable index rule
+    ON CONFLICT (user_id, goal_instance_id) DO NOTHING;
+    """, nativeQuery = true)
     int evaluateUserGoalsBatch();
+
 
     /**
      * Retrieves all unique primary identifiers for goal instances that have reached
@@ -438,6 +493,44 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
     @Modifying
     @Query(value = "UPDATE goal_instances SET pacing_status = :status WHERE goal_instance_id = :id", nativeQuery = true)
     void updatePacingStatus(@Param("id") Long id, @Param("status") String status);
+
+
+    @Modifying
+    @Query(value = "UPDATE public.entity_stats SET is_processed = true WHERE is_processed = false", nativeQuery = true)
+    int clearProcessedEntityStatsQueue();
+
+    @Modifying
+    @Query(value = "UPDATE public.group_stats SET is_processed = true WHERE is_processed = false", nativeQuery = true)
+    int clearProcessedGroupStatsQueue();
+
+
+    @Modifying
+    @Query(value = """
+    UPDATE public.contributions 
+    SET contribution_status_id = 3, -- Flips from ALLOCATED to PAID
+        payout_batch_id = :payoutId
+    WHERE entity_id = (SELECT entity_id FROM public.goal_instances WHERE goal_instance_id = :instanceId)
+      AND contribution_status_id = 5 -- Targets only ALLOCATED metrics
+    """, nativeQuery = true)
+    void finalizeContributionsToPaid(@Param("instanceId") Long instanceId, @Param("payoutId") Long payoutId);
+
+    /**
+     * Updates a goal instance's catalog reference dynamically using its string code token.
+     * Resolves the matching numeric primary key internally via an inline catalog table lookup.
+     *
+     * @param id the primary identifier of the target campaign goal instance
+     * @param statusCode the text code identifier from the pacing catalog (e.g., 'CLOSED_PENDING_AUDIT', 'SETTLED')
+     */
+    @Modifying
+    @Query(value = """
+    UPDATE public.goal_instances 
+    SET pacing_status_id = (SELECT pacing_status_id FROM public.pacing_statuses WHERE code = :statusCode)
+    WHERE goal_instance_id = :id
+    """, nativeQuery = true)
+    void updatePacingStatusByCode(@Param("id") Long id, @Param("statusCode") String statusCode);
+
+
+
 
 
 }

@@ -22,23 +22,5 @@ public class UserGoalController {
         return userGoalService.getAll();
     }
 
-    /**
-     * Endpoint hit when a user clicks to start an individual challenge or restart a completed one.
-     */
-    @PostMapping("/{userId}/join/{instanceId}")
-    public ResponseEntity<?> joinChallengeInstance(
-            @PathVariable("userId") Long userId,
-            @PathVariable("instanceId") Long instanceId) {
-        return ResponseEntity.ok(userGoalService.joinGoal(userId, instanceId));
-    }
 
-    /**
-     * Endpoint hit when a user explicitly abandons an active challenge early.
-     */
-    @PostMapping("/{userId}/leave/{instanceId}")
-    public ResponseEntity<?> leaveChallengeInstance(
-            @PathVariable("userId") Long userId,
-            @PathVariable("instanceId") Long instanceId) {
-        return ResponseEntity.ok(userGoalService.leaveGoal(userId, instanceId));
-    }
 }

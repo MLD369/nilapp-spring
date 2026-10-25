@@ -31,13 +31,20 @@ public class UserStreakService {
 
         // 2. Safe Condition A: User already secured or rescued their streak today or yesterday
         if (lastCompleted != null && (lastCompleted.equals(today) || lastCompleted.equals(yesterday))) {
-            return Map.of("status", "SAFE", "actionRequired", false);
+            return Map.of("status", "SAFE",
+                    "actionRequired", false,
+                    "currentStreak", streakRecord.getCurrentStreak(),
+                    "availableShields", streakRecord.getStreakShields());
         }
 
         // 3. Safe Condition B: Check combined total attempts yesterday (Pending + Approved)
         long totalAttempts = userStreakRepository.countYesterdayTotalClaimsAttempts(userId);
         if (totalAttempts >= 10) {
-            return Map.of("status", "SAFE", "actionRequired", false);
+            return Map.of("status", "SAFE",
+                    "actionRequired", false,
+                    "totalAttempts",totalAttempts,
+                    "currentStreak", streakRecord.getCurrentStreak(),
+                    "availableShields", streakRecord.getStreakShields());
         }
 
         // 4. Action Required: User failed criteria. Return details to populate front-end modal.
@@ -46,7 +53,8 @@ public class UserStreakService {
                 "actionRequired", true,
                 "currentStreak", streakRecord.getCurrentStreak(),
                 "availableShields", streakRecord.getStreakShields(),
-                "message", "You did not complete your 10 ad claims yesterday."
+                "message", "You did not complete your 10 ad claims yesterday.",
+                "totalAttempts",totalAttempts
         );
     }
 

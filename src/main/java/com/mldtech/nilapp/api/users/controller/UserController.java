@@ -407,20 +407,40 @@ public class UserController {
                     );
         }
     }
-    @PostMapping("/{userId}/goal-instance/{instanceId}/join")
+    @PostMapping("/{userId}/goal-instance/{goalInstanceId}/join")
     public Object joinGoal(
             @PathVariable Long userId,
-            @PathVariable Long instanceId
+            @PathVariable Long goalInstanceId
     ) {
-        return userGoalService.joinGoal(userId, instanceId);
+        return userGoalService.joinGoal(userId, goalInstanceId);
     }
-    @PutMapping("/{userId}/goal-instance/{instanceId}/leave")
+    @PutMapping("/{userId}/goal-instance/{goalInstanceId}/leave")
     public Object leaveGoal(
             @PathVariable Long userId,
-            @PathVariable Long instanceId
+            @PathVariable Long goalInstanceId
     ) {
-        return userGoalService.leaveGoal(userId, instanceId);
+        return userGoalService.leaveGoal(userId, goalInstanceId);
     }
+//
+//    /**
+//     * Endpoint hit when a user clicks to start an individual challenge or restart a completed one.
+//     */
+//    @PostMapping("/{userId}/join/{goalInstanceId}")
+//    public ResponseEntity<?> joinChallengeInstance(
+//            @PathVariable("userId") Long userId,
+//            @PathVariable("goalInstanceId") Long goalInstanceId) {
+//        return ResponseEntity.ok(userGoalService.joinGoal(userId, goalInstanceId));
+//    }
+//
+//    /**
+//     * Endpoint hit when a user explicitly abandons an active challenge early.
+//     */
+//    @PutMapping("/{userId}/leave/{goalInstanceId}")
+//    public ResponseEntity<?> leaveChallengeInstance(
+//            @PathVariable("userId") Long userId,
+//            @PathVariable("goalInstanceId") Long goalInstanceId) {
+//        return ResponseEntity.ok(userGoalService.leaveGoal(userId, goalInstanceId));
+//    }
 
     // ---------------------------------------------------------
     // Stats page api

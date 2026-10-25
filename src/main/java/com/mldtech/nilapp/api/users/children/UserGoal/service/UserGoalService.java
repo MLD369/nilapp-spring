@@ -38,10 +38,10 @@ public class UserGoalService {
      * Checks for a currently active row; if none exists, it provisions a zero-based timeline record.
      */
     @Transactional
-    public CustomResponse<?> joinGoal(Long userId, Long instanceId) {
+    public CustomResponse<?> joinGoal(Long userId, Long goalInstanceId) {
 
         // Precise Fix: Prevent duplicate joins ONLY if their previous run is still active
-        boolean alreadyActive = userGoalRepository.existsByUser_UserIdAndGoalInstance_GoalInstanceIdAndIsActiveTrue(userId, instanceId);
+        boolean alreadyActive = userGoalRepository.existsByUser_UserIdAndGoalInstance_GoalInstanceIdAndIsActiveTrue(userId, goalInstanceId);
 
         if (alreadyActive) {
             return new CustomResponse<>(
@@ -54,7 +54,7 @@ public class UserGoalService {
         UserGoal userGoal = new UserGoal();
         userGoal.setUser(userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found")));
-        userGoal.setGoalInstance(goalInstanceRepository.findById(instanceId)
+        userGoal.setGoalInstance(goalInstanceRepository.findById(goalInstanceId)
                 .orElseThrow(() -> new RuntimeException("Goal instance not found")));
 
         // Baseline initialization
@@ -73,7 +73,7 @@ public class UserGoalService {
         UserGoalDTO dto = UserGoalDTO.builder()
                 .userGoalId(saved.getUserGoalId())
                 .userId(userId)
-                .goalInstanceId(instanceId)
+                .goalInstanceId(goalInstanceId)
                 .joinedAt(saved.getJoinedAt())
                 .leftAt(saved.getLeftAt())
                 .allocationPct(saved.getAllocationPct())
@@ -88,11 +88,11 @@ public class UserGoalService {
      * API for a user to explicitly walk away from an active challenge early.
      */
     @Transactional
-    public CustomResponse<?> leaveGoal(Long userId, Long instanceId) {
+    public CustomResponse<?> leaveGoal(Long userId, Long goalInstanceId) {
 
         // Precise Fix: Find the row that is currently active (where is_active = true)
         UserGoal userGoal = userGoalRepository
-                .findByUser_UserIdAndGoalInstance_GoalInstanceIdAndIsActiveTrue(userId, instanceId)
+                .findByUser_UserIdAndGoalInstance_GoalInstanceIdAndIsActiveTrue(userId, goalInstanceId)
                 .orElseThrow(() -> new RuntimeException("User is not currently active in this goal"));
 
         userGoal.setLeftAt(LocalDateTime.now());
@@ -103,7 +103,7 @@ public class UserGoalService {
         UserGoalDTO dto = UserGoalDTO.builder()
                 .userGoalId(saved.getUserGoalId())
                 .userId(userId)
-                .goalInstanceId(instanceId)
+                .goalInstanceId(goalInstanceId)
                 .joinedAt(saved.getJoinedAt())
                 .leftAt(saved.getLeftAt())
                 .allocationPct(saved.getAllocationPct())

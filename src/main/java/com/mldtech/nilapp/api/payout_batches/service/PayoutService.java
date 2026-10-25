@@ -125,8 +125,11 @@ public class PayoutService {
         batch.setPayoutStatus("SETTLED");
         batch.setUpdatedAt(java.time.LocalDateTime.now());
 
+        // Safely updates the contribution tables to PAID now that the transaction has been verified
+        contributionRepository.finalizeContributionsToPaid(goalInstanceId, batch.getPayoutBatchId());
+
         // Pull the goal_instance out of the active audit loop completely
-        contributionRepository.updatePacingStatus(goalInstanceId, "SETTLED");
+        contributionRepository.updatePacingStatusByCode(goalInstanceId, "SETTLED");
 
         return payoutBatchRepository.save(batch);
     }

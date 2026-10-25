@@ -2,6 +2,9 @@ package com.mldtech.nilapp.api.batches.service;
 
 import com.mldtech.nilapp.api.contributions.repository.ContributionRepository;
 import com.mldtech.nilapp.api.payout_batches.service.PayoutService;
+import com.mldtech.nilapp.api.users.children.UserGoal.repository.UserGoalRepository;
+import com.mldtech.nilapp.enums.PacingStatusEnum;
+import com.mldtech.nilapp.enums.UserGoalStatusEnum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -15,10 +18,12 @@ public class BatchService {
     private static final Logger log = LoggerFactory.getLogger(BatchService.class);
     private final ContributionRepository contributionRepository;
     private final PayoutService payoutService;
+    private final UserGoalRepository userGoalRepository;
 
-    public BatchService(ContributionRepository contributionRepository, PayoutService payoutService) {
+    public BatchService(ContributionRepository contributionRepository, PayoutService payoutService, UserGoalRepository userGoalRepository) {
         this.contributionRepository = contributionRepository;
         this.payoutService = payoutService;
+        this.userGoalRepository = userGoalRepository;
     }
 
     // Inject PayoutService alongside your repository at the class level:
@@ -43,6 +48,9 @@ public class BatchService {
 
             // 3. Evaluate Group Campaigns (Tracks social metrics)
             int groupGoals = contributionRepository.evaluateGroupGoals();
+            // Flips flags to true so these data snapshots are never re-evaluated
+            contributionRepository.clearProcessedEntityStatsQueue();
+            contributionRepository.clearProcessedGroupStatsQueue();
 
             // 4. Calibrate Pacing Trackers (Updates status strings for running instances)
             int pacingUpdates = contributionRepository.recalculateGoalPacingStatuses();
@@ -59,17 +67,23 @@ public class BatchService {
             // ======================================================================
             int automatedPayoutsDiscovered = 0;
 
+            // This lookup returns ONLY instances currently flagged as 'COMPLETED'
             List<Long> completedInstanceIds = contributionRepository.findNewlyClosedGoalInstanceIds();
 
             for (Long instanceId : completedInstanceIds) {
                 try {
                     if (rowsUpdated > 0) { // TODO needs to be commented out for mocks
-                    // Advance campaign state to CLOSED_PENDING_AUDIT for anti-cheat verification
-                    contributionRepository.updatePacingStatus(instanceId, "CLOSED_PENDING_AUDIT");
+                        // Stage A: Advance campaign state to CLOSED_PENDING_AUDIT using string catalog lookup
+                        contributionRepository.updatePacingStatusByCode(instanceId, PacingStatusEnum.CLOSED_PENDING_AUDIT.name());
+                        List<Long> childUserGoalIds = userGoalRepository.findUserGoalIdsByInstanceId(instanceId);
+                        for (Long userGoalId : childUserGoalIds) {
+                            userGoalRepository.updateUserGoalStatusByCode(userGoalId, UserGoalStatusEnum.ARCHIVED_SUCCESS.name());
+                        }
 
-                    // Initialize the record in its default baseline state
-                    payoutService.createInitialPayoutDraft(instanceId);
-                    automatedPayoutsDiscovered++;
+
+                        // Stage B: Initialize the record in its default baseline state
+                        payoutService.createInitialPayoutDraft(instanceId);
+                        automatedPayoutsDiscovered++;
                     }
                 } catch (Exception e) {
                     log.error("Failed to process payout discovery for Goal Instance ID: {}. Recording system failure log...", instanceId, e);
@@ -157,6 +171,7 @@ DELETE FROM public.user_goals WHERE user_goal_id IN (999801, 999802, 999803);
 DELETE FROM public.goal_instances WHERE goal_instance_id IN (999011, 999012, 999013, 999014, 999015, 999016, 999017, 999001, 999002, 999003, 999004);
 DELETE FROM public.goals WHERE goal_id = 999;
 DELETE FROM public.achievements WHERE achievement_id IN (101, 999901, 999902);
+DELETE FROM public.user_achievements WHERE goal_instance_id IN (999011, 999012, 999013, 999014, 999015, 999016, 999017, 999001, 999002, 999003, 999004) OR user_id = 1;
 
 
 -- ======================================================================
