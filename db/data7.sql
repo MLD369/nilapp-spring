@@ -268,8 +268,12 @@ CREATE INDEX idx_group_stats_lookup ON group_stats (group_id, created_at);
 CREATE INDEX idx_entity_stats_user ON entity_stats (user_id);
 CREATE INDEX idx_group_stats_user ON group_stats (user_id);
 
-ALTER TABLE user_achievements
-    ADD CONSTRAINT unique_user_achievement_run UNIQUE (user_id, achievement_id, earned_at);
+-- ALTER TABLE user_achievements
+--     ADD CONSTRAINT unique_user_achievement_run UNIQUE (user_id, achievement_id, earned_at);
+-- ALTER TABLE public.user_achievements DROP CONSTRAINT IF EXISTS unique_user_achievement_run;
+ALTER TABLE public.user_achievements
+    ADD CONSTRAINT unique_user_goal_instance_badge UNIQUE (user_id, goal_instance_id);
+
 
 ALTER TABLE goal_instances ADD COLUMN completed_at TIMESTAMP;
 
@@ -372,6 +376,9 @@ ALTER TABLE public.goal_instances ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP 
 CREATE INDEX IF NOT EXISTS idx_goal_instances_timestamps ON public.goal_instances (updated_at DESC);
 
 COMMIT;
+-- Add the missing column to your user_achievements table
+ALTER TABLE public.user_achievements
+    ADD COLUMN goal_instance_id BIGINT REFERENCES public.goal_instances(goal_instance_id);
 
 -- // TODO payout batch needs something to stop duplicates payout batch id, enitity id , transaction ref, tracking number,
 -- todo I DONT THINK THERE SHOULD BE DUPLICATES entity and goal instances  also the batch need to change the status of the goal isntance

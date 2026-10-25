@@ -333,6 +333,20 @@ CREATE TABLE user_streaks (
                                   FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
+CREATE TABLE public.pacing_statuses (
+                                        pacing_status_id INT PRIMARY KEY,
+                                        code VARCHAR(50) UNIQUE NOT NULL,
+                                        label VARCHAR(100) NOT NULL,
+                                        description TEXT
+);
+
+CREATE TABLE public.user_goal_statuses (
+                                           user_goal_status_id INT PRIMARY KEY,
+                                           code VARCHAR(50) UNIQUE NOT NULL,
+                                           label VARCHAR(100) NOT NULL,
+                                           description TEXT
+);
+
 -- contribution_id	group_id	coins	allocation_percentage
 -- 123	3	70	70
 -- 123	9	30	30
