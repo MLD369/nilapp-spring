@@ -48,7 +48,7 @@ public class UserController {
      * @param userId ID of the user
      * @return CustomResponse containing UserProfileResponse
      */
-    @GetMapping("/{userId}/profile")
+    @GetMapping("/{userId}/profile") // TODO add user streak to this ???
     public CustomResponse<UserProfileResponse> getUserProfile(@PathVariable Long userId) {
         return userService.getUserProfile(userId);
     }

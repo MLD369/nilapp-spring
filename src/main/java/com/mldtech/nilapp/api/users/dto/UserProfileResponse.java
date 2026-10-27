@@ -21,5 +21,6 @@ public class UserProfileResponse {
     private List<ContributionDTO> contributions;
     private List<DailyStatDTO> dailyStats;
     private List<FriendDTO> friends;
+    private int currentStreak;
 }
 
