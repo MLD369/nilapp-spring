@@ -63,4 +63,9 @@ public class UserStreak {
     @Column(name = "updated_at")
     @Builder.Default
     private LocalDateTime updatedAt = LocalDateTime.now();
+
+    @Column(name = "previous_streak", nullable = false)
+    @Builder.Default
+    private Integer previousStreak = 0;
+
 }

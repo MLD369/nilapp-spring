@@ -112,6 +112,28 @@ public interface UserStreakRepository extends JpaRepository<UserStreak, Long> {
         """, nativeQuery = true)
     int awardEarnedShieldsFromDailyStats();
 
+    /**
+     * Safely updates previous_streak snapshot and drops current active tracking count to 0.
+     * Stamps the last completed date to today to exit the evaluation danger loops.
+     */
+    @Modifying
+    @Query(value = """
+    UPDATE public.user_streaks 
+    SET previous_streak = :currentStreakBackup,
+        current_streak = 0,
+        last_completed_date = :today
+    WHERE user_id = :userId
+    """, nativeQuery = true)
+    void archiveAndResetActiveStreak(
+            @Param("userId") Long userId,
+            @Param("currentStreakBackup") int currentStreakBackup,
+            @Param("today") LocalDate today
+    );
+
+    @Modifying
+    @Query(value = "UPDATE public.user_streaks SET last_completed_date = :today WHERE user_id = :userId", nativeQuery = true)
+    void updateLastCompletedDate(@Param("userId") Long userId, @Param("today") LocalDate today);
+
 
 }
 
