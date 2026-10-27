@@ -14,6 +14,8 @@ import java.util.Map;
 public class UserStreakService {
     private final UserStreakRepository userStreakRepository;
 
+    private final int amountForStreak = 10;
+
 
     /**
      * Evaluates a user's streak status immediately when they open the app.
@@ -31,20 +33,28 @@ public class UserStreakService {
 
         // 2. Safe Condition A: User already secured or rescued their streak today or yesterday
         if (lastCompleted != null && (lastCompleted.equals(today) || lastCompleted.equals(yesterday))) {
-            return Map.of("status", "SAFE",
+            return Map.of(
+                    "status", "SAFE",
                     "actionRequired", false,
                     "currentStreak", streakRecord.getCurrentStreak(),
-                    "availableShields", streakRecord.getStreakShields());
+                    "availableShields", streakRecord.getStreakShields(),
+                    "lastCompletedDate",streakRecord.getLastCompletedDate(),
+                    "message", "You did completed your 10 ad claims yesterday."
+            );
         }
 
         // 3. Safe Condition B: Check combined total attempts yesterday (Pending + Approved)
         long totalAttempts = userStreakRepository.countYesterdayTotalClaimsAttempts(userId);
-        if (totalAttempts >= 10) {
-            return Map.of("status", "SAFE",
+        if (totalAttempts >= amountForStreak) {
+            return Map.of(
+                    "status", "SAFE",
                     "actionRequired", false,
-                    "totalAttempts",totalAttempts,
                     "currentStreak", streakRecord.getCurrentStreak(),
-                    "availableShields", streakRecord.getStreakShields());
+                    "availableShields", streakRecord.getStreakShields(),
+                    "lastCompletedDate",streakRecord.getLastCompletedDate(),
+                    "totalAttempts",totalAttempts,
+                    "message", "You did completed your 10 ad claims yesterday."
+            );
         }
 
         // 4. Action Required: User failed criteria. Return details to populate front-end modal.
@@ -53,8 +63,10 @@ public class UserStreakService {
                 "actionRequired", true,
                 "currentStreak", streakRecord.getCurrentStreak(),
                 "availableShields", streakRecord.getStreakShields(),
-                "message", "You did not complete your 10 ad claims yesterday.",
-                "totalAttempts",totalAttempts
+                "lastCompletedDate",streakRecord.getLastCompletedDate(),
+                "totalAttempts",totalAttempts,
+                "message", "You did not complete your 10 ad claims yesterday."
+
         );
     }
 
