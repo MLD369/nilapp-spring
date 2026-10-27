@@ -93,45 +93,63 @@ public class UserStreakService {
     }
 
     /**
-     * Handles rescue selections, dynamically pulling from previous_streak if recovering from a soft reset.
+     * Executes the user's manual option choice from the app pop-up interface.
+     * Strictly hardened against repeat-execution exploits on the same calendar day.
      */
     @Transactional
     public void executeStreakRescueSelection(Long userId, String selectedOption) {
-        // 1. Fetch the user's record to pull their current active streak value
+        // 1. Fetch the user's active streak record straight from the master database
         UserStreak streakRecord = userStreakRepository.findByUser_UserId(userId)
                 .orElseThrow(() -> new RuntimeException("Streak profile not found for user: " + userId));
 
         LocalDate today = LocalDate.now();
+        LocalDate lastCompleted = streakRecord.getLastCompletedDate();
 
-        // Determine the base streak value we are working with
-        // If recovering from a soft reset today, pull from previous_streak. Otherwise, use current_streak.
+        // ======================================================================
+        // 🔒 THE API EXPLOIT SECURITY GATE
+        // ======================================================================
+        // If today is already marked as completed, their daily status is locked.
+        // This stops users from cycling back and forth between reset and ad-watching.
+        if (lastCompleted != null && lastCompleted.equals(today)) {
+            throw new IllegalStateException(
+                    "Security Block: You have already secured or rescued your daily streak today. " +
+                            "Action option '" + selectedOption + "' has been rejected."
+            );
+        }
+
+        // 2. Determine if we are recovering from an unfinalized soft reset written earlier today
         boolean isRecovering = streakRecord.getSoftResetAt() != null && streakRecord.getSoftResetAt().equals(today);
         int targetStreakValue = isRecovering ? streakRecord.getPreviousStreak() : streakRecord.getCurrentStreak();
 
+        // 3. Direct evaluation tree mapping straight to database operations
         switch (selectedOption) {
             case "USE_SHIELD_SHORT_AD":
                 int rowsUpdated = userStreakRepository.consumeShieldWithShortAd(userId);
                 if (rowsUpdated == 0) {
                     throw new RuntimeException("Action failed. No available shields in inventory.");
                 }
-                // Restore backed-up value if recovering, clear soft reset date, stamp completion to today
+                // Restores the previous value, clears the soft_reset_at timestamp, and locks today's window
                 userStreakRepository.restoreStreakState(userId, targetStreakValue, today);
                 break;
 
             case "WATCH_PREMIUM_LONG_AD":
                 userStreakRepository.consumePremiumVideoSaver(userId, targetStreakValue);
+                // Restores the previous value, clears the soft_reset_at timestamp, and locks today's window
                 userStreakRepository.restoreStreakState(userId, targetStreakValue, today);
                 break;
 
             case "ACCEPT_RESET":
-                // Only allow an initial soft reset. If they click it again while already at 0, do nothing.
+                // Only allow an initial soft reset. If they have already done a soft reset today, block duplicate triggers.
                 if (!isRecovering) {
                     userStreakRepository.softResetActiveStreak(userId, streakRecord.getCurrentStreak(), today);
+                } else {
+                    throw new IllegalStateException("Your streak has already been soft-reset today. Awaiting rescue options.");
                 }
                 break;
 
             default:
-                throw new IllegalArgumentException("Unknown selection option token: " + selectedOption);
+                throw new IllegalArgumentException("Unknown rescue selection option pattern: " + selectedOption);
         }
     }
+
 }
