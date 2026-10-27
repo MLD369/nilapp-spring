@@ -68,4 +68,7 @@ public class UserStreak {
     @Builder.Default
     private Integer previousStreak = 0;
 
+    @Column(name = "soft_reset_at")
+    private LocalDate softResetAt;
+
 }

@@ -134,6 +134,44 @@ public interface UserStreakRepository extends JpaRepository<UserStreak, Long> {
     @Query(value = "UPDATE public.user_streaks SET last_completed_date = :today WHERE user_id = :userId", nativeQuery = true)
     void updateLastCompletedDate(@Param("userId") Long userId, @Param("today") LocalDate today);
 
+    /**
+     * Executes a soft reset: backs up the current active streak count, drops the active
+     * tracking count down to 0, and records today's date to open the recovery options window.
+     */
+    @Modifying
+    @Query(value = """
+    UPDATE public.user_streaks 
+    SET previous_streak = :streakBackup,
+        current_streak = 0,
+        soft_reset_at = :today,
+        last_completed_date = NULL
+    WHERE user_id = :userId
+    """, nativeQuery = true)
+    void softResetActiveStreak(
+            @Param("userId") Long userId,
+            @Param("streakBackup") int streakBackup,
+            @Param("today") LocalDate today
+    );
+
+    /**
+     * Restores a soft-reset streak back to full operation once an ad or shield is verified.
+     * Nulls out the soft_reset_at tracker to lock out further modifications.
+     */
+    @Modifying
+    @Query(value = """
+    UPDATE public.user_streaks 
+    SET current_streak = :restoredValue,
+        previous_streak = 0,
+        soft_reset_at = NULL,
+        last_completed_date = :today
+    WHERE user_id = :userId
+    """, nativeQuery = true)
+    void restoreStreakState(
+            @Param("userId") Long userId,
+            @Param("restoredValue") int restoredValue,
+            @Param("today") LocalDate today
+    );
+
 
 }
 
