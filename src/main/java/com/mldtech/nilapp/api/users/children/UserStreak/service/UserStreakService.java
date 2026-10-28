@@ -1,9 +1,12 @@
 package com.mldtech.nilapp.api.users.children.UserStreak.service;
 
+import com.mldtech.nilapp.api.batches.service.BatchService;
 import com.mldtech.nilapp.api.users.children.UserStreak.model.UserStreak;
 import com.mldtech.nilapp.api.users.children.UserStreak.repository.UserStreakRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -13,6 +16,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class UserStreakService {
     private final UserStreakRepository userStreakRepository;
+    private static final Logger log = LoggerFactory.getLogger(UserStreakService.class);
 
     private final int amountForStreak = 10;
 
@@ -39,6 +43,7 @@ public class UserStreakService {
                     "previousStreak", 0,
                     "availableShields", streakRecord.getStreakShields(),
                     "lastCompletedDate", streakRecord.getLastCompletedDate(),
+                    "longestStreak", streakRecord.getLongestStreak(),
                     "message", "Your streak is secure."
             );
         }
@@ -46,12 +51,23 @@ public class UserStreakService {
         // Condition B: Check if they successfully hit their metric totals yesterday
         long totalAttempts = userStreakRepository.countYesterdayTotalClaimsAttempts(userId);
         if (totalAttempts >= amountForStreak) {
+            // IDEMPOTENCY GUARD: Only increment and save if they haven't already processed today's milestone check
             if (lastCompleted == null || !lastCompleted.equals(today)) {
-                streakRecord.setCurrentStreak(streakRecord.getCurrentStreak() + 1);
+                int newStreak = streakRecord.getCurrentStreak() + 1;
+                streakRecord.setCurrentStreak(newStreak);
                 streakRecord.setLastCompletedDate(today);
-                streakRecord.setSoftResetAt(null);
-                streakRecord.setPreviousStreak(0);// Clear out old reset histories if any existed
-                userStreakRepository.save(streakRecord);
+                streakRecord.setSoftResetAt(null); // Clear out old reset histories if any existed
+
+                // ======================================================================
+                // 📈 LONGEST STREAK RECORD-BREAKER ENGINE
+                // ======================================================================
+                // Checks if the new current streak surpasses their historical personal best record
+                if (newStreak > streakRecord.getLongestStreak()) {
+                    streakRecord.setLongestStreak(newStreak);
+                    log.info("User ID {} just broke their personal record! New Longest Streak: {}", userId, newStreak);
+                }
+
+                userStreakRepository.save(streakRecord); // Persist updated metrics cleanly
             }
             return Map.of(
                     "status", "SAFE",
@@ -61,6 +77,7 @@ public class UserStreakService {
                     "availableShields", streakRecord.getStreakShields(),
                     "lastCompletedDate", today,
                     "totalAttempts", totalAttempts,
+                    "longestStreak", streakRecord.getLongestStreak(),
                     "message", "Daily goal achieved! Streak increased."
             );
         }
@@ -75,6 +92,7 @@ public class UserStreakService {
                     "availableShields", streakRecord.getStreakShields(),
                     "lastCompletedDate", today,
                     "totalAttempts", totalAttempts,
+                    "longestStreak", streakRecord.getLongestStreak(),
                     "message", "You accepted a reset today, but you can still recover your streak before midnight!"
             );
         }
@@ -88,6 +106,7 @@ public class UserStreakService {
                 "availableShields", streakRecord.getStreakShields(),
                 "lastCompletedDate", lastCompleted != null ? lastCompleted : yesterday.minusDays(1),
                 "totalAttempts", totalAttempts,
+                "longestStreak", streakRecord.getLongestStreak(),
                 "message", "You did not complete your 10 ad claims yesterday."
         );
     }

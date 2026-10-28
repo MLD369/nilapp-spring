@@ -39,7 +39,7 @@ public interface UserStreakRepository extends JpaRepository<UserStreak, Long> {
         SELECT COUNT(contribution_id) 
         FROM contributions 
         WHERE user_id = :userId 
-          AND contribution_status_id IN (1, 2)
+          AND contribution_status_id IN (1, 2, 5)
           -- ESCAPED THE COLONS HERE TO FIX THE HIBERNATE SYNTAX ERROR:
           AND (created_at AT TIME ZONE 'America/New_York')\\:\\:date = CURRENT_DATE - INTERVAL '1 day'
         """, nativeQuery = true)
