@@ -380,5 +380,9 @@ COMMIT;
 ALTER TABLE public.user_achievements
     ADD COLUMN goal_instance_id BIGINT REFERENCES public.goal_instances(goal_instance_id);
 
+ALTER TABLE public.user_streaks
+    ADD COLUMN IF NOT EXISTS previous_streak INT DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS soft_reset_at DATE DEFAULT NULL;
+
 -- // TODO payout batch needs something to stop duplicates payout batch id, enitity id , transaction ref, tracking number,
 -- todo I DONT THINK THERE SHOULD BE DUPLICATES entity and goal instances  also the batch need to change the status of the goal isntance
