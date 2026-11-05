@@ -97,6 +97,28 @@ public class UserStreakService {
             );
         }
 
+        // 🆕 NEW CONDITION: Hard Reset (User missed 2 or more days)
+        // If they last completed their goal prior to 2 days ago, the streak is completely dead.
+        LocalDate twoDaysAgo = today.minusDays(2);
+        if (lastCompleted == null || lastCompleted.isBefore(twoDaysAgo)) {
+            // Hard reset the values in the database immediately so they can't exploit executeStreakRescueSelection
+            streakRecord.setCurrentStreak(0);
+            streakRecord.setSoftResetAt(null);
+            userStreakRepository.save(streakRecord);
+
+            return Map.of(
+                    "status", "STREAK_BROKEN",
+                    "actionRequired", false, // No pop-up rescue allowed
+                    "currentStreak", 0,
+                    "previousStreak", 0,
+                    "availableShields", streakRecord.getStreakShields(),
+                    "lastCompletedDate", lastCompleted != null ? lastCompleted : twoDaysAgo,
+                    "totalAttempts", totalAttempts,
+                    "longestStreak", streakRecord.getLongestStreak(),
+                    "message", "Your streak has reset because you missed multiple days."
+            );
+        }
+
         // Condition D: Action Required (First-time break notification)
         return Map.of(
                 "status", "STREAK_IN_DANGER",
