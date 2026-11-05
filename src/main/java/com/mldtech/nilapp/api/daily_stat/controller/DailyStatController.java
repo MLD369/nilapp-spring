@@ -41,5 +41,10 @@ public class DailyStatController {
     public DailyStat createOrUpdateDailyStat(@RequestBody DailyStat stat) {
         return service.createOrUpdateDailyStat(stat);
     }
+
+    @PostMapping("/{userId}/total-device-steps")
+    public DailyStat syncYesterdayDeviceSteps(@PathVariable Long userId,@RequestBody DailyStat stat) {
+        return service.syncYesterdayDeviceSteps(userId,stat.getTotalDeviceSteps());
+    }
 }
 

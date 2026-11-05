@@ -3,7 +3,10 @@ package com.mldtech.nilapp.api.daily_stat.service;
 import com.mldtech.nilapp.api.daily_stat.model.DailyStat;
 import com.mldtech.nilapp.api.daily_stat.repository.DailyStatRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -12,6 +15,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class DailyStatService {
+    private static final Logger log = LoggerFactory.getLogger(DailyStatService.class);
 
     private final DailyStatRepository dailyStatRepository;
 
@@ -47,5 +51,36 @@ public class DailyStatService {
                     return dailyStatRepository.save(stat);
                 });
     }
+
+    @Transactional
+    public DailyStat syncYesterdayDeviceSteps(Long userId, int deviceSteps) {
+        LocalDate yesterday = LocalDate.now().minusDays(1);
+
+        log.info("Processing device steps synchronization for User ID: {} for date: {}. Steps: {}",
+                userId, yesterday, deviceSteps);
+
+        // Check if there is a daily stat row for yesterday
+        DailyStat stats = dailyStatRepository.findByUserIdAndDate(userId, yesterday)
+                .orElseGet(() -> {
+                    log.info("No daily stat row found for User ID: {} on {}. Creating new row.", userId, yesterday);
+                    DailyStat newRow = new DailyStat();
+                    newRow.setUserId(userId);
+                    newRow.setDate(yesterday);
+                    // Initialize default values explicitly if needed (e.g., 0 claimed, 0 coins)
+                    // todo IS THIS NEEDED OR CAN THEY JUST BE NULL
+//                    newRow.setClaimedSteps(0);
+//                    newRow.setCoinsEarned(0);
+                    return newRow;
+                });
+
+        // Update the total device steps field
+        stats.setTotalDeviceSteps(deviceSteps);
+
+        DailyStat savedStats = dailyStatRepository.save(stats);
+        log.info("Successfully persisted device steps for User ID: {} on date: {}", userId, yesterday);
+
+        return savedStats;
+    }
+
 }
 
