@@ -48,6 +48,7 @@ public interface PayoutBatchRepository extends JpaRepository<PayoutBatch, Long> 
     /**
      * Stams the unique generated payout tracking batch link back into the contribution ledger.
      * Prevents double payouts by locking rows forever.
+     *  TODO delete same as finalizeContributionsToPaid double check
      */
     @Modifying
     @Query(value = """
