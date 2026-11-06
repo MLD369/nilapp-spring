@@ -205,7 +205,7 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
         WITH locked_contributions AS (
             SELECT contribution_id, user_id, steps_contributed, coins_contributed, conversion_rate, created_at, allocation_snapshot
             FROM contributions
-            WHERE contribution_status_id = 1
+            WHERE contribution_status_id = 1 -- will need to change this to (2) verified once we have a verifcation process
             FOR UPDATE SKIP LOCKED
         ),
         inserted_entities AS (
@@ -414,7 +414,7 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
             SUM(c.steps_contributed) AS daily_steps,
             SUM(c.coins_contributed) AS daily_coins
         FROM contributions c
-        WHERE c.contribution_status_id = 2 -- VERIFIED
+        WHERE c.contribution_status_id = 5  -- allocated - was 2 for verified
           AND DATE_TRUNC('day', c.created_at) = CURRENT_DATE
         GROUP BY c.user_id
     ),
@@ -459,7 +459,7 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
     )
     -- Mint a unique user achievement entry instantly for the completed row run
     INSERT INTO public.user_achievements (user_id, achievement_id, goal_instance_id, earned_at)
-    SELECT uug.user_id, 101, uug.goal_instance_id, NOW() -- 101 = Standard Individual Goal Cleared Badge ID
+    SELECT uug.user_id, 101, uug.goal_instance_id, NOW() -- 101 = Standard Individual Goal Cleared Badge ID // TODO change this from 101
     FROM updated_user_goals uug
     WHERE uug.is_complete = true
     -- FIXED: Aligned targeting specifications with your new reliable index rule
