@@ -384,5 +384,84 @@ ALTER TABLE public.user_streaks
     ADD COLUMN IF NOT EXISTS previous_streak INT DEFAULT 0,
     ADD COLUMN IF NOT EXISTS soft_reset_at DATE DEFAULT NULL;
 
+-- Add logic so daily steps has a status to say it has synced with users lifetime coins and steps
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS total_lifetime_steps INT DEFAULT 0;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS total_lifetime_claimed_steps INT DEFAULT 0;
+
+
+-- 1. ADD BATCH SYNCHRONIZATION COLUMNS SAFELY WITH DEFAULTS
+ALTER TABLE public.daily_stats
+    ADD COLUMN IF NOT EXISTS is_synced_to_lifetime boolean DEFAULT false NOT NULL,
+    ADD COLUMN IF NOT EXISTS sync_batch_id character varying(36);
+
+-- 2. CLEAN UP POTENTIAL HISTORICAL DUPLICATES (PRE-MIGRATION SAFETY CHECK)
+-- If your production database already contains duplicate rows for a single user on the same date,
+-- the upcoming UNIQUE constraint will fail. This clean-up query retains the row with the most
+-- device steps and removes the duplicates.
+DELETE FROM public.daily_stats a USING public.daily_stats b
+WHERE a.daily_stat_id < b.daily_stat_id
+  AND a.user_id = b.user_id
+  AND a.date = b.date;
+
+-- 3. APPLY THE UNIQUE CONSTRAINT REQUIRED FOR THE 'ON CONFLICT' UPSERT
+-- This guarantees that there can only ever be exactly one row per user per calendar day.
+ALTER TABLE public.daily_stats
+DROP CONSTRAINT IF EXISTS uq_daily_stats_user_date, -- Clear out old naming variants if any
+    ADD CONSTRAINT uq_daily_stats_user_date UNIQUE (user_id, date);
+
+-- 4. ADD AN OPTIMIZED COMPLEX INDEX FOR THE BATCH SCHEDULER LOOKUPS
+-- This allows the hourly/daily batch daemon to fast-path lookups for un-synced entries.
+CREATE INDEX IF NOT EXISTS idx_daily_stats_sync_lookup
+    ON public.daily_stats (is_synced_to_lifetime, sync_batch_id);
+
+-- Add operation order to contribution status and laymans descriptions
+ALTER TABLE public.contribution_statuses
+    ADD COLUMN IF NOT EXISTS layman_definition TEXT;
+
+ALTER TABLE public.contribution_statuses
+    ADD COLUMN IF NOT EXISTS display_order INTEGER;
+
+UPDATE public.contribution_statuses
+SET
+    layman_definition = CASE contribution_status_id
+                            WHEN 1 THEN 'Contribution received but not yet processed.'
+                            WHEN 2 THEN 'Contribution passed the required verification checks and is approved for processing.'
+                            WHEN 5 THEN 'Contribution distributed to the appropriate user, entity, and group records.'
+                            WHEN 3 THEN 'Contribution added to a payout batch for manual payment processing.'
+                            WHEN 4 THEN 'Contribution rejected due to suspected dishonesty, fraud, or other rule violations.'
+        END,
+
+    display_order = CASE contribution_status_id
+                        WHEN 1 THEN 1
+                        WHEN 2 THEN 2
+                        WHEN 5 THEN 3
+                        WHEN 4 THEN 4
+                        WHEN 3 THEN 5
+        END
+
+WHERE contribution_status_id IN (1, 2, 3, 4, 5);
+
+
+-- make daily stat sync logic and new index for contributions status 5 and synced false
+-- Add the daily stats synchronization flag to the contributions table
+ALTER TABLE public.contributions
+    ADD COLUMN IF NOT EXISTS is_synced_to_daily_stats boolean DEFAULT false NOT NULL;
+
+-- Optimize index for the batch processor sweep
+CREATE INDEX IF NOT EXISTS idx_contributions_daily_stat_sync
+    ON public.contributions (contribution_status_id, is_synced_to_daily_stats)
+    WHERE contribution_status_id = 5 AND is_synced_to_daily_stats = false;
+
+
+-- Ensure your columns strictly prohibit null values going forward
+ALTER TABLE public.daily_stats
+    ALTER COLUMN total_device_steps SET DEFAULT 0,
+ALTER COLUMN total_claimed_steps SET DEFAULT 0,
+    ALTER COLUMN coins SET DEFAULT 0,
+    ALTER COLUMN total_device_steps SET NOT NULL,
+    ALTER COLUMN total_claimed_steps SET NOT NULL,
+    ALTER COLUMN coins SET NOT NULL;
+
+
 -- // TODO payout batch needs something to stop duplicates payout batch id, enitity id , transaction ref, tracking number,
 -- todo I DONT THINK THERE SHOULD BE DUPLICATES entity and goal instances  also the batch need to change the status of the goal isntance
