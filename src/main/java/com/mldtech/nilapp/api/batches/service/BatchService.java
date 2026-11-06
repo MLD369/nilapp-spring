@@ -1,6 +1,7 @@
 package com.mldtech.nilapp.api.batches.service;
 
 import com.mldtech.nilapp.api.contributions.repository.ContributionRepository;
+import com.mldtech.nilapp.api.daily_stat.repository.DailyStatRepository;
 import com.mldtech.nilapp.api.payout_batches.service.PayoutService;
 import com.mldtech.nilapp.api.users.children.UserGoal.repository.UserGoalRepository;
 import com.mldtech.nilapp.enums.PacingStatusEnum;
@@ -10,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -19,11 +21,18 @@ public class BatchService {
     private final ContributionRepository contributionRepository;
     private final PayoutService payoutService;
     private final UserGoalRepository userGoalRepository;
+    private final DailyStatRepository dailyStatRepository;
 
-    public BatchService(ContributionRepository contributionRepository, PayoutService payoutService, UserGoalRepository userGoalRepository) {
+    // ======================================================================
+    // Increase this value (e.g., to 5, 7, 14) as your user base scales to millions
+    // to give manual audit teams and fraud verification queues more time to clear.
+    private static final int WORKOUT_COOLING_DAYS = 0; // TODO will need to find a good date for these
+
+    public BatchService(ContributionRepository contributionRepository, PayoutService payoutService, UserGoalRepository userGoalRepository, DailyStatRepository dailyStatRepository) {
         this.contributionRepository = contributionRepository;
         this.payoutService = payoutService;
         this.userGoalRepository = userGoalRepository;
+        this.dailyStatRepository = dailyStatRepository;
     }
 
     // Inject PayoutService alongside your repository at the class level:
@@ -124,7 +133,75 @@ public class BatchService {
             throw e;
         }
     }
+    /**
+     * Daily Workout Metrics Rollup & Lifetime Profiles Sync Engine.
+     * Sweeps up all newly ALLOCATED contributions, maps them to historical daily logs,
+     * and increments user profiles cleanly without stepping on financial states.
+     */
+    /**
+     * Workout Metrics Rollup & Lifetime Profiles Sync Engine.
+     * Continuously sweeps newly ALLOCATED contributions into daily workout logs, but strictly
+     * guards user lifetime column mutations using explicit aging and queue clearing integrity controls.
+     */
+    @Transactional
+    public void executeDailyStatsAggregationBatch() {
+        log.info("Starting automated workout metrics rollup pipeline...");
 
+        String uniqueBatchId = java.util.UUID.randomUUID().toString();
+
+        // Dynamic Safety Window Calculation using internal constant variable
+        LocalDate thresholdDate = LocalDate.now().minusDays(WORKOUT_COOLING_DAYS);
+        log.info("Enforcing internal scaling lock rule ({} days). Only processing records on or before: {}",
+                WORKOUT_COOLING_DAYS, thresholdDate);
+
+        int dailyStatsCreatedOrUpdated = 0;
+        int contributionsAllocated = 0;
+        int profileMetricsUpdated = 0;
+        int dailyStatsClosed = 0;
+
+        try {
+            // Pass 1: Merge newly allocated tracking data into daily calendar metrics logs
+            dailyStatsCreatedOrUpdated = dailyStatRepository.aggregateAllocatedContributionsToDailyStats();
+
+            // Pass 2: Mark contributions as completely integrated into the daily summary
+            contributionsAllocated = dailyStatRepository.clearProcessedContributionsQueue();
+
+            // Pass 3: Lock rows that meet maturity conditions (Enforces historical cutoff and zero pending contributions)
+            int rowsLocked = dailyStatRepository.lockUnprocessedDailyStats(uniqueBatchId, thresholdDate);
+
+            if (rowsLocked > 0) {
+                // Pass 4: Bulk aggregate safely isolated records directly into the user account files
+                profileMetricsUpdated = dailyStatRepository.incrementUserLifetimeMetricsBatch(uniqueBatchId);
+
+                // Pass 5: Finalize and close the snapshot batch
+                dailyStatsClosed = dailyStatRepository.clearProcessedDailyStatsQueue(uniqueBatchId);
+                log.info("Successfully pushed metrics for {} verified, matured daily records into user lifetime files.", rowsLocked);
+            } else {
+                log.info("No daily stats rows met the aging threshold ({}) and integrity checks during this execution cycle.", thresholdDate);
+            }
+
+            log.info("""
+                
+                ======================================================================
+                🏃‍♂️ DECOUPLED WORKOUT LOGISTICS PIPELINE SUCCESS SUMMARY
+                ======================================================================
+                🔹 Cooling Window Enforced                    -> [ {} days ]
+                🔹 Max Date Allowed For Finalization          -> [ {} ]
+                🔹 Contributions Processed                    -> [ {} claims ingested ]
+                🔹 Daily Stat Records Affected                -> [ {} log rows updated ]
+                🔹 Lifetime Profiles Updated (users)          -> [ {} accounts modified ]
+                🔹 Sync Transactions Finalized                -> [ {} records finalized ]
+                ======================================================================
+                """,
+
+                WORKOUT_COOLING_DAYS, thresholdDate, contributionsAllocated,
+                dailyStatsCreatedOrUpdated, profileMetricsUpdated, dailyStatsClosed
+            );
+        } catch (Exception e) {
+                log.error("Workout log sync pipeline failed. Atomic database rollbacks applied.", e);
+                throw e;
+        }
+    }
 }
 /*
 
