@@ -58,7 +58,7 @@ public interface DailyStatRepository extends JpaRepository<DailyStat, Long> {
     long sumLifetimeDeviceStepsByUserId(@org.springframework.data.repository.query.Param("userId") Long userId);
 
     // ======================================================================
-    // 🔄 PASS 1: CONSUME ALL ALLOCATED CONTRIBUTIONS INTO THE CORRESPONDING DATES
+    // 🔄 PASS 1: CONSUME ALLOCATED CONTRIBUTIONS INTO THE CORRESPONDING DATES
     // ======================================================================
     @Modifying
     @Transactional
@@ -86,7 +86,7 @@ public interface DailyStatRepository extends JpaRepository<DailyStat, Long> {
         DO UPDATE SET 
             total_claimed_steps   = daily_stats.total_claimed_steps + EXCLUDED.total_claimed_steps,
             coins                 = daily_stats.coins + EXCLUDED.coins,
-            is_synced_to_lifetime = false -- Triggers user lifetime totals to pull this update
+            is_synced_to_lifetime = false -- Signals to the streaming pass that new deltas are ready!
         """, nativeQuery = true)
     int aggregateAllocatedContributionsToDailyStats();
 
@@ -104,73 +104,53 @@ public interface DailyStatRepository extends JpaRepository<DailyStat, Long> {
     int clearProcessedContributionsQueue();
 
     // ======================================================================
-    // 🔒 PASS 3: LOCK UNPROCESSED DAILY STATS WITH BATCH ID
+    // 📊 PASS 3A: STREAM DATA DELTAS AND UPDATE USER PROFILE ACCOUNT FILES
     // ======================================================================
-    // Only locks rows that have passed the cooling window AND have
-    // absolutely zero unresolved contributions left pending/verified for that date.
+    @Modifying
+    @Transactional
+    @Query(value = """
+        WITH calculated_deltas AS (
+            SELECT 
+                ds.user_id,
+                (ds.total_device_steps - ds.lifetime_synced_device_steps) as delta_device,
+                (ds.total_claimed_steps - ds.lifetime_synced_claimed_steps) as delta_claimed,
+                (ds.coins - ds.lifetime_synced_coins) as delta_coins
+            FROM daily_stats ds
+            WHERE ds.is_synced_to_lifetime = false
+        )
+        UPDATE users u
+        SET 
+            total_lifetime_steps         = u.total_lifetime_steps + src.total_device_sum,
+            total_lifetime_claimed_steps = u.total_lifetime_claimed_steps + src.total_claimed_sum,
+            total_lifetime_coins         = u.total_lifetime_coins + src.total_coins_sum
+        FROM (
+            SELECT 
+                user_id,
+                SUM(delta_device) as total_device_sum,
+                SUM(delta_claimed) as total_claimed_sum,
+                SUM(delta_coins) as total_coins_sum
+            FROM calculated_deltas
+            GROUP BY user_id
+        ) src
+        WHERE u.user_id = src.user_id
+        """, nativeQuery = true)
+    int streamWorkoutDeltasToUserLifetimes();
+
     // ======================================================================
-    // 🔒 PASS 3: LOCK UNPROCESSED DAILY STATS WITH BATCH ID (EXTERNALIZED THRESHOLD)
+    // ✅ PASS 3B: SET DAILY SYNCHRONIZATION COLUMN PROGRESS TRACKERS
     // ======================================================================
     @Modifying
     @Transactional
     @Query(value = """
         UPDATE daily_stats ds
-        SET sync_batch_id = :batchId 
-        WHERE ds.is_synced_to_lifetime = false 
-          AND ds.sync_batch_id IS NULL
-          AND ds.date <= :thresholdDate               -- ⏳ Dynamic Scaling Aging Guard
-          AND NOT EXISTS (                             -- 🛡️ Integrity Guard
-              SELECT 1 
-              FROM contributions c
-              WHERE c.user_id = ds.user_id
-                AND CAST(c.created_at AS date) = ds.date
-                AND c.contribution_status_id IN (1, 2) -- 1=PENDING, 2=VERIFIED // TODO will need to change to only 2 in the future once verified logic is made and any sitting in pending wont process
-          )
-        """, nativeQuery = true)
-    int lockUnprocessedDailyStats(
-            @Param("batchId") String batchId,
-            @Param("thresholdDate") LocalDate thresholdDate
-    );
-
-
-
-    // ======================================================================
-    // 📊 PASS 4: UPGRADE USER PROFILE LIFE SUMMARY LIFETIME COLUMNS
-    // ======================================================================
-    @Modifying
-    @Transactional
-    @Query(value = """
-        UPDATE users u
         SET 
-            total_lifetime_steps         = u.total_lifetime_steps + src.total_device,
-            total_lifetime_claimed_steps = u.total_lifetime_claimed_steps + src.total_claimed,
-            total_lifetime_coins         = u.total_lifetime_coins + src.total_coins
-        FROM (
-            SELECT 
-                ds.user_id,
-                SUM(COALESCE(ds.total_device_steps, 0)) as total_device,
-                SUM(COALESCE(ds.total_claimed_steps, 0)) as total_claimed,
-                SUM(COALESCE(ds.coins, 0)) as total_coins
-            FROM daily_stats ds
-            WHERE ds.sync_batch_id = :batchId
-            GROUP BY ds.user_id
-        ) src
-        WHERE u.user_id = src.user_id
+            lifetime_synced_device_steps  = ds.total_device_steps,
+            lifetime_synced_claimed_steps = ds.total_claimed_steps,
+            lifetime_synced_coins         = ds.coins,
+            is_synced_to_lifetime         = true
+        WHERE ds.is_synced_to_lifetime = false
         """, nativeQuery = true)
-    int incrementUserLifetimeMetricsBatch(@Param("batchId") String batchId);
-
-    // ======================================================================
-    // ✅ PASS 5: RELEASE AND CLOSE LOGISTICAL RUN
-    // ======================================================================
-    @Modifying
-    @Transactional
-    @Query(value = """
-        UPDATE daily_stats 
-        SET is_synced_to_lifetime = true 
-        WHERE sync_batch_id = :batchId
-        """, nativeQuery = true)
-    int clearProcessedDailyStatsQueue(@Param("batchId") String batchId);
-
+    int clearProcessedDailyStatsQueue();
 
 
 }

@@ -134,25 +134,13 @@ public class BatchService {
         }
     }
     /**
-     * Daily Workout Metrics Rollup & Lifetime Profiles Sync Engine.
-     * Sweeps up all newly ALLOCATED contributions, maps them to historical daily logs,
-     * and increments user profiles cleanly without stepping on financial states.
-     */
-    /**
-     * Workout Metrics Rollup & Lifetime Profiles Sync Engine.
-     * Continuously sweeps newly ALLOCATED contributions into daily workout logs, but strictly
-     * guards user lifetime column mutations using explicit aging and queue clearing integrity controls.
+     * Workout Metrics Delta Engine.
+     * Sweeps up all newly ALLOCATED contributions into daily logs and streams any new
+     * incremental increases directly into user lifetime summaries in real-time.
      */
     @Transactional
     public void executeDailyStatsAggregationBatch() {
-        log.info("Starting automated workout metrics rollup pipeline...");
-
-        String uniqueBatchId = java.util.UUID.randomUUID().toString();
-
-        // Dynamic Safety Window Calculation using internal constant variable
-        LocalDate thresholdDate = LocalDate.now().minusDays(WORKOUT_COOLING_DAYS);
-        log.info("Enforcing internal scaling lock rule ({} days). Only processing records on or before: {}",
-                WORKOUT_COOLING_DAYS, thresholdDate);
+        log.info("Starting automated workout metrics delta rollup pipeline...");
 
         int dailyStatsCreatedOrUpdated = 0;
         int contributionsAllocated = 0;
@@ -160,46 +148,38 @@ public class BatchService {
         int dailyStatsClosed = 0;
 
         try {
-            // Pass 1: Merge newly allocated tracking data into daily calendar metrics logs
+            // Pass 1: Continually roll up newly ALLOCATED items into their specific calendar dates
             dailyStatsCreatedOrUpdated = dailyStatRepository.aggregateAllocatedContributionsToDailyStats();
 
-            // Pass 2: Mark contributions as completely integrated into the daily summary
+            // Pass 2: Clear processed items out of the raw contribution entry queue
             contributionsAllocated = dailyStatRepository.clearProcessedContributionsQueue();
 
-            // Pass 3: Lock rows that meet maturity conditions (Enforces historical cutoff and zero pending contributions)
-            int rowsLocked = dailyStatRepository.lockUnprocessedDailyStats(uniqueBatchId, thresholdDate);
+            // ✅ Pass 3A: Streams deltas safely to profiles and returns the true number of users modified
+            profileMetricsUpdated = dailyStatRepository.streamWorkoutDeltasToUserLifetimes();
 
-            if (rowsLocked > 0) {
-                // Pass 4: Bulk aggregate safely isolated records directly into the user account files
-                profileMetricsUpdated = dailyStatRepository.incrementUserLifetimeMetricsBatch(uniqueBatchId);
-
-                // Pass 5: Finalize and close the snapshot batch
-                dailyStatsClosed = dailyStatRepository.clearProcessedDailyStatsQueue(uniqueBatchId);
-                log.info("Successfully pushed metrics for {} verified, matured daily records into user lifetime files.", rowsLocked);
-            } else {
-                log.info("No daily stats rows met the aging threshold ({}) and integrity checks during this execution cycle.", thresholdDate);
-            }
+            // ✅ Pass 3B: Flushes progress markers and returns the true number of daily stat records closed
+            dailyStatsClosed = dailyStatRepository.clearProcessedDailyStatsQueue();
 
             log.info("""
                 
                 ======================================================================
                 🏃‍♂️ DECOUPLED WORKOUT LOGISTICS PIPELINE SUCCESS SUMMARY
                 ======================================================================
-                🔹 Cooling Window Enforced                    -> [ {} days ]
-                🔹 Max Date Allowed For Finalization          -> [ {} ]
                 🔹 Contributions Processed                    -> [ {} claims ingested ]
                 🔹 Daily Stat Records Affected                -> [ {} log rows updated ]
                 🔹 Lifetime Profiles Updated (users)          -> [ {} accounts modified ]
                 🔹 Sync Transactions Finalized                -> [ {} records finalized ]
                 ======================================================================
                 """,
-
-                WORKOUT_COOLING_DAYS, thresholdDate, contributionsAllocated,
-                dailyStatsCreatedOrUpdated, profileMetricsUpdated, dailyStatsClosed
+                    contributionsAllocated,
+                    dailyStatsCreatedOrUpdated,
+                    profileMetricsUpdated,
+                    dailyStatsClosed
             );
+
         } catch (Exception e) {
-                log.error("Workout log sync pipeline failed. Atomic database rollbacks applied.", e);
-                throw e;
+            log.error("Workout log sync pipeline failed. Atomic database rollbacks applied.", e);
+            throw e;
         }
     }
 }

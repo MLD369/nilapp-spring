@@ -59,28 +59,32 @@ public class DailyStatService {
         log.info("Processing device steps synchronization for User ID: {} for date: {}. Steps: {}",
                 userId, yesterday, deviceSteps);
 
-        // Check if there is a daily stat row for yesterday
         DailyStat stats = dailyStatRepository.findByUserIdAndDate(userId, yesterday)
                 .orElseGet(() -> {
                     log.info("No daily stat row found for User ID: {} on {}. Creating new row.", userId, yesterday);
                     DailyStat newRow = new DailyStat();
                     newRow.setUserId(userId);
                     newRow.setDate(yesterday);
-                    // Initialize default values explicitly if needed (e.g., 0 claimed, 0 coins)
-                    // todo IS THIS NEEDED OR CAN THEY JUST BE NULL
-//                    newRow.setClaimedSteps(0);
-//                    newRow.setCoinsEarned(0);
+                    newRow.setTotalClaimedSteps(0);
+                    newRow.setCoins(0);
+                    newRow.setLifetimeSyncedDeviceSteps(0);
+                    newRow.setLifetimeSyncedClaimedSteps(0);
+                    newRow.setLifetimeSyncedCoins(0);
                     return newRow;
                 });
 
-        // Update the total device steps field
+        // 📈 Apply the freshly read physical steps
         stats.setTotalDeviceSteps(deviceSteps);
 
+        // ⚡ CRITICAL: Force the flag to false so the streaming engine processes this update immediately!
+        stats.setSyncedToLifetime(false);
+
         DailyStat savedStats = dailyStatRepository.save(stats);
-        log.info("Successfully persisted device steps for User ID: {} on date: {}", userId, yesterday);
+        log.info("Successfully persisted device steps and flagged for lifetime streaming for User ID: {} on date: {}", userId, yesterday);
 
         return savedStats;
     }
+
 
 }
 

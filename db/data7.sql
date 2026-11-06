@@ -462,6 +462,22 @@ ALTER COLUMN total_claimed_steps SET DEFAULT 0,
     ALTER COLUMN total_claimed_steps SET NOT NULL,
     ALTER COLUMN coins SET NOT NULL;
 
+--  set up allow user to update lifetime stats while daily stat is still open
+-- Add delta tracking metrics directly to daily_stats
+ALTER TABLE public.daily_stats
+    ADD COLUMN IF NOT EXISTS lifetime_synced_device_steps integer DEFAULT 0 NOT NULL,
+    ADD COLUMN IF NOT EXISTS lifetime_synced_claimed_steps integer DEFAULT 0 NOT NULL,
+    ADD COLUMN IF NOT EXISTS lifetime_synced_coins integer DEFAULT 0 NOT NULL;
 
+-- Drop the old column we no longer need
+ALTER TABLE public.daily_stats DROP COLUMN IF EXISTS sync_batch_id;
+
+-- Backfill existing rows so historical data is perfectly balanced
+UPDATE public.daily_stats
+SET
+    lifetime_synced_device_steps = total_device_steps,
+    lifetime_synced_claimed_steps = total_claimed_steps,
+    lifetime_synced_coins = coins
+WHERE is_synced_to_lifetime = true;
 -- // TODO payout batch needs something to stop duplicates payout batch id, enitity id , transaction ref, tracking number,
 -- todo I DONT THINK THERE SHOULD BE DUPLICATES entity and goal instances  also the batch need to change the status of the goal isntance

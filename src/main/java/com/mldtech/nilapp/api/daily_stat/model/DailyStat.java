@@ -51,4 +51,16 @@ public class DailyStat {
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "is_synced_to_lifetime", nullable = false)
+    private boolean isSyncedToLifetime = false;
+
+    @Column(name = "lifetime_synced_device_steps", nullable = false)
+    private int lifetimeSyncedDeviceSteps = 0;
+
+    @Column(name = "lifetime_synced_claimed_steps", nullable = false)
+    private int lifetimeSyncedClaimedSteps = 0;
+
+    @Column(name = "lifetime_synced_coins", nullable = false)
+    private int lifetimeSyncedCoins = 0;
 }
