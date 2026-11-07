@@ -1424,14 +1424,14 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
             /*
              * ============================================================
              * USER GOALS
-             * Merge duplicate goalIds into a single progress object
+             *  Group by BOTH goalId and goalInstanceId to preserve
+             * unique instance tracking records across multi-instance targets.
              * ============================================================
              */
-
-            Map<Long, List<GoalProgressDTO>> groupedUserGoals =
+            Map<String, List<GoalProgressDTO>> groupedUserGoals =
                     user.getUserGoals().stream()
                             .map(ug -> helper.toGoalProgressDTO(ug.getGoalInstance()))
-                            .collect(Collectors.groupingBy(GoalProgressDTO::getGoalId));
+                            .collect(Collectors.groupingBy(g -> g.getGoalId() + "_" + g.getGoalInstanceId()));
 
             List<GoalProgressDTO> userGoals =
                     groupedUserGoals.values().stream()
@@ -1610,6 +1610,7 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
             throw new RuntimeException("Error building dashboard: " + ex.getMessage());
         }
     }
+
 
 
 
