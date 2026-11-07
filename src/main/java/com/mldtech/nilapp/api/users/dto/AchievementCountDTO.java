@@ -17,5 +17,7 @@ public class AchievementCountDTO {
     private String entityName;
     private String groupName;
     private LocalDateTime earnedAt;
+    private String description;
+    private String badge;
 }
 
