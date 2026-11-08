@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -200,7 +201,17 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
      *
      * @return the total number of pending master contribution rows successfully processed and approved
      */
+    /**
+     * Executes the background metrics distribution fan-out process.
+     * Grabs un-batched pending contributions (status 1) using row-level locking to prevent concurrency collisions,
+     * flattens nested JSON parameters inside the allocation snapshot, splits running metrics to separate flat statistics tables,
+     * calculates precise organization payouts (70%) and platform margins (30%) for entities, handles clean whole-number
+     * remainder splits for both tables, and transitions processed contribution records to status 5 in a single atomic transaction.
+     *
+     * @return the total number of pending master contribution rows successfully processed and approved
+     */
     @Modifying
+    @Transactional
     @Query(value = """
         WITH locked_contributions AS (
             SELECT contribution_id, user_id, steps_contributed, coins_contributed, conversion_rate, created_at, allocation_snapshot
@@ -208,34 +219,65 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
             WHERE contribution_status_id = 1 -- will need to change this to (2) verified once we have a verifcation process
             FOR UPDATE SKIP LOCKED
         ),
-        inserted_entities AS (
-            INSERT INTO entity_stats (contribution_id, entity_id, user_id, steps, coins, allocation_percentage, revenue_generated, company_profit_retained, created_at)
+        -- 🏢 1. FLATTEN & CALCULATE SHARES FOR CORPORATE ENTITIES
+        flattened_entities AS (
             SELECT 
-                lc.contribution_id,
-                (alloc->>'entityId')\\:\\:bigint,
-                lc.user_id,
-                ROUND((lc.steps_contributed * (alloc->>'percentage')\\:\\:numeric) / 100)\\:\\:bigint,
-                ROUND((lc.coins_contributed * (alloc->>'percentage')\\:\\:numeric) / 100)\\:\\:bigint,
-                (alloc->>'percentage')\\:\\:int,
-                (((lc.coins_contributed * lc.conversion_rate) * (alloc->>'percentage')\\:\\:numeric / 100) * 0.70)\\:\\:decimal(15,6),
-                (((lc.coins_contributed * lc.conversion_rate) * (alloc->>'percentage')\\:\\:numeric / 100) * 0.30)\\:\\:decimal(15,6),
-                lc.created_at
+                lc.contribution_id, lc.user_id, lc.created_at, lc.conversion_rate,
+                CAST(CAST(alloc->>'entityId' AS numeric) AS bigint) AS entity_id,             -- 🌟 FIXED: Safe SQL function casts
+                CAST(CAST(goal->>'goalInstanceId' AS numeric) AS bigint) AS goal_instance_id, -- 🌟 FIXED: Safe SQL function casts
+                CAST(alloc->>'percentage' AS numeric) AS parent_pct,
+                CAST(goal->>'share' AS numeric) AS goal_share,
+                CAST(FLOOR((lc.steps_contributed * CAST(alloc->>'percentage' AS numeric)) / 100.0) AS bigint) AS total_entity_steps,
+                CAST(FLOOR((lc.coins_contributed * CAST(alloc->>'percentage' AS numeric)) / 100.0) AS bigint) AS total_entity_coins,
+                ROW_NUMBER() OVER (PARTITION BY lc.contribution_id, alloc->>'entityId' ORDER BY CAST(CAST(goal->>'goalInstanceId' AS numeric) AS bigint)) AS goal_rank,
+                COUNT(*) OVER (PARTITION BY lc.contribution_id, alloc->>'entityId') AS total_goals_in_entity -- 🌟 FIXED: Added missing closing parenthesis
             FROM locked_contributions lc
             CROSS JOIN LATERAL jsonb_array_elements(lc.allocation_snapshot->'entityAllocations') AS alloc
+            CROSS JOIN LATERAL jsonb_array_elements(alloc->'goals') AS goal
         ),
-        inserted_groups AS (
-            INSERT INTO group_stats (contribution_id, group_id, user_id, steps, coins, allocation_percentage, created_at)
+        -- 👥 2. FLATTEN & CALCULATE SHARES FOR FRIEND GROUPS (NO FINANCIAL DATA)
+        flattened_groups AS (
             SELECT 
-                lc.contribution_id,
-                (alloc->>'groupId')\\:\\:bigint,
-                lc.user_id,
-                ROUND((lc.steps_contributed * (alloc->>'percentage')\\:\\:numeric) / 100)\\:\\:bigint,
-                ROUND((lc.coins_contributed * (alloc->>'percentage')\\:\\:numeric) / 100)\\:\\:bigint,
-                (alloc->>'percentage')\\:\\:int,
-                lc.created_at
+                lc.contribution_id, lc.user_id, lc.created_at,
+                CAST(CAST(alloc->>'groupId' AS numeric) AS bigint) AS group_id,                     -- 🌟 FIXED: Safe SQL function casts
+                CAST(CAST(goal->>'goalInstanceId' AS numeric) AS bigint) AS goal_instance_id,        -- 🌟 FIXED: Safe SQL function casts
+                CAST(alloc->>'percentage' AS numeric) AS parent_pct,
+                CAST(goal->>'share' AS numeric) AS goal_share,
+                CAST(FLOOR((lc.steps_contributed * CAST(alloc->>'percentage' AS numeric)) / 100.0) AS bigint) AS total_group_steps,
+                CAST(FLOOR((lc.coins_contributed * CAST(alloc->>'percentage' AS numeric)) / 100.0) AS bigint) AS total_group_coins,
+                ROW_NUMBER() OVER (PARTITION BY lc.contribution_id, alloc->>'groupId' ORDER BY CAST(CAST(goal->>'goalInstanceId' AS numeric) AS bigint)) AS goal_rank,
+                COUNT(*) OVER (PARTITION BY lc.contribution_id, alloc->>'groupId') AS total_goals_in_group
             FROM locked_contributions lc
             CROSS JOIN LATERAL jsonb_array_elements(lc.allocation_snapshot->'groupAllocations') AS alloc
+            CROSS JOIN LATERAL jsonb_array_elements(alloc->'goals') AS goal
+        ),
+        -- 🏢 3. EXECUTE BULK WRITE TO ENTITY LEDGER (WITH FINANCIALS)
+        inserted_entities AS (
+            INSERT INTO entity_stats (contribution_id, entity_id, goal_instance_id, user_id, steps, coins, allocation_percentage, revenue_generated, company_profit_retained, created_at)
+            SELECT 
+                fe.contribution_id, fe.entity_id, fe.goal_instance_id, fe.user_id,
+                CASE WHEN fe.goal_rank = fe.total_goals_in_entity THEN fe.total_entity_steps - CAST(FLOOR(fe.total_entity_steps * (1.0 - fe.goal_share)) AS bigint) ELSE CAST(FLOOR(fe.total_entity_steps * fe.goal_share) AS bigint) END,
+                CASE WHEN fe.goal_rank = fe.total_goals_in_entity THEN fe.total_entity_coins - CAST(FLOOR(fe.total_entity_coins * (1.0 - fe.goal_share)) AS bigint) ELSE CAST(FLOOR(fe.total_entity_coins * fe.goal_share) AS bigint) END,
+                CAST(fe.parent_pct AS int),
+                CAST((((fe.total_entity_coins * fe.goal_share) * fe.conversion_rate) * 0.70) AS decimal(15,6)),
+                CAST((((fe.total_entity_coins * fe.goal_share) * fe.conversion_rate) * 0.30) AS decimal(15,6)),
+                fe.created_at
+            FROM flattened_entities fe
+            WHERE fe.goal_share > 0
+        ),
+        -- 👥 4. EXECUTE BULK WRITE TO GROUP LEDGER (NO FINANCIALS)
+        inserted_groups AS (
+            INSERT INTO group_stats (contribution_id, group_id, goal_instance_id, user_id, steps, coins, allocation_percentage, created_at)
+            SELECT 
+                fg.contribution_id, fg.group_id, fg.goal_instance_id, fg.user_id,
+                CASE WHEN fg.goal_rank = fg.total_goals_in_group THEN fg.total_group_steps - CAST(FLOOR(fg.total_group_steps * (1.0 - fg.goal_share)) AS bigint) ELSE CAST(FLOOR(fg.total_group_steps * fg.goal_share) AS bigint) END,
+                CASE WHEN fg.goal_rank = fg.total_goals_in_group THEN fg.total_group_coins - CAST(FLOOR(fg.total_group_coins * (1.0 - fg.goal_share)) AS bigint) ELSE CAST(FLOOR(fg.total_group_coins * fg.goal_share) AS bigint) END,
+                CAST(fg.parent_pct AS int),
+                fg.created_at
+            FROM flattened_groups fg
+            WHERE fg.goal_share > 0
         )
+        -- 🔒 5. CLOSE CONTAINER QUEUE
         UPDATE contributions
         SET contribution_status_id = 5
         WHERE contribution_id IN (SELECT contribution_id FROM locked_contributions)
@@ -252,6 +294,9 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
      * as complete for audit verification.
      *
      * @return the total number of active entity goal instances modified or completed
+     */
+    /**
+     * Evaluates active entity campaigns safely isolated by primary key goal_instance_id.
      */
     @Modifying
     @Query(value = """
@@ -271,16 +316,15 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
            end_date      = CASE WHEN (gi.coins_contributed + sub.total_coins) >= gi.coins_needed THEN CURRENT_DATE ELSE gi.end_date END,
            updated_at    = NOW()
        FROM (
-           SELECT entity_id,\s
-                  SUM(steps) as total_steps,\s
-                  SUM(coins) as total_coins,\s
+           SELECT goal_instance_id, 
+                  SUM(steps) as total_steps, 
+                  SUM(coins) as total_coins, 
                   SUM(revenue_generated) as total_rev
            FROM entity_stats
            WHERE is_processed = false -- Reads only fresh data
-           GROUP BY entity_id
+           GROUP BY goal_instance_id
        ) sub
-       WHERE gi.entity_id = sub.entity_id\s
-       AND gi.is_active = true;
+       WHERE gi.goal_instance_id = sub.goal_instance_id;
        """, nativeQuery = true)
     int evaluateEntityGoals();
 
@@ -292,9 +336,11 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
      *
      * @return the total number of active group challenge milestones updated or concluded
      */
+    /**
+     * Evaluates active group campaigns safely isolated by primary key goal_instance_id.
+     */
     @Modifying
     @Query(value = """
-
        UPDATE goal_instances gi
        SET
            steps_contributed = gi.steps_contributed + sub.total_steps,
@@ -306,15 +352,14 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
            end_date          = CASE WHEN (gi.coins_contributed + sub.total_coins) >= gi.coins_needed THEN CURRENT_DATE ELSE gi.end_date END,
            updated_at        = NOW()
        FROM (
-           SELECT group_id,\s
-                  SUM(steps) as total_steps,\s
+           SELECT goal_instance_id, 
+                  SUM(steps) as total_steps, 
                   SUM(coins) as total_coins
            FROM group_stats
            WHERE is_processed = false -- FIXED: Pulls fresh logs only
-           GROUP BY group_id
+           GROUP BY goal_instance_id
        ) sub
-       WHERE gi.group_id = sub.group_id\s
-         AND gi.is_active = true
+       WHERE gi.goal_instance_id = sub.goal_instance_id;
         """, nativeQuery = true)
     int evaluateGroupGoals();
 
@@ -406,6 +451,14 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
      *
      * @return the number of separate user goal rows successfully processed during this batch iteration [3]
      */
+    /**
+     * Evaluates and updates independent, user-driven individual goal tasks.
+     * Aggregates newly approved ad claim metrics from the current date to update step or coin progress columns.
+     * If a target threshold is reached, it closes the record, locks future updates, logs the resolution timestamp,
+     * and instantly mints a standard individual achievement badge using a unique timestamp index loop.
+     *
+     * @return the number of separate user goal rows successfully processed during this batch iteration [3]
+     */
     @Modifying
     @Query(value = """
     WITH calculated_progress AS (
@@ -414,8 +467,8 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
             SUM(c.steps_contributed) AS daily_steps,
             SUM(c.coins_contributed) AS daily_coins
         FROM contributions c
-        WHERE c.contribution_status_id = 5  -- allocated - was 2 for verified
-          AND DATE_TRUNC('day', c.created_at) = CURRENT_DATE
+        WHERE c.contribution_status_id = 5   -- allocated - was 2 for verified
+          AND c.is_synced_to_user_goals = false -- 🛡️ Safe Queue: Never misses rows due to server downtime or midnight boundaries
         GROUP BY c.user_id
     ),
     updated_user_goals AS (
@@ -456,14 +509,22 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
           AND ug.user_goal_status_id = (SELECT user_goal_status_id FROM public.user_goal_statuses WHERE code = 'TRACKING')
           AND ug.is_active = true
         RETURNING ug.user_id, ug.is_complete, ug.goal_instance_id
-    )
+    ),
     -- Mint a unique user achievement entry instantly for the completed row run
-    INSERT INTO public.user_achievements (user_id, achievement_id, goal_instance_id, earned_at)
-    SELECT uug.user_id, 101, uug.goal_instance_id, NOW() -- 101 = Standard Individual Goal Cleared Badge ID // TODO change this from 101
-    FROM updated_user_goals uug
-    WHERE uug.is_complete = true
-    -- FIXED: Aligned targeting specifications with your new reliable index rule
-    ON CONFLICT (user_id, goal_instance_id) DO NOTHING;
+    inserted_achievements AS (
+        INSERT INTO public.user_achievements (user_id, achievement_id, goal_instance_id, earned_at)
+        SELECT uug.user_id, 101, uug.goal_instance_id, NOW() -- 101 = Standard Individual Goal Cleared Badge ID // TODO change this from 101
+        FROM updated_user_goals uug
+        WHERE uug.is_complete = true
+        -- FIXED: Aligned targeting specifications with your new reliable index rule
+        ON CONFLICT (user_id, goal_instance_id) DO NOTHING
+        RETURNING user_id
+    )
+    -- 🔒 Close out the processed entries in the raw queue so they are never double counted
+    UPDATE contributions
+    SET is_synced_to_user_goals = true
+    WHERE contribution_status_id = 5 
+      AND is_synced_to_user_goals = false;
     """, nativeQuery = true)
     int evaluateUserGoalsBatch();
 
@@ -532,6 +593,43 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
 
 
 
+    // ======================================================================
+    // 🛡️ RE-ALLOCATION COMPLIANCE API CHECKS
+    // ======================================================================
+
+    /**
+     * Checks if an Entity Campaign's active instance is still open.
+     * True means it's running; False means it's closed or missing.
+     */
+    @Query(value = """
+        SELECT EXISTS (
+            SELECT 1 FROM goal_instances 
+            WHERE entity_id = :entityId 
+              AND pacing_status_id NOT IN (SELECT pacing_status_id FROM public.pacing_statuses WHERE code = 'CLOSED_PENDING_AUDIT')
+              AND end_date > CURRENT_TIMESTAMP
+        )
+        """, nativeQuery = true)
+    boolean isEntityGoalActive(@Param("entityId") Long entityId);
+
+    /**
+     * Checks if a Friend Group Goal's active instance is still open.
+     * True means it's running; False means it's closed or missing.
+     */
+    @Query(value = """
+        SELECT EXISTS (
+            SELECT 1 FROM goal_instances 
+            WHERE group_id = :groupId 
+              AND pacing_status_id NOT IN (SELECT pacing_status_id FROM public.pacing_statuses WHERE code = 'CLOSED_PENDING_AUDIT')
+              AND end_date > CURRENT_TIMESTAMP
+        )
+        """, nativeQuery = true)
+    boolean isGroupGoalActive(@Param("groupId") Long groupId);
+
+    @Query(value = "SELECT name FROM entities WHERE entity_id = :entityId", nativeQuery = true)
+    String findEntityNameById(@Param("entityId") Long entityId);
+
+    @Query(value = "SELECT name FROM groups WHERE group_id = :groupId", nativeQuery = true)
+    String findGroupNameById(@Param("groupId") Long groupId);
 
 }
 

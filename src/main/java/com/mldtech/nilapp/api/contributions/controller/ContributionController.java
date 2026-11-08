@@ -1,13 +1,16 @@
 package com.mldtech.nilapp.api.contributions.controller;
 
+import com.mldtech.nilapp.exceptions.ClosedAllocationException;
 import com.mldtech.nilapp.api.contributions.dto.ContributionRequestDTO;
-import com.mldtech.nilapp.api.contributions.dto.ContributionSummaryDTO;
 import com.mldtech.nilapp.api.contributions.dto.CreateContributionRequest;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.contributions.service.ContributionService;
 import com.mldtech.nilapp.api.users.dto.ContributionDTO;
 import com.mldtech.nilapp.helper.CustomResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,7 +19,7 @@ import java.util.List;
 @RequestMapping("/api/v1/contributions")
 @RequiredArgsConstructor
 public class ContributionController {
-
+    private static final Logger log = LoggerFactory.getLogger(ContributionController.class);
     private final ContributionService service;
 
     @GetMapping("/user/{userId}/1")
@@ -68,14 +71,16 @@ public class ContributionController {
         );
     }
     @PostMapping("/claim")
-    public Contribution claimContribution(@RequestBody ContributionRequestDTO request) {
+    public ResponseEntity<?> claimContribution(@RequestBody ContributionRequestDTO request) {
         System.out.println("claimContribution");
         System.out.println("claimContribution");
         System.out.println(request);
         System.out.println("claimContribution");
         System.out.println("claimContribution");
+
         Contribution contribution = contributionService.claimContribution(request);
-        return contribution;//ResponseEntity.ok(contribution);
+        return ResponseEntity.ok(contribution);
+
     }
 
 

@@ -479,5 +479,14 @@ SET
     lifetime_synced_claimed_steps = total_claimed_steps,
     lifetime_synced_coins = coins
 WHERE is_synced_to_lifetime = true;
+
+--  allow batch to know the goal to update for group and entities
+ALTER TABLE public.entity_stats ADD COLUMN IF NOT EXISTS goal_instance_id bigint;
+ALTER TABLE public.group_stats ADD COLUMN IF NOT EXISTS goal_instance_id bigint;
+
+-- to say User goal batch is synce
+ALTER TABLE public.contributions ADD COLUMN IF NOT EXISTS is_synced_to_user_goals boolean DEFAULT false NOT NULL;
+
+
 -- // TODO payout batch needs something to stop duplicates payout batch id, enitity id , transaction ref, tracking number,
 -- todo I DONT THINK THERE SHOULD BE DUPLICATES entity and goal instances  also the batch need to change the status of the goal isntance
