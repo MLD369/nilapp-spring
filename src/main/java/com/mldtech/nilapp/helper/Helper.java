@@ -22,12 +22,20 @@ public class Helper {
         };
     }
     public GoalProgressDTO toGoalProgressDTO(GoalInstance gi) {
+        if (gi == null) {
+            return null;
+        }
 
         var goal = gi.getGoal();
+        if (goal == null) {
+            return null;
+        }
+
+        // 🌟 Ensure your Achievement object link maps cleanly
         var achievement = goal.getAchievement();
 
-        Long requiredSteps = achievement.getRequiredSteps();
-        Long requiredCoins = achievement.getRequiredCoins();
+        Long requiredSteps = (achievement != null) ? achievement.getRequiredSteps() : null;
+        Long requiredCoins = (achievement != null) ? achievement.getRequiredCoins() : null;
 
         Long stepsContributed = gi.getStepsContributed();
         Long coinsContributed = gi.getCoinsContributed();
@@ -40,33 +48,20 @@ public class Helper {
 
         // STEP-BASED GOAL
         if (requiredSteps != null && requiredSteps > 0) {
-
             long contributed = stepsContributed != null ? stepsContributed : 0L;
-            long needed = stepsNeeded != null ? stepsNeeded : requiredSteps;
-
             currentAmount = contributed;
-
-            progressPct = requiredSteps > 0
-                    ? (contributed * 100.0) / requiredSteps
-                    : 0.0;
+            progressPct = (contributed * 100.0) / requiredSteps;
         }
-
         // COIN-BASED GOAL
         else if (requiredCoins != null && requiredCoins > 0) {
-
             long contributed = coinsContributed != null ? coinsContributed : 0L;
-            long needed = coinsNeeded != null ? coinsNeeded : requiredCoins;
-
             currentAmount = contributed;
-
-            progressPct = requiredCoins > 0
-                    ? (contributed * 100.0) / requiredCoins
-                    : 0.0;
+            progressPct = (contributed * 100.0) / requiredCoins;
         }
 
         return GoalProgressDTO.builder()
                 .goalId(goal.getGoalId())
-                .goalName(goal.getGoal())
+                .goalName(goal.getGoal()) // Maps the name of the template
 
                 .requiredSteps(requiredSteps)
                 .requiredCoins(requiredCoins)
@@ -75,15 +70,22 @@ public class Helper {
                 .progressPct(progressPct)
                 .isComplete(progressPct >= 100.0)
 
-                // NEW FIELDS
-                .stepsContributed(stepsContributed)
-                .coinsContributed(coinsContributed)
-                .stepsNeeded(stepsNeeded)
-                .coinsNeeded(coinsNeeded)
-                .dollarAmount(gi.getDollarAmount())
+                // LOGISTICAL SUMMARY FIELDS
+                .stepsContributed(stepsContributed != null ? stepsContributed : 0L)
+                .coinsContributed(coinsContributed != null ? coinsContributed : 0L)
+                .stepsNeeded(stepsNeeded != null ? stepsNeeded : (requiredSteps != null ? requiredSteps : 0L))
+                .coinsNeeded(coinsNeeded != null ? coinsNeeded : (requiredCoins != null ? requiredCoins : 0L))
+                .dollarAmount(gi.getDollarAmount() != null ? gi.getDollarAmount() : java.math.BigDecimal.ZERO)
+
+                // 🌟 CRITICAL TRACKER: Explicitly passed to eliminate grouping null pointer print errors!
+                .goalInstanceId(gi.getGoalInstanceId())
+
+
+                .joined(true)
 
                 .build();
     }
+
 
     public GoalProgressDTO mergeGoalProgress(List<GoalProgressDTO> goals) {
 
