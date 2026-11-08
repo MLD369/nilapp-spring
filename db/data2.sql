@@ -97,3 +97,11 @@ INSERT INTO public.entity_types(
     type, description)
 VALUES ('Collective', 'School Collective');
 
+INSERT INTO public.entity_types(
+    type, description)
+VALUES ('SCHOLARSHIP', 'Paid to scholarship programs');
+
+INSERT INTO public.entity_types(
+    type, description)
+VALUES ('App', 'App default entity');
+
