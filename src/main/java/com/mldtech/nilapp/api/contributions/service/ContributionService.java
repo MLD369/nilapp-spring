@@ -320,6 +320,7 @@ public class ContributionService {
      */
     @Transactional
     public Contribution claimContribution(ContributionRequestDTO dto) {
+        // TODO change all the error messages in this method to  ContributionErrorPayload
         log.info("Pre-flight guard verification running for incoming contribution claim path...");
 
         ObjectMapper objectMapper = new ObjectMapper();
@@ -346,6 +347,7 @@ public class ContributionService {
         List<Map<String, Object>> closedEntities = new ArrayList<>();
         List<Map<String, Object>> closedGroups = new ArrayList<>();
 
+        // TODO change  ContributionErrorPayload
         // 🚨 RULE 1: ENFORCE MANDATORY ENTITY ALLOCATIONS ARRAY PRESENCE
         if (!parsedSnapshot.containsKey("entityAllocations") || !(parsedSnapshot.get("entityAllocations") instanceof List)) {
             Map<String, Object> errorDetails = Map.of(
@@ -362,7 +364,7 @@ public class ContributionService {
         }
 
         List<?> entityList = (List<?>) parsedSnapshot.get("entityAllocations");
-
+        // TODO change  ContributionErrorPayload
         // 🚨 RULE 2: REJECT EMPTY ENTITY LIST ARRAYS
         if (entityList.isEmpty()) {
             Map<String, Object> errorDetails = Map.of(
@@ -396,7 +398,7 @@ public class ContributionService {
                 String dbEntityName = contributionRepository.findEntityNameById(entityId);
                 String resolvedEntityName = dbEntityName != null ? dbEntityName : "Entity";
 
-
+                // TODO change  ContributionErrorPayload
                 // 🚨 RULE 3: ENFORCE GOAL ATTACHMENT FOR WEIGHTED POOLS
                 if (percentage > 0) {
                     if (goals == null || goals.isEmpty()) {
@@ -412,7 +414,7 @@ public class ContributionService {
                                 errorDetails
                         );
                     }
-
+                    // TODO change  ContributionErrorPayload
                     // 📐 MATHEMATICAL COMPLIANCE: Verify inner goal shares sum up to exactly 1.0 (100%)
                     double totalGoalShareSum = 0.0;
                     for (Object goalObj : goals) {
@@ -430,7 +432,7 @@ public class ContributionService {
                         throw new InvalidAllocationMathException(dto.getUserId(), "GOAL_SHARES_ENTITY_" + entityId, totalGoalShareSum, errorDetails);
                     }
                 }
-
+                // TODO change  ContributionErrorPayload
                 // Check active timeline instance status flags in DB
                 boolean isEntityOpen = contributionRepository.isEntityGoalActive(entityId);
                 if (!isEntityOpen) {
@@ -447,7 +449,7 @@ public class ContributionService {
                 }
             }
         }
-
+        // TODO change  ContributionErrorPayload
         // 🚨 MATHEMATICAL COMPLIANCE: Top-Level Entities Verification Gate
         if (Math.abs(totalEntityPercentageSum - 100.0) > 0.0001) {
             Map<String, Object> errorDetails = Map.of(
@@ -457,7 +459,7 @@ public class ContributionService {
             );
             throw new InvalidAllocationMathException(dto.getUserId(), "ENTITY_PERCENTAGES", totalEntityPercentageSum, errorDetails);
         }
-
+        // TODO change  ContributionErrorPayload
         // 👥 SCAN BLOCK B: PARSE AND VALIDATE DYNAMIC GROUP SELECTIONS (Optional Presence)
         if (parsedSnapshot.containsKey("groupAllocations") && parsedSnapshot.get("groupAllocations") instanceof List) {
             List<?> groupList = (List<?>) parsedSnapshot.get("groupAllocations");
@@ -505,6 +507,7 @@ public class ContributionService {
                                 throw new InvalidAllocationMathException(dto.getUserId(), "GOAL_SHARES_GROUP_" + groupId, totalGroupGoalShareSum, errorDetails);
                             }
                         }
+                        // TODO change  ContributionErrorPayload
                         boolean isGroupOpen = contributionRepository.isGroupGoalActive(groupId);
                         if (!isGroupOpen) {
                             int stepsAttempted = (int) Math.round((totalIncomingSteps * percentage) / 100.0);
@@ -519,6 +522,7 @@ public class ContributionService {
                         }
                     }
                 }
+                // TODO change  ContributionErrorPayload
                 // 🚨 MATHEMATICAL COMPLIANCE: Top-Level Groups Verification Gate (Only triggers if groups are used)
                 if (Math.abs(totalGroupPercentageSum - 100.0) > 0.0001) {
                     Map<String, Object> errorDetails = Map.of(
@@ -530,6 +534,7 @@ public class ContributionService {
                 }
             }
         }
+        // TODO change  ContributionErrorPayload
         // 🛑 CLOSING CHECK: REJECT TRANSACTION IMMEDIATELY IF TARGETS ARE CLOSED
         if (!closedEntities.isEmpty() || !closedGroups.isEmpty()) {
             int totalClosed = closedEntities.size() + closedGroups.size();
