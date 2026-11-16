@@ -31,7 +31,6 @@ public class Helper {
             return null;
         }
 
-        // 🌟 Ensure your Achievement object link maps cleanly
         var achievement = goal.getAchievement();
 
         Long requiredSteps = (achievement != null) ? achievement.getRequiredSteps() : null;
@@ -43,48 +42,58 @@ public class Helper {
         Long stepsNeeded = gi.getStepsNeeded();
         Long coinsNeeded = gi.getCoinsNeeded();
 
-        Long currentAmount = null;
+        Long currentAmount = 0L;
         double progressPct = 0.0;
 
-        // STEP-BASED GOAL
         if (requiredSteps != null && requiredSteps > 0) {
             long contributed = stepsContributed != null ? stepsContributed : 0L;
-            currentAmount = contributed;
-            progressPct = (contributed * 100.0) / requiredSteps;
-        }
-        // COIN-BASED GOAL
-        else if (requiredCoins != null && requiredCoins > 0) {
+            currentAmount = Math.max(0L, contributed);
+            progressPct = (currentAmount * 100.0) / requiredSteps;
+        } else if (requiredCoins != null && requiredCoins > 0) {
             long contributed = coinsContributed != null ? coinsContributed : 0L;
-            currentAmount = contributed;
-            progressPct = (contributed * 100.0) / requiredCoins;
+            currentAmount = Math.max(0L, contributed);
+            progressPct = (currentAmount * 100.0) / requiredCoins;
+        } else {
+            // Fallback if neither target is set: default to steps if available, otherwise coins
+            long fallback = stepsContributed != null ? stepsContributed : (coinsContributed != null ? coinsContributed : 0L);
+            currentAmount = Math.max(0L, fallback);
+        }
+
+        boolean isExpiredByDate = gi.getEndDate() != null && gi.getEndDate().isBefore(LocalDate.now());
+        boolean isComplete = Boolean.TRUE.equals(gi.getIsComplete()) || progressPct >= 100.0;
+        boolean isActive = Boolean.TRUE.equals(gi.getIsActive()) && !isComplete && !isExpiredByDate;
+
+        String status;
+        if (isComplete) {
+            status = "COMPLETED";
+        } else if (isExpiredByDate) {
+            status = "EXPIRED";
+        } else if (isActive) {
+            status = "ACTIVE";
+        } else {
+            status = "INACTIVE";
         }
 
         return GoalProgressDTO.builder()
                 .goalId(goal.getGoalId())
-                .goalName(goal.getGoal()) // Maps the name of the template
-
+                .goalName(goal.getGoal())
                 .requiredSteps(requiredSteps)
                 .requiredCoins(requiredCoins)
-
                 .currentAmount(currentAmount)
                 .progressPct(progressPct)
-                .isComplete(progressPct >= 100.0)
-
-                // LOGISTICAL SUMMARY FIELDS
                 .stepsContributed(stepsContributed != null ? stepsContributed : 0L)
                 .coinsContributed(coinsContributed != null ? coinsContributed : 0L)
                 .stepsNeeded(stepsNeeded != null ? stepsNeeded : (requiredSteps != null ? requiredSteps : 0L))
                 .coinsNeeded(coinsNeeded != null ? coinsNeeded : (requiredCoins != null ? requiredCoins : 0L))
-                .dollarAmount(gi.getDollarAmount() != null ? gi.getDollarAmount() : java.math.BigDecimal.ZERO)
-
-                // 🌟 CRITICAL TRACKER: Explicitly passed to eliminate grouping null pointer print errors!
+                .dollarAmount(gi.getDollarAmount() != null ? gi.getDollarAmount() : BigDecimal.ZERO)
                 .goalInstanceId(gi.getGoalInstanceId())
-
-
+                .active(isActive)
+                .isComplete(isComplete)
+                .status(status)
                 .joined(true)
-
                 .build();
     }
+
 
 
     public GoalProgressDTO mergeGoalProgress(List<GoalProgressDTO> goals) {

@@ -75,6 +75,9 @@ public class GoalInstance {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "pacing_status_id")
+    private int status;
+
     /**
      * Entity lifecycle hook executed right before a standard row merge update command drops into PostgreSQL.
      * Ensures our app-layer modifications keep timestamps accurate without manual configuration parameters.

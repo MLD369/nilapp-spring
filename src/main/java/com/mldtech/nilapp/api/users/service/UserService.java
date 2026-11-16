@@ -29,6 +29,7 @@ import com.mldtech.nilapp.api.group.service.GroupService;
 import com.mldtech.nilapp.api.groupstat.repository.GroupStatsRepository;
 import com.mldtech.nilapp.api.users.children.UserAchievement.model.UserAchievement;
 import com.mldtech.nilapp.api.users.children.UserAchievement.repository.UserAchievementRepository;
+import com.mldtech.nilapp.api.users.children.UserGoal.model.UserGoal;
 import com.mldtech.nilapp.api.users.children.UserGoal.repository.UserGoalRepository;
 import com.mldtech.nilapp.api.users.dto.*;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
@@ -1420,90 +1421,97 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         try {
-
             /*
              * ============================================================
              * USER GOALS
-             *  Group by BOTH goalId and goalInstanceId to preserve
-             * unique instance tracking records across multi-instance targets.
              * ============================================================
              */
-            Map<String, List<GoalProgressDTO>> groupedUserGoals =
+            Map<String, List<UserGoal>> groupedUserGoals =
                     user.getUserGoals().stream()
-                            .map(ug -> helper.toGoalProgressDTO(ug.getGoalInstance()))
-                            .collect(Collectors.groupingBy(g -> g.getGoalId() + "_" + g.getGoalInstanceId()));
+                            .filter(ug -> ug.getLeftAt() == null
+                                    && ug.getGoalInstance() != null
+                                    && ug.getGoalInstance().getGoal() != null)
+                            .collect(Collectors.groupingBy(ug ->
+                                    ug.getGoalInstance().getGoal().getGoalId() + "_" + ug.getGoalInstance().getGoalInstanceId()
+                            ));
 
             List<GoalProgressDTO> userGoals =
                     groupedUserGoals.values().stream()
-                            .map(goalList -> {
+                            .map(ugList -> {
+                                UserGoal firstUg = ugList.get(0);
+                                GoalInstance gi = firstUg.getGoalInstance();
+                                GoalProgressDTO firstDto = helper.toGoalProgressDTO(gi);
 
-                                GoalProgressDTO first = goalList.get(0);
+                                List<GoalProgressDTO> goalList = ugList.stream()
+                                        .map(ug -> helper.toGoalProgressDTO(ug.getGoalInstance()))
+                                        .toList();
 
                                 long totalSteps = goalList.stream()
-                                        .mapToLong(g ->
-                                                g.getStepsContributed() != null
-                                                        ? g.getStepsContributed()
-                                                        : 0L
-                                        )
+                                        .mapToLong(g -> g.getStepsContributed() != null ? g.getStepsContributed() : 0L)
                                         .sum();
 
                                 long totalCoins = goalList.stream()
-                                        .mapToLong(g ->
-                                                g.getCoinsContributed() != null
-                                                        ? g.getCoinsContributed()
-                                                        : 0L
-                                        )
+                                        .mapToLong(g -> g.getCoinsContributed() != null ? g.getCoinsContributed() : 0L)
                                         .sum();
 
                                 BigDecimal totalDollarAmount = goalList.stream()
-                                        .map(g ->
-                                                g.getDollarAmount() != null
-                                                        ? g.getDollarAmount()
-                                                        : BigDecimal.ZERO
-                                        )
+                                        .map(g -> g.getDollarAmount() != null ? g.getDollarAmount() : BigDecimal.ZERO)
                                         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                                Long requiredSteps = first.getRequiredSteps();
-                                Long requiredCoins = first.getRequiredCoins();
-
-                                Long currentAmount = requiredSteps != null
+                                Long requiredSteps = firstDto.getRequiredSteps();
+                                Long requiredCoins = firstDto.getRequiredCoins();
+                                long rawAmount = (requiredSteps != null && requiredSteps > 0)
                                         ? totalSteps
-                                        : totalCoins;
+                                        : ((requiredCoins != null && requiredCoins > 0) ? totalCoins : totalSteps);
+
+                                Long currentAmount = Math.max(0L, rawAmount);
 
                                 double progressPct = 0.0;
-
                                 if (requiredSteps != null && requiredSteps > 0) {
                                     progressPct = (totalSteps * 100.0) / requiredSteps;
                                 } else if (requiredCoins != null && requiredCoins > 0) {
                                     progressPct = (totalCoins * 100.0) / requiredCoins;
                                 }
 
-                                return GoalProgressDTO.builder()
-                                        .goalId(first.getGoalId())
-                                        .goalName(first.getGoalName())
+                                boolean isExpiredByDate = gi.getEndDate() != null && gi.getEndDate().isBefore(LocalDate.now());
+                                boolean isComplete = Boolean.TRUE.equals(firstUg.getIsComplete())
+                                        || firstDto.isComplete()
+                                        || progressPct >= 100.0;
 
+                                // Must be active on BOTH UserGoal and parent GoalInstance, and not completed/expired
+                                boolean ugActiveFlag = firstUg.getIsActive() != null ? firstUg.getIsActive() : true;
+                                boolean isActive = ugActiveFlag && firstDto.isActive() && !isComplete && !isExpiredByDate;
+
+                                String status;
+                                if (isComplete) {
+                                    status = "COMPLETED";
+                                } else if (isExpiredByDate) {
+                                    status = "EXPIRED";
+                                } else if (isActive) {
+                                    status = "ACTIVE";
+                                } else {
+                                    status = "INACTIVE";
+                                }
+
+                                return GoalProgressDTO.builder()
+                                        .goalId(firstDto.getGoalId())
+                                        .goalName(firstDto.getGoalName())
                                         .requiredSteps(requiredSteps)
                                         .requiredCoins(requiredCoins)
-
                                         .currentAmount(currentAmount)
                                         .progressPct(progressPct)
-
                                         .stepsContributed(totalSteps)
                                         .coinsContributed(totalCoins)
-
                                         .stepsNeeded(requiredSteps)
                                         .coinsNeeded(requiredCoins)
-
                                         .dollarAmount(totalDollarAmount)
-
-                                        .isComplete(progressPct >= 100.0)
-
-                                        // user goals: always joined, entity/group null
+                                        .active(isActive)
+                                        .isComplete(isComplete)
+                                        .status(status)
                                         .entityId(null)
                                         .groupId(null)
-                                        .goalInstanceId(first.getGoalInstanceId())
+                                        .goalInstanceId(firstDto.getGoalInstanceId())
                                         .joined(true)
-
                                         .build();
                             })
                             .toList();
@@ -1511,11 +1519,8 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
             /*
              * ============================================================
              * ENTITY GOALS
-             * ONLY include active memberships (leftAt == null)
-             * Reuse getEntitiesDetails to get joined + goalInstanceId
              * ============================================================
              */
-
             Map<Long, EntityGoalProgressDTO> entityMap = new LinkedHashMap<>();
 
             for (var ue : user.getUserEntities().stream()
@@ -1523,41 +1528,30 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                     .toList()) {
 
                 var entity = ue.getEntity();
-
-                // skip duplicates
                 if (entityMap.containsKey(entity.getEntityId())) {
                     continue;
                 }
 
-                // 🔹 Reuse existing API logic
                 CustomResponse<EntityDetailsDTO> entityDetailsResponse =
                         entityService.getEntitiesDetails(entity.getEntityId(), userId, true);
 
                 EntityDetailsDTO entityDetails = (EntityDetailsDTO) entityDetailsResponse.getObject();
-
-                List<GoalProgressDTO> mergedGoals = entityDetails.getActiveGoals();
 
                 entityMap.put(
                         entity.getEntityId(),
                         EntityGoalProgressDTO.builder()
                                 .entityId(entity.getEntityId())
                                 .entityName(entity.getName())
-                                .goals(mergedGoals)
+                                .goals(entityDetails.getActiveGoals())
                                 .build()
                 );
             }
 
-            List<EntityGoalProgressDTO> entityGoals =
-                    new ArrayList<>(entityMap.values());
-
             /*
              * ============================================================
              * GROUP GOALS
-             * ONLY include active memberships (leftAt == null)
-             * Reuse getGroupDetails to get joined + goalInstanceId
              * ============================================================
              */
-
             Map<Long, GroupGoalProgressDTO> groupMap = new LinkedHashMap<>();
 
             for (var ug : user.getUserGroups().stream()
@@ -1565,51 +1559,43 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
                     .toList()) {
 
                 var group = ug.getGroup();
-
-                // skip duplicates
                 if (groupMap.containsKey(group.getGroupId())) {
                     continue;
                 }
 
-                // 🔹 Reuse existing API logic
                 CustomResponse<GroupDetailsDTO> groupDetailsResponse =
                         groupService.getGroupDetails(group.getGroupId(), userId, true);
 
                 GroupDetailsDTO groupDetails = (GroupDetailsDTO) groupDetailsResponse.getObject();
-
-                List<GoalProgressDTO> mergedGoals = groupDetails.getActiveGoals();
 
                 groupMap.put(
                         group.getGroupId(),
                         GroupGoalProgressDTO.builder()
                                 .groupId(group.getGroupId())
                                 .groupName(group.getName())
-                                .goals(mergedGoals)
+                                .goals(groupDetails.getActiveGoals())
                                 .build()
                 );
             }
-
-            List<GroupGoalProgressDTO> groupGoals =
-                    new ArrayList<>(groupMap.values());
 
             /*
              * ============================================================
              * FINAL RESPONSE
              * ============================================================
              */
-
             return UserGoalDashboardResponse.builder()
                     .userId(userId)
                     .username(user.getUsername())
                     .userGoals(userGoals)
-                    .entityGoals(entityGoals)
-                    .groupGoals(groupGoals)
+                    .entityGoals(new ArrayList<>(entityMap.values()))
+                    .groupGoals(new ArrayList<>(groupMap.values()))
                     .build();
 
         } catch (Exception ex) {
             throw new RuntimeException("Error building dashboard: " + ex.getMessage());
         }
     }
+
 
 
 
