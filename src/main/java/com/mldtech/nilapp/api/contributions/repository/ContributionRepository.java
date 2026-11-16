@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -630,6 +631,25 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
 
     @Query(value = "SELECT name FROM groups WHERE group_id = :groupId", nativeQuery = true)
     String findGroupNameById(@Param("groupId") Long groupId);
+
+    @Query("""
+    SELECT CASE WHEN COUNT(gi) > 0 THEN true ELSE false END
+    FROM GoalInstance gi
+    WHERE gi.goalInstanceId = :goalInstanceId
+      AND gi.isActive = true
+      AND (gi.isComplete IS NULL OR gi.isComplete = false)
+      AND (gi.endDate IS NULL OR gi.endDate >= :today)
+""")
+    boolean isGoalInstanceOpen(@Param("goalInstanceId") Long goalInstanceId, @Param("today") LocalDate today);
+
+    @Query("""
+    SELECT g.goal
+    FROM GoalInstance gi
+    JOIN gi.goal g
+    WHERE gi.goalInstanceId = :goalInstanceId
+""")
+    String findGoalNameByGoalInstanceId(@Param("goalInstanceId") Long goalInstanceId);
+
 
 }
 

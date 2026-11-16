@@ -6,6 +6,7 @@ import com.mldtech.nilapp.api.contributions.dto.CreateContributionRequest;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.contributions.service.ContributionService;
 import com.mldtech.nilapp.api.users.dto.ContributionDTO;
+import com.mldtech.nilapp.exceptions.ContributionErrorPayload;
 import com.mldtech.nilapp.helper.CustomResponse;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -82,6 +83,12 @@ public class ContributionController {
         return ResponseEntity.ok(contribution);
 
     }
+    @PostMapping("/validate")
+    public ResponseEntity<ContributionErrorPayload> validateClaim(@RequestBody ContributionRequestDTO dto) {
+        ContributionErrorPayload result = contributionService.preflightValidateClaim(dto);
+        return ResponseEntity.ok(result);
+    }
+
 
 
 }

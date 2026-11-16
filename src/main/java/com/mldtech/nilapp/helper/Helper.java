@@ -1,15 +1,43 @@
 package com.mldtech.nilapp.helper;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mldtech.nilapp.api.batches.scheduler.BatchScheduler;
+import com.mldtech.nilapp.api.contributions.dto.ContributionRequestDTO;
+import com.mldtech.nilapp.api.contributions.repository.ContributionRepository;
+import com.mldtech.nilapp.api.daily_stat.repository.DailyStatRepository;
+import com.mldtech.nilapp.api.entities.children.EntityAchievement.repository.EntityAchievementRepository;
+import com.mldtech.nilapp.api.entities.service.EntityService;
+import com.mldtech.nilapp.api.entitystat.repository.EntityStatsRepository;
+import com.mldtech.nilapp.api.friend.repository.FriendRepository;
 import com.mldtech.nilapp.api.goals.children.GoalInstances.model.GoalInstance;
+import com.mldtech.nilapp.api.goals.children.GoalInstances.repository.GoalInstanceRepository;
+import com.mldtech.nilapp.api.group.children.GroupAchievement.repository.GroupAchievementRepository;
+import com.mldtech.nilapp.api.group.service.GroupService;
+import com.mldtech.nilapp.api.groupstat.repository.GroupStatsRepository;
+import com.mldtech.nilapp.api.users.children.UserAchievement.repository.UserAchievementRepository;
+import com.mldtech.nilapp.api.users.children.UserGoal.repository.UserGoalRepository;
 import com.mldtech.nilapp.api.users.dto.GoalProgressDTO;
+import com.mldtech.nilapp.api.users.repository.UserRepository;
+import com.mldtech.nilapp.exceptions.ClosedAllocationException;
+import com.mldtech.nilapp.exceptions.ContributionErrorPayload;
+import com.mldtech.nilapp.exceptions.InvalidAllocationMathException;
+import com.mldtech.nilapp.exceptions.MandatoryEntityMissingException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.WeekFields;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Helper {
+    private static final Logger log = LoggerFactory.getLogger(Helper.class);
+
     public String getPeriodKey(LocalDateTime date, String periodType) {
         LocalDate d = date.toLocalDate();
 
@@ -153,6 +181,282 @@ public class Helper {
                 .build();
     }
 
+    /**
+     * Shared validation gate used by both pre-flight validation and final claim submission.
+     * Validates JSON structure, entity/group percentage math, goal shares, and open goal status.
+     *
+     * @param dto the incoming contribution request payload
+     * @return the parsed allocation snapshot map if all structural, math, and open-goal checks pass
+     */
+    public Map<String, Object> validateAllocationSnapshot(ContributionRequestDTO dto, GoalInstanceRepository goalInstanceRepository, ContributionRepository contributionRepository) {
+        log.info("Pre-flight guard verification running for incoming contribution path...");
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, Object> parsedSnapshot = new HashMap<>();
+
+        if (dto.getAllocationSnapshot() != null && !dto.getAllocationSnapshot().isBlank()) {
+            try {
+                parsedSnapshot = objectMapper.readValue(
+                        dto.getAllocationSnapshot(),
+                        new TypeReference<Map<String, Object>>() {}
+                );
+            } catch (Exception e) {
+                log.error("Structural error caught parsing snapshot text framework.", e);
+                parsedSnapshot = new HashMap<>();
+            }
+        }
+
+        // ======================================================================
+        // 🛡️ CRITICAL STRUCTURAL, STATUS, & MATHEMATICAL GATES
+        // ======================================================================
+        List<ContributionErrorPayload.ClosedTargetDetail> closedEntities = new ArrayList<>();
+        List<ContributionErrorPayload.ClosedTargetDetail> closedGroups = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+
+        // 🚨 RULE 1: ENFORCE MANDATORY ENTITY ALLOCATIONS ARRAY PRESENCE
+        if (!parsedSnapshot.containsKey("entityAllocations") || !(parsedSnapshot.get("entityAllocations") instanceof List)) {
+            ContributionErrorPayload errorDetails = ContributionErrorPayload.builder()
+                    .allowedToProcess(false)
+                    .statusText("MANDATORY_ENTITY_MISSING")
+                    .systemMessage("Please select an entity to support before claiming your points.")
+                    .build();
+
+            throw new MandatoryEntityMissingException(
+                    dto.getUserId(),
+                    "MISSING_ENTITY_ARRAY",
+                    "Submitted allocationSnapshot completely lacked the 'entityAllocations' structural key array.",
+                    errorDetails
+            );
+        }
+
+        List<?> entityList = (List<?>) parsedSnapshot.get("entityAllocations");
+
+        // 🚨 RULE 2: REJECT EMPTY ENTITY LIST ARRAYS
+        if (entityList.isEmpty()) {
+            ContributionErrorPayload errorDetails = ContributionErrorPayload.builder()
+                    .allowedToProcess(false)
+                    .statusText("MANDATORY_ENTITY_MISSING")
+                    .systemMessage("You must choose at least one entity to support with this claim.")
+                    .build();
+
+            throw new MandatoryEntityMissingException(
+                    dto.getUserId(),
+                    "EMPTY_ENTITY_LIST",
+                    "Submitted allocationSnapshot contained an empty 'entityAllocations' array list.",
+                    errorDetails
+            );
+        }
+
+        int totalIncomingSteps = dto.getStepsContributed();
+        int totalIncomingCoins = dto.getCoinsContributed();
+
+        double totalEntityPercentageSum = 0.0;
+        double totalGroupPercentageSum = 0.0;
+
+        // 🏢 SCAN BLOCK A: PARSE AND VALIDATE DYNAMIC ENTITY SELECTIONS
+        for (Object obj : entityList) {
+            if (obj instanceof Map<?, ?> entityData) {
+                Long entityId = Long.valueOf(entityData.get("entityId").toString());
+                double percentage = Double.parseDouble(entityData.get("percentage").toString());
+                totalEntityPercentageSum += percentage;
+
+                List<?> goals = (List<?>) entityData.get("goals");
+                String dbEntityName = contributionRepository.findEntityNameById(entityId);
+                String resolvedEntityName = dbEntityName != null ? dbEntityName : "Entity";
+
+                // 🚨 RULE 3: ENFORCE GOAL ATTACHMENT FOR WEIGHTED POOLS
+                if (percentage > 0) {
+                    if (goals == null || goals.isEmpty()) {
+                        ContributionErrorPayload errorDetails = ContributionErrorPayload.builder()
+                                .allowedToProcess(false)
+                                .statusText("ORPHANED_ALLOCATION_WEIGHT")
+                                .systemMessage(String.format("You gave points to %s but didn't pick a specific goal. Please select a goal for your points.", resolvedEntityName))
+                                .build();
+
+                        throw new MandatoryEntityMissingException(
+                                dto.getUserId(),
+                                "ORPHANED_ENTITY_WEIGHT",
+                                "Entity ID " + entityId + " has a percentage allocation greater than 0 but no goals attached.",
+                                errorDetails
+                        );
+                    }
+
+                    // 📐 MATHEMATICAL COMPLIANCE & INDIVIDUAL GOAL CLOSING CHECK
+                    double totalGoalShareSum = 0.0;
+                    for (Object goalObj : goals) {
+                        if (goalObj instanceof Map<?, ?> goalData) {
+                            double share = Double.parseDouble(goalData.get("share").toString());
+                            totalGoalShareSum += share;
+
+                            if (share > 0 && goalData.get("goalInstanceId") != null) {
+                                Long goalInstanceId = Long.valueOf(goalData.get("goalInstanceId").toString());
+                                String goalName = goalData.get("goalName") != null
+                                        ? goalData.get("goalName").toString()
+                                        : null;
+
+                                boolean isGoalOpen = goalInstanceRepository.isGoalInstanceOpen(goalInstanceId, today);
+                                if (!isGoalOpen) {
+                                    double effectivePct = (percentage * share) / 100.0;
+                                    int stepsAttempted = (int) Math.round(totalIncomingSteps * effectivePct);
+                                    int coinsAttempted = (int) Math.round(totalIncomingCoins * effectivePct);
+                                    String displayName = goalName != null
+                                            ? resolvedEntityName + " - " + goalName
+                                            : resolvedEntityName;
+
+                                    closedEntities.add(
+                                            ContributionErrorPayload.ClosedTargetDetail.builder()
+                                                    .targetId(entityId)
+                                                    .name(displayName)
+                                                    .stepsAttempted(stepsAttempted)
+                                                    .coinsAttempted(coinsAttempted)
+                                                    .allocationPercentage(percentage * share)
+                                                    .build()
+                                    );
+                                }
+                            }
+                        }
+                    }
+
+                    if (Math.abs(totalGoalShareSum - 1.0) > 0.0001) {
+                        ContributionErrorPayload errorDetails = ContributionErrorPayload.builder()
+                                .allowedToProcess(false)
+                                .statusText("INVALID_GOAL_SHARE_SUM")
+                                .systemMessage(String.format("The splits you chose for your goals under %s don't add up correctly. Please make sure they equal 100%% of that allocation.", resolvedEntityName))
+                                .build();
+
+                        throw new InvalidAllocationMathException(
+                                dto.getUserId(),
+                                "GOAL_SHARES_ENTITY_" + entityId,
+                                totalGoalShareSum,
+                                errorDetails
+                        );
+                    }
+                }
+            }
+        }
+
+        // 🚨 MATHEMATICAL COMPLIANCE: Top-Level Entities Verification Gate
+        if (Math.abs(totalEntityPercentageSum - 100.0) > 0.0001) {
+            ContributionErrorPayload errorDetails = ContributionErrorPayload.builder()
+                    .allowedToProcess(false)
+                    .statusText("INVALID_ENTITY_PERCENTAGE_SUM")
+                    .systemMessage("Your entity point split does not equal exactly 100%. Please re-adjust your sliders.")
+                    .build();
+
+            throw new InvalidAllocationMathException(
+                    dto.getUserId(),
+                    "ENTITY_PERCENTAGES",
+                    totalEntityPercentageSum,
+                    errorDetails
+            );
+        }
+
+        // 👥 SCAN BLOCK B: PARSE AND VALIDATE DYNAMIC GROUP SELECTIONS (Optional Presence)
+        if (parsedSnapshot.containsKey("groupAllocations") && parsedSnapshot.get("groupAllocations") instanceof List<?> groupList) {
+            if (!groupList.isEmpty()) {
+                for (Object obj : groupList) {
+                    if (obj instanceof Map<?, ?> groupData) {
+                        Long groupId = Long.valueOf(groupData.get("groupId").toString());
+                        double percentage = Double.parseDouble(groupData.get("percentage").toString());
+                        totalGroupPercentageSum += percentage;
+
+                        List<?> goals = (List<?>) groupData.get("goals");
+                        String dbGroupName = contributionRepository.findGroupNameById(groupId);
+                        String resolvedGroupName = dbGroupName != null ? dbGroupName : "Friend Group";
+
+                        // Enforce goals if group weight is active
+                        if (percentage > 0) {
+                            if (goals == null || goals.isEmpty()) {
+                                ContributionErrorPayload errorDetails = ContributionErrorPayload.builder()
+                                        .allowedToProcess(false)
+                                        .statusText("ORPHANED_ALLOCATION_WEIGHT")
+                                        .systemMessage(String.format("You gave points to %s but didn't pick a specific group goal. Please select a goal.", resolvedGroupName))
+                                        .build();
+                                throw new MandatoryEntityMissingException(
+                                        dto.getUserId(),
+                                        "ORPHANED_GROUP_WEIGHT",
+                                        "Group ID " + groupId + " has a percentage allocation greater than 0 but no goals attached.",
+                                        errorDetails
+                                );
+                            }
+                            // 📐 MATHEMATICAL COMPLIANCE & INDIVIDUAL GROUP GOAL CLOSING CHECK
+                            double totalGroupGoalShareSum = 0.0;
+                            for (Object goalObj : goals) {
+                                if (goalObj instanceof Map goalData) {
+                                    double share = Double.parseDouble(goalData.get("share").toString());
+                                    totalGroupGoalShareSum += share;
+                                    if (share > 0 && goalData.get("goalInstanceId") != null) {
+                                        Long goalInstanceId = Long.valueOf(goalData.get("goalInstanceId").toString());
+                                        String goalName = goalData.get("goalName") != null
+                                                ? goalData.get("goalName").toString()
+                                                : null;
+                                        boolean isGoalOpen = goalInstanceRepository.isGoalInstanceOpen(goalInstanceId, today);
+                                        if (!isGoalOpen) {
+                                            double effectivePct = (percentage * share) / 100.0;
+                                            int stepsAttempted = (int) Math.round(totalIncomingSteps * effectivePct);
+                                            int coinsAttempted = (int) Math.round(totalIncomingCoins * effectivePct);
+                                            String displayName = goalName != null
+                                                    ? resolvedGroupName + " - " + goalName
+                                                    : resolvedGroupName;
+                                            closedGroups.add(
+                                                    ContributionErrorPayload.ClosedTargetDetail.builder()
+                                                            .targetId(groupId)
+                                                            .name(displayName)
+                                                            .stepsAttempted(stepsAttempted)
+                                                            .coinsAttempted(coinsAttempted)
+                                                            .allocationPercentage(percentage * share)
+                                                            .build()
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                            if (Math.abs(totalGroupGoalShareSum - 1.0) > 0.0001) {
+                                ContributionErrorPayload errorDetails = ContributionErrorPayload.builder()
+                                        .allowedToProcess(false)
+                                        .statusText("INVALID_GOAL_SHARE_SUM")
+                                        .systemMessage(String.format("The splits you chose for your group goals under %s don't add up correctly. Please make sure they equal 100%% of that allocation.", resolvedGroupName))
+                                        .build();
+                                throw new InvalidAllocationMathException(
+                                        dto.getUserId(),
+                                        "GOAL_SHARES_GROUP_" + groupId,
+                                        totalGroupGoalShareSum,
+                                        errorDetails
+                                );
+                            }
+                        }
+                    }
+                }
+// 🚨 MATHEMATICAL COMPLIANCE: Top-Level Groups Verification Gate
+                if (Math.abs(totalGroupPercentageSum - 100.0) > 0.0001) {
+                    ContributionErrorPayload errorDetails = ContributionErrorPayload.builder()
+                            .allowedToProcess(false)
+                            .statusText("INVALID_GROUP_PERCENTAGE_SUM")
+                            .systemMessage("Your group point split does not equal exactly 100%. Please re-adjust your sliders.")
+                            .build();
+                    throw new InvalidAllocationMathException(
+                            dto.getUserId(),
+                            "GROUP_PERCENTAGES",
+                            totalGroupPercentageSum,
+                            errorDetails
+                    );
+                }
+            }
+        }
+// 🛑 CLOSING CHECK: REJECT TRANSACTION IMMEDIATELY IF TARGETS ARE CLOSED
+        if (!closedEntities.isEmpty() || !closedGroups.isEmpty()) {
+            int totalClosed = closedEntities.size() + closedGroups.size();
+            ContributionErrorPayload errorDetails = ContributionErrorPayload.builder()
+                    .allowedToProcess(false)
+                    .statusText("CLOSED_TARGETS_FOUND")
+                    .systemMessage("One or more of the goals you selected have just finished! Please review your dashboard and choose an active goal.")
+                    .closedEntities(closedEntities.isEmpty() ? null : closedEntities)
+                    .closedGroups(closedGroups.isEmpty() ? null : closedGroups)
+                    .build();
+            throw new ClosedAllocationException(dto.getUserId(), totalClosed, errorDetails);
+        }
+        return parsedSnapshot;
+    }
 
 
 

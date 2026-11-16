@@ -33,7 +33,7 @@ public class GlobalExceptionHandler {
      * Catches and formats errors when a user attempts a claim with no Entity selected.
      */
     @ExceptionHandler(MandatoryEntityMissingException.class)
-    public ResponseEntity<Map<String, Object>> handleMissingMandatoryEntity(MandatoryEntityMissingException ex) {
+    public ResponseEntity<ContributionErrorPayload> handleMissingMandatoryEntity(MandatoryEntityMissingException ex) {
         log.warn("Guard Gate Intercepted Structural Error: {}", ex.getMessage());
         return ResponseEntity.badRequest().body(ex.getErrorDetails());
     }
@@ -42,7 +42,7 @@ public class GlobalExceptionHandler {
      * Catches and formats errors when a user selects a closed/completed campaign target.
      */
     @ExceptionHandler(ClosedAllocationException.class)
-    public ResponseEntity<Map<String, Object>> handleClosedAllocations(ClosedAllocationException ex) {
+    public ResponseEntity<ContributionErrorPayload> handleClosedAllocations(ClosedAllocationException ex) {
         log.warn("Guard Gate Intercepted Business Rule Error: {}", ex.getMessage());
         return ResponseEntity.badRequest().body(ex.getErrorDetails());
     }
@@ -51,7 +51,7 @@ public class GlobalExceptionHandler {
      * Catches and formats errors when user allocation percentages or goal shares fail to equal 100%.
      */
     @ExceptionHandler(InvalidAllocationMathException.class)
-    public ResponseEntity<Map<String, Object>> handleInvalidAllocationMath(InvalidAllocationMathException ex) {
+    public ResponseEntity<ContributionErrorPayload> handleInvalidAllocationMath(InvalidAllocationMathException ex) {
         log.warn("Guard Gate Intercepted Mathematical Imbalance: {}", ex.getMessage());
         return ResponseEntity.badRequest().body(ex.getErrorDetails());
     }

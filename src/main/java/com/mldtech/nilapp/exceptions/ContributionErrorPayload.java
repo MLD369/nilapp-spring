@@ -9,7 +9,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL) // 🛡️ Safely hides empty list keys on the JSON response
-// TODO use this in error messages
+
 public class ContributionErrorPayload {
 
     private boolean allowedToProcess;
@@ -25,8 +25,10 @@ public class ContributionErrorPayload {
     @AllArgsConstructor
     @Builder
     public static class ClosedTargetDetail {
-        private Long targetId;
-        private String name;
+        private Long targetId;         // Entity ID or Group ID
+        private String targetName;     // Entity Name or Group Name
+        private Long goalInstanceId;   // Exact GoalInstance ID that closed
+        private String name;           // Exact Goal Name (e.g., "Kids' Active Zone")
         private int stepsAttempted;
         private int coinsAttempted;
         private double allocationPercentage;
