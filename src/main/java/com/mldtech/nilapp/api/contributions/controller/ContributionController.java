@@ -21,30 +21,30 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ContributionController {
     private static final Logger log = LoggerFactory.getLogger(ContributionController.class);
-    private final ContributionService service;
+    private final ContributionService contributionService;
 
     @GetMapping("/user/{userId}/1")
     public List<Contribution> getContributionsForUser(@PathVariable Long userId) {
-        return service.getContributionsForUser(userId);
+        return contributionService.getContributionsForUser(userId);
     }
     @GetMapping("/user/{userId}")
     public CustomResponse<List<ContributionDTO>> getContributionsForUserDto(@PathVariable Long userId) {
-        return service.getUserContributions(userId);
+        return contributionService.getUserContributions(userId);
     }
 
     @GetMapping("/entity/{entityId}")
     public List<Contribution> getContributionsForEntity(@PathVariable Long entityId) {
-        return service.getContributionsForEntity(entityId);
+        return contributionService.getContributionsForEntity(entityId);
     }
 
     @GetMapping("/campaign/{campaignId}")
     public List<Contribution> getContributionsForCampaign(@PathVariable Long campaignId) {
-        return service.getContributionsForCampaign(campaignId);
+        return contributionService.getContributionsForCampaign(campaignId);
     }
 
     @PostMapping("only")
     public Contribution createContribution(@RequestBody Contribution contribution) {
-        return service.createContribution(contribution);
+        return contributionService.createContribution(contribution);
     }
 
     @PutMapping("/{contributionId}/status/{statusId}")
@@ -52,25 +52,25 @@ public class ContributionController {
             @PathVariable Long contributionId,
             @PathVariable Integer statusId
     ) {
-        return service.updateStatus(contributionId, statusId);
+        return contributionService.updateStatus(contributionId, statusId);
     }
 
 
-        private final ContributionService contributionService;
 
-    @PostMapping
-    public Contribution createContribution(@RequestBody CreateContributionRequest request) {
-        return contributionService.createContribution(
-                request.getUserId(),
-                request.getEntityId(),
-                request.getCoins(),
-                request.getSteps(),
-                request.getEntityAllocations(),
-                request.getGroupAllocations(),
-                request.getAdValue(),
-                request.getCoinValue()
-        );
-    }
+
+//    @PostMapping
+//    public Contribution createContribution(@RequestBody CreateContributionRequest request) {
+//        return contributionService.createContribution(
+//                request.getUserId(),
+//                request.getEntityId(),
+//                request.getCoins(),
+//                request.getSteps(),
+//                request.getEntityAllocations(),
+//                request.getGroupAllocations(),
+//                request.getAdValue(),
+//                request.getCoinValue()
+//        );
+//    }
     @PostMapping("/claim")
     public ResponseEntity<?> claimContribution(@RequestBody ContributionRequestDTO request) {
         System.out.println("claimContribution");
@@ -84,7 +84,7 @@ public class ContributionController {
 
     }
     @PostMapping("/validate")
-    public ResponseEntity<ContributionErrorPayload> validateClaim(@RequestBody ContributionRequestDTO dto) {
+    public ResponseEntity<ContributionErrorPayload> validateContribution(@RequestBody ContributionRequestDTO dto) {
         ContributionErrorPayload result = contributionService.preflightValidateClaim(dto);
         return ResponseEntity.ok(result);
     }
