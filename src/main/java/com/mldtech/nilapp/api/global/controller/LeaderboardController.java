@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-
+// TODO why is this under global???
 @RestController
 @RequestMapping("/api/v1/leaderboard")
 @RequiredArgsConstructor
