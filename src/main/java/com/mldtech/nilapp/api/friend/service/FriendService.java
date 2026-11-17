@@ -2,7 +2,7 @@ package com.mldtech.nilapp.api.friend.service;
 
 import com.mldtech.nilapp.api.friend.model.Friend;
 import com.mldtech.nilapp.api.friend.repository.FriendRepository;
-import com.mldtech.nilapp.api.friend.children.FriendStatus.repository.FriendStatusRepository;
+import com.mldtech.nilapp.api.FriendStatus.repository.FriendStatusRepository;
 import com.mldtech.nilapp.api.users.dto.FriendDTO;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
 import com.mldtech.nilapp.helper.CustomResponse;

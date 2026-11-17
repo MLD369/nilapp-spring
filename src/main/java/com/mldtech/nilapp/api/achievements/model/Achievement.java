@@ -1,8 +1,8 @@
 package com.mldtech.nilapp.api.achievements.model;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.mldtech.nilapp.api.achievements.children.AchievementType.model.AchievementType;
-import com.mldtech.nilapp.api.group.children.GroupAchievement.model.GroupAchievement;
+import com.mldtech.nilapp.api.AchievementType.model.AchievementType;
+import com.mldtech.nilapp.api.GroupAchievement.model.GroupAchievement;
 import jakarta.persistence.*;
 import lombok.*;
 

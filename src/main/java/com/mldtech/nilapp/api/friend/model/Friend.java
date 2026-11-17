@@ -2,7 +2,7 @@ package com.mldtech.nilapp.api.friend.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.mldtech.nilapp.api.friend.children.FriendStatus.model.FriendStatus;
+import com.mldtech.nilapp.api.FriendStatus.model.FriendStatus;
 import com.mldtech.nilapp.api.users.model.User;
 import jakarta.persistence.*;
 import lombok.*;

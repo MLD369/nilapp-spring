@@ -1,0 +1,43 @@
+package com.mldtech.nilapp.api.UserGroup.model;
+
+//import com.mldtech.nilapp.api.group.model.Group;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.mldtech.nilapp.api.group.model.Group;
+import com.mldtech.nilapp.api.users.model.User;
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.time.Instant;
+
+@Entity
+@Table(
+        name = "user_groups",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "group_id"})
+)
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@ToString(exclude = {"user","group"})
+public class UserGroup {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "user_groups_id") // TODO make singular
+    private Long userGroupId;
+
+    @JsonIgnore
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @ManyToOne
+    @JoinColumn(name = "group_id")
+    private Group group;
+
+    @Column(name = "joined_at")
+    private Instant joinedAt;
+
+    @Column(name = "left_at")
+    private Instant leftAt;
+}

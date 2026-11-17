@@ -2,11 +2,11 @@ package com.mldtech.nilapp.api.global.service;
 
 import com.mldtech.nilapp.api.contributions.repository.ContributionRepository;
 import com.mldtech.nilapp.api.daily_stat.repository.DailyStatRepository;
-import com.mldtech.nilapp.api.users.children.UserEntity.model.UserEntity;
-import com.mldtech.nilapp.api.users.children.UserEntity.repository.UserEntityRepository;
-import com.mldtech.nilapp.api.users.children.UserGroup.model.UserGroup;
-import com.mldtech.nilapp.api.users.children.UserGroup.repository.UserGroupRepository;
-import com.mldtech.nilapp.api.users.children.UserStreak.repository.UserStreakRepository;
+import com.mldtech.nilapp.api.UserEntity.model.UserEntity;
+import com.mldtech.nilapp.api.UserEntity.repository.UserEntityRepository;
+import com.mldtech.nilapp.api.UserGroup.model.UserGroup;
+import com.mldtech.nilapp.api.UserGroup.repository.UserGroupRepository;
+import com.mldtech.nilapp.api.UserStreak.repository.UserStreakRepository;
 import com.mldtech.nilapp.api.users.dto.*;
 import com.mldtech.nilapp.api.users.model.User;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
@@ -17,8 +17,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static java.util.stream.Collectors.toList;
 
 @Service
 @RequiredArgsConstructor

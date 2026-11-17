@@ -2,11 +2,10 @@ package com.mldtech.nilapp.api.entities.service;
 
 import com.mldtech.nilapp.api.entities.model.Entities;
 import com.mldtech.nilapp.api.entities.repository.EntityRepository;
-import com.mldtech.nilapp.api.goals.children.GoalInstances.repository.GoalInstanceRepository;
-import com.mldtech.nilapp.api.users.children.UserEntity.model.UserEntity;
-import com.mldtech.nilapp.api.users.children.UserEntity.repository.UserEntityRepository;
-import com.mldtech.nilapp.api.users.children.UserGoal.model.UserGoal;
-import com.mldtech.nilapp.api.users.children.UserGoal.repository.UserGoalRepository;
+import com.mldtech.nilapp.api.GoalInstances.repository.GoalInstanceRepository;
+import com.mldtech.nilapp.api.UserEntity.model.UserEntity;
+import com.mldtech.nilapp.api.UserEntity.repository.UserEntityRepository;
+import com.mldtech.nilapp.api.UserGoal.repository.UserGoalRepository;
 import com.mldtech.nilapp.api.users.dto.*;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
 import com.mldtech.nilapp.helper.CustomResponse;
@@ -15,14 +14,12 @@ import com.mldtech.nilapp.mapper.EntityMapper;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.Hibernate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Collectors;
 

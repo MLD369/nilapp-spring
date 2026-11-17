@@ -1,13 +1,13 @@
 package com.mldtech.nilapp.api.group.service;
 
 import com.mldtech.nilapp.api.entities.model.Entities;
-import com.mldtech.nilapp.api.goals.children.GoalInstances.repository.GoalInstanceRepository;
-import com.mldtech.nilapp.api.group.children.GroupEntity.repository.GroupEntityRepository;
+import com.mldtech.nilapp.api.GoalInstances.repository.GoalInstanceRepository;
+import com.mldtech.nilapp.api.GroupEntity.repository.GroupEntityRepository;
 import com.mldtech.nilapp.api.group.model.Group;
 import com.mldtech.nilapp.api.group.repository.GroupRepository;
-import com.mldtech.nilapp.api.users.children.UserGoal.repository.UserGoalRepository;
-import com.mldtech.nilapp.api.users.children.UserGroup.model.UserGroup;
-import com.mldtech.nilapp.api.users.children.UserGroup.repository.UserGroupRepository;
+import com.mldtech.nilapp.api.UserGoal.repository.UserGoalRepository;
+import com.mldtech.nilapp.api.UserGroup.model.UserGroup;
+import com.mldtech.nilapp.api.UserGroup.repository.UserGroupRepository;
 import com.mldtech.nilapp.api.users.dto.*;
 import com.mldtech.nilapp.api.users.repository.UserRepository;
 import com.mldtech.nilapp.helper.CustomResponse;
@@ -19,7 +19,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;

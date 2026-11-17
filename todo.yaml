@@ -1,8 +1,28 @@
+# ToDO check everywhere with total steps to makes sure everything is working
+# TODO urgent
+
+
+auto setting primary key issue can switch to uuid or find a way to run this code
+SELECT setval(
+pg_get_serial_sequence('public.contributions', 'contribution_id'),
+COALESCE(MAX(contribution_id), 0) + 1,
+false
+) FROM public.contributions;
+Tip: If you ever migrate to UUIDs, use UUIDv7 (supported natively in modern database updates). They are time-ordered, meaning they solve index fragmentation while keeping the collision-proof benefits of UUIDs.
+solution is most likely // Safe: Instantly skips the sequence ahead by 1000 IDs to clear any blocking rows,
+  // without running a slow 'MAX(id)' table scan.
+  String fastBumpSql = "SELECT nextval('public.contributions_id_seq') + 1000";
+bigint 9 quintillions should never get reached in holes in the sequence are fine  
+  
+  
+  
+  add loggers and logs to every api
+  
 need to use customresponse in all api calls
 
 fix all repo names
 
-no random longs that should be ints for tables and classsees
+no random longs that should be ints for tables and classes
 
 
 get user and children working
@@ -11,7 +31,14 @@ get entity working
 
 get other objects working
 
-
+#TODO this will be db batch to make monthly weekly and yearly task even daily
+#todo CREATE a leveling system, steaks boost exp, medals give exp, group and entity goals give exp
+make medals like garmin 
+make levels for accounts
+maybe take the garmin UI for stats?
+  
+  
+#TODO  block possible exploit using postman for claims,streaks, etc
 
 ##################################################################Android#################################################################
 get user steps
@@ -53,7 +80,7 @@ test api
 user
   login/logout
   set entities
-  update user
+  update userg
   view user with achievements and entities
   count number of users
   count number of users for demeographics (college,affliation,goal,etc)

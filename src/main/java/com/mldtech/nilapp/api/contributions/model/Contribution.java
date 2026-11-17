@@ -2,10 +2,8 @@ package com.mldtech.nilapp.api.contributions.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.mldtech.nilapp.api.contributions.children.ContributionStatus.model.ContributionStatus;
-import com.mldtech.nilapp.api.contributions.children.ContributionType.model.ContributionType;
-import com.mldtech.nilapp.api.goals.model.Goal;
-import com.mldtech.nilapp.api.users.model.User;
+import com.mldtech.nilapp.api.ContributionStatus.model.ContributionStatus;
+import com.mldtech.nilapp.api.ContributionType.model.ContributionType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Type;
@@ -15,7 +13,6 @@ import com.vladmihalcea.hibernate.type.json.JsonType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 
 @Entity

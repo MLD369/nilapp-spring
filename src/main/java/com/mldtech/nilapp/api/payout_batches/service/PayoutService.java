@@ -1,8 +1,8 @@
 package com.mldtech.nilapp.api.payout_batches.service;
 
 import com.mldtech.nilapp.api.contributions.repository.ContributionRepository;
-import com.mldtech.nilapp.api.goals.children.GoalInstances.model.GoalInstance;
-import com.mldtech.nilapp.api.goals.children.GoalInstances.repository.GoalInstanceRepository;
+import com.mldtech.nilapp.api.GoalInstances.model.GoalInstance;
+import com.mldtech.nilapp.api.GoalInstances.repository.GoalInstanceRepository;
 import com.mldtech.nilapp.api.payout_batches.model.PayoutBatch;
 import com.mldtech.nilapp.api.payout_batches.repository.PayoutBatchRepository;
 import org.springframework.stereotype.Service;
@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 

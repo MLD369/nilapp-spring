@@ -2,14 +2,12 @@ package com.mldtech.nilapp.api.users.controller;
 
 import com.mldtech.nilapp.api.contributions.dto.ContributionSummaryDTO;
 import com.mldtech.nilapp.api.contributions.dto.ContributionTotalDTO;
-import com.mldtech.nilapp.api.contributions.model.Contribution;
 import com.mldtech.nilapp.api.contributions.service.ContributionService;
 import com.mldtech.nilapp.api.entities.service.EntityService;
 import com.mldtech.nilapp.api.group.service.GroupService;
-import com.mldtech.nilapp.api.users.children.UserEntity.model.UserEntity;
-import com.mldtech.nilapp.api.users.children.UserEntity.service.UserEntityService;
-import com.mldtech.nilapp.api.users.children.UserGoal.model.UserGoal;
-import com.mldtech.nilapp.api.users.children.UserGoal.service.UserGoalService;
+import com.mldtech.nilapp.api.UserEntity.model.UserEntity;
+import com.mldtech.nilapp.api.UserEntity.service.UserEntityService;
+import com.mldtech.nilapp.api.UserGoal.service.UserGoalService;
 import com.mldtech.nilapp.api.users.dto.*;
 import com.mldtech.nilapp.api.users.service.UserService;
 import com.mldtech.nilapp.helper.CustomResponse;
@@ -17,7 +15,6 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;

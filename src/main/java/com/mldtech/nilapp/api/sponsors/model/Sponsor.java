@@ -1,7 +1,6 @@
 package com.mldtech.nilapp.api.sponsors.model;
 
-import com.mldtech.nilapp.api.sponsors.children.SponserCampaign.model.SponsorCampaign;
-import com.mldtech.nilapp.api.users.children.UserEntity.model.UserEntity;
+import com.mldtech.nilapp.api.SponserCampaign.model.SponsorCampaign;
 import jakarta.persistence.*;
 import lombok.*;
 
