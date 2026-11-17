@@ -38,6 +38,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.mldtech.nilapp.helper.AppConstants.DEFAULT_STATUS_ID;
+import static com.mldtech.nilapp.helper.AppConstants.DEFAULT_TYPE_ID;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -51,9 +54,7 @@ public class ContributionService {
     private final GoalInstanceRepository goalInstanceRepository;
 
 
-    // Define your default IDs as constants
-    private static final Integer DEFAULT_STATUS_ID = 1; // e.g., PENDING
-    private static final Integer DEFAULT_TYPE_ID = 1;   // e.g., Advertisement
+
 
     public ContributionTotalDTO getUserMonthlyTotals(Long userId,
                                                            LocalDateTime start,

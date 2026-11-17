@@ -46,6 +46,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.mldtech.nilapp.helper.AppConstants.DATE_FORMATTER;
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -70,8 +72,6 @@ public class UserService {
     private final DailyStatRepository dailyStatRepository;
     Helper helper = new Helper();
 
-    // Define a reusable, thread-safe formatter
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
 //    @Transactional   /// TODO change this to the right way with dtos
 //    public UserProfileResponse getUserProfile(Long userId) {

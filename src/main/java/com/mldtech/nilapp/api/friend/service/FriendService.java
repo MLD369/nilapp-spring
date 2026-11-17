@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+import static com.mldtech.nilapp.helper.AppConstants.*;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -29,13 +31,7 @@ public class FriendService {
         return repo.findByUserUserIdAndFriendUserId(friendId, userId);
     }
 
-    // Helper: status IDs
-    private static final int STATUS_REQUESTED = 1;
-    private static final int STATUS_FRIENDS = 2;
-    private static final int STATUS_BLOCKED_BY_USER = 3;
-    private static final int STATUS_UNFRIENDED = 4;
-    private static final int STATUS_BLOCKED_BY_FRIEND = 5;
-    private static final int STATUS_RECEIVED = 6;
+
 
     public List<FriendDTO> getAllFriends() {
 
