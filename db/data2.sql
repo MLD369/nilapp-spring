@@ -8,12 +8,6 @@ VALUES ( 2, '10k Dollars', 'Users contribute $10,000', 'photo', null, null,10000
 
 
 
-INSERT INTO public.affiliations(
-    name)
-VALUES ( 'Sun Belt');
-INSERT INTO public.affiliations(
-    name)
-VALUES ( 'D1 Football');
 -- INSERT INTO public.contribution_statuses(
 --     contribution_status_id,code, label, description)
 -- VALUES (1,'PENDING', 'Pending', 'Contribution is pending verification');
@@ -82,12 +76,12 @@ ALTER TABLE public.user_goals
     ADD COLUMN user_goal_status_id INT REFERENCES public.user_goal_statuses(user_goal_status_id) DEFAULT 1;
 
 -- Add tracking columns to statistics tables to ensure data is read exactly once
-ALTER TABLE public.entity_stats
-    ADD COLUMN is_processed BOOLEAN DEFAULT false,
-    ADD COLUMN payout_batch_id BIGINT;
-
-ALTER TABLE public.group_stats
-    ADD COLUMN is_processed BOOLEAN DEFAULT false;
+-- ALTER TABLE public.entity_stats
+--     ADD COLUMN is_processed BOOLEAN DEFAULT false,
+--     ADD COLUMN payout_batch_id BIGINT;
+--
+-- ALTER TABLE public.group_stats
+--     ADD COLUMN is_processed BOOLEAN DEFAULT false;
 
 INSERT INTO public.entity_types(
     type, description)

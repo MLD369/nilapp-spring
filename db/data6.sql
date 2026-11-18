@@ -37,7 +37,7 @@ GROUP BY
     (ga->>'groupId'),
     month_label,
     year_label,
-    c.status_id,
+    c.contribution_status_id,
     c.created_at;
 
 INSERT INTO public.user_streaks(

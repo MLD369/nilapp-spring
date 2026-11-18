@@ -271,8 +271,7 @@ CREATE INDEX idx_group_stats_user ON group_stats (user_id);
 -- ALTER TABLE user_achievements
 --     ADD CONSTRAINT unique_user_achievement_run UNIQUE (user_id, achievement_id, earned_at);
 -- ALTER TABLE public.user_achievements DROP CONSTRAINT IF EXISTS unique_user_achievement_run;
-ALTER TABLE public.user_achievements
-    ADD CONSTRAINT unique_user_goal_instance_badge UNIQUE (user_id, goal_instance_id);
+
 
 
 ALTER TABLE goal_instances ADD COLUMN completed_at TIMESTAMP;
@@ -492,6 +491,8 @@ ALTER TABLE public.user_streaks ADD COLUMN  IF NOT EXISTS clean_streak_days INTE
 ALTER TABLE public.user_streaks ADD COLUMN  IF NOT EXISTS last_shield_evaluated_date DATE;
 ALTER TABLE public.user_streaks ADD COLUMN  IF NOT EXISTS shield_claimable BOOLEAN NOT NULL DEFAULT FALSE;
 
+ALTER TABLE public.user_achievements
+    ADD CONSTRAINT unique_user_goal_instance_badge UNIQUE (user_id, goal_instance_id);
 
 -- // TODO payout batch needs something to stop duplicates payout batch id, enitity id , transaction ref, tracking number,
 -- todo I DONT THINK THERE SHOULD BE DUPLICATES entity and goal instances  also the batch need to change the status of the goal isntance

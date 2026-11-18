@@ -1,7 +1,9 @@
 DROP Table IF EXISTS achievement_types CASCADE;
 DROP Table IF EXISTS achievements CASCADE;
 DROP Table IF EXISTS affiliations CASCADE;
+DROP Table IF EXISTS affiliation_types CASCADE;
 DROP Table IF EXISTS contribution_statuses CASCADE;
+DROP Table IF EXISTS contribution_types CASCADE;
 DROP Table IF EXISTS contributions CASCADE;
 DROP Table IF EXISTS daily_stats CASCADE;
 DROP Table IF EXISTS entities CASCADE;
@@ -15,21 +17,25 @@ DROP Table IF EXISTS goal_instances CASCADE;
 DROP Table IF EXISTS goals CASCADE;
 DROP Table IF EXISTS goal_types CASCADE;
 DROP Table IF EXISTS group_achievements CASCADE;
-DROP Table IF EXISTS group_goal_histories CASCADE; -- deleted
-DROP Table IF EXISTS group_goals CASCADE; -- deleted
+DROP Table IF EXISTS group_entities CASCADE;
 DROP Table IF EXISTS groups CASCADE;
 DROP Table IF EXISTS group_stats CASCADE;
+DROP Table IF EXISTS pacing_statuses CASCADE;
 DROP Table IF EXISTS payout_batches CASCADE;
 DROP Table IF EXISTS sponsor_campaigns CASCADE;
 DROP Table IF EXISTS sponsors CASCADE;
 DROP Table IF EXISTS user_achievements CASCADE;
 DROP Table IF EXISTS user_entities CASCADE;
-DROP Table IF EXISTS user_goal_histories CASCADE; -- deleted
+DROP Table IF EXISTS user_goal_statuses CASCADE;
 DROP Table IF EXISTS user_goals CASCADE;
 DROP Table IF EXISTS user_groups CASCADE;
-DROP Table IF EXISTS user_progress CASCADE; -- deleted
+DROP Table IF EXISTS user_streaks CASCADE;
 DROP Table IF EXISTS users CASCADE ;
-DROP TABLE IF EXISTS public.group_entities;
+
+DROP Table IF EXISTS group_goal_histories CASCADE; -- deleted
+DROP Table IF EXISTS group_goals CASCADE; -- deleted
+DROP Table IF EXISTS user_progress CASCADE; -- deleted
+DROP Table IF EXISTS user_goal_histories CASCADE; -- deleted
 -- TODO make sure all tables are in drop list
 
 CREATE TABLE "users" (
@@ -105,9 +111,9 @@ CREATE TABLE "contributions" (
                                  "ad_session_id" varchar(100),
                                  "created_at" timestamp DEFAULT (now()),
                                  "payout_batch_id" bigint,
-                                 "contribution_status_id" int NOT NULL DEFAULT 1,
---                                  "contribution_type_id" INT NOT NULL REFERENCES contribution_types(contribution_type_id),  // added later TODO just use this
---                                  allocation_snapshot JSONB;  // added later TODO just use this
+                                 "contribution_status_id" int NOT NULL DEFAULT 1
+--                                  "contribution_type_id" INT NOT NULL REFERENCES contribution_types(contribution_type_id),  added later TODO just use this
+--                                  allocation_snapshot JSONB;   added later TODO just use this
 );
 
 CREATE TABLE "payout_batches" (
@@ -269,7 +275,7 @@ CREATE TABLE "goal_instances" (
                                   "coins_contributed" bigint NOT NULL DEFAULT 0,
                                   "steps_needed" bigint,
                                   "coins_needed" bigint,
-                                  "dollar_amount"  decimal(10,6) NOT NULL,
+                                  "dollar_amount"  decimal(10,6) NOT NULL DEFAULT 0
 );
 
 CREATE TABLE "user_goals" (
@@ -462,7 +468,7 @@ COMMENT ON COLUMN "achievement_types"."type" IS 'GOAL';
 
 COMMENT ON COLUMN "friend_statuses"."status" IS 'accepted  -- pending, accepted, blocked';
 
-COMMENT ON COLUMN "groups"."entities" IS 'if we attach entities to groups';
+-- COMMENT ON COLUMN "groups"."entities" IS 'if we attach entities to groups';
 
 COMMENT ON COLUMN "goal_types"."type" IS '(APP, ENTITY, GROUP)';
 
@@ -504,7 +510,7 @@ ALTER TABLE "daily_stats" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("user_
 
 ALTER TABLE "entity_affiliations" ADD FOREIGN KEY ("entity_id") REFERENCES "entities" ("entity_id") DEFERRABLE INITIALLY IMMEDIATE;
 
-ALTER TABLE "entity_affiliations" ADD FOREIGN KEY ("affiliation_id") REFERENCES "affiliations" ("affiliations_id") DEFERRABLE INITIALLY IMMEDIATE;
+ALTER TABLE "entity_affiliations" ADD FOREIGN KEY ("affiliation_id") REFERENCES "affiliations" ("affiliation_id") DEFERRABLE INITIALLY IMMEDIATE;
 
 ALTER TABLE "entity_achievements" ADD FOREIGN KEY ("entity_id") REFERENCES "entities" ("entity_id") DEFERRABLE INITIALLY IMMEDIATE;
 

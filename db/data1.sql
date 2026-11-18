@@ -27,5 +27,10 @@ VALUES
     ('AD', 'Advertisement', 'User viewed an ad and earned NIL coins'),
     ('SURVEY', 'Survey', 'User completed a survey and earned NIL coins');
 
-
+INSERT INTO public.affiliations(
+    name)
+VALUES ( 'Sun Belt');
+INSERT INTO public.affiliations(
+    name)
+VALUES ( 'D1 Football');
 
