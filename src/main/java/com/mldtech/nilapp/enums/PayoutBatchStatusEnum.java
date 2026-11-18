@@ -5,15 +5,32 @@ import lombok.Getter;
 @Getter
 public enum PayoutBatchStatusEnum {
 
-    DRAFT("Initial draft payout batch created and awaiting review"),
-    PENDING_FINANCE_RELEASE("Approved by system and awaiting finance team release"),
-    PROCESSING("Payout transfer is currently in progress"),
-    SETTLED("Funds have been successfully transferred and settled"),
-    FAILED("Payout processing encountered an error and requires attention");
+    DRAFT(
+            "Created (Waiting for clearing date)",
+            "Default initial payout batch state upon creation"
+    ),
+    PENDING_FINANCE_RELEASE(
+            "Ready for manager release",
+            "Reached or passed recommended cash-clearing date and awaiting financial release"
+    ),
+    PROCESSING(
+            "Manager approved & generating file",
+            "Manager has initiated payout file generation"
+    ),
+    SETTLED(
+            "It has been paid",
+            "Finalized with payment tracking IDs and disbursement completed"
+    ),
+    FAILED(
+            "Failed processing",
+            "Payout batch processing failed and requires review"
+    );
 
+    private final String laymanDescription;
     private final String description;
 
-    PayoutBatchStatusEnum(String description) {
+    PayoutBatchStatusEnum(String laymanDescription, String description) {
+        this.laymanDescription = laymanDescription;
         this.description = description;
     }
 

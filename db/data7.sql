@@ -499,23 +499,25 @@ ALTER TABLE public.user_achievements
 
 -- payout batch status
 CREATE TABLE "payout_batch_statuses" (
-                                         "status_code" VARCHAR(50) PRIMARY KEY,
-                                         "description" TEXT,
-                                         "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+"status_code" VARCHAR(50) PRIMARY KEY,
+"layman_description" VARCHAR(100) NOT NULL,
+"description" TEXT,
+"created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO "payout_batch_statuses" ("status_code", "description") VALUES
-                                                                       ('DRAFT', 'Initial draft payout batch created and awaiting review'),
-                                                                       ('PENDING_FINANCE_RELEASE', 'Approved by system and awaiting finance team release'),
-                                                                       ('PROCESSING', 'Payout transfer is currently in progress'),
-                                                                       ('SETTLED', 'Funds have been successfully transferred and settled'),
-                                                                       ('FAILED', 'Payout processing encountered an error and requires attention');
+INSERT INTO "payout_batch_statuses" ("status_code", "layman_description", "description") VALUES
+('DRAFT', 'Created (Waiting for clearing date)', 'Default initial payout batch state upon creation'),
+('PENDING_FINANCE_RELEASE', 'Ready for manager release', 'Reached or passed recommended cash-clearing date and awaiting financial release'),
+('PROCESSING', 'Manager approved & generating file', 'Manager has initiated payout file generation'),
+('SETTLED', 'It has been paid', 'Finalized with payment tracking IDs and disbursement completed'),
+('FAILED', 'Failed processing', 'Payout batch processing failed and requires review');
+
 
 ALTER TABLE "payout_batches"
-    ADD COLUMN "status" VARCHAR(50) NOT NULL DEFAULT 'DRAFT';
+ADD COLUMN "status" VARCHAR(50) NOT NULL DEFAULT 'DRAFT';
 
 ALTER TABLE "payout_batches"
-    ADD CONSTRAINT "fk_payout_batches_status"
-        FOREIGN KEY ("payout_status")
-            REFERENCES "payout_batch_statuses" ("status_code")
-            ON UPDATE CASCADE;
+ADD CONSTRAINT "fk_payout_batches_status"
+FOREIGN KEY ("payout_status")
+REFERENCES "payout_batch_statuses" ("status_code")
+ON UPDATE CASCADE;
