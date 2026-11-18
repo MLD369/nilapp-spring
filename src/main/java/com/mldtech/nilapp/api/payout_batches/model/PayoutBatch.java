@@ -1,5 +1,6 @@
 package com.mldtech.nilapp.api.payout_batches.model;
 
+import com.mldtech.nilapp.enums.PayoutBatchStatusEnum;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -46,8 +47,10 @@ public class PayoutBatch {
     @Column(name = "tracking_number")
     private String trackingNumber;
 
-    @Column(name = "payout_status")
-    private String payoutStatus;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payout_status", nullable = false, length = 50)
+    @Builder.Default
+    private PayoutBatchStatusEnum payoutStatus = PayoutBatchStatusEnum.DRAFT;
 
     @Column(name = "total_coins_processed")
     @Builder.Default

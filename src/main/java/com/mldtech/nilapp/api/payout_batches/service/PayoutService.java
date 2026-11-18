@@ -5,6 +5,7 @@ import com.mldtech.nilapp.api.GoalInstances.model.GoalInstance;
 import com.mldtech.nilapp.api.GoalInstances.repository.GoalInstanceRepository;
 import com.mldtech.nilapp.api.payout_batches.model.PayoutBatch;
 import com.mldtech.nilapp.api.payout_batches.repository.PayoutBatchRepository;
+import com.mldtech.nilapp.enums.PayoutBatchStatusEnum;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,7 +61,7 @@ public class PayoutService {
                 .totalCoinsProcessed(totalCoins)
                 .paymentMethod("ACH")
                 .trackingNumber("TRACE_PENDING_AUDIT")
-                .payoutStatus("DRAFT") // Default state
+                .payoutStatus(PayoutBatchStatusEnum.valueOf("DRAFT")) // Default state
                 .periodStart(goalInstance.getStartDate())
                 .periodEnd(goalInstance.getEndDate())
                 .transactionRef("TX_DRAFT_" + goalInstanceId + "_" + System.currentTimeMillis())
@@ -82,7 +83,7 @@ public class PayoutService {
                 .amountPaid(BigDecimal.ZERO)
                 .paymentMethod("NONE")
                 .trackingNumber("ERROR_LOGGED")
-                .payoutStatus("FAILED") // Captured exception status
+                .payoutStatus(PayoutBatchStatusEnum.valueOf("FAILED")) // Captured exception status
                 .transactionRef("ERR_" + goalInstanceId + "_" + System.currentTimeMillis())
                 .s3ManifestUrl("none")
                 .updatedAt(java.time.LocalDateTime.now())
@@ -98,11 +99,11 @@ public class PayoutService {
         PayoutBatch batch = payoutBatchRepository.findByGoalInstanceId(goalInstanceId)
                 .orElseThrow(() -> new IllegalStateException("No payout record found for this instance."));
 
-        if (!"DRAFT".equals(batch.getPayoutStatus())) {
+        if (!PayoutBatchStatusEnum.valueOf("DRAFT").equals(batch.getPayoutStatus())) {
             throw new IllegalStateException("Cannot process payout. Status must be DRAFT but was: " + batch.getPayoutStatus());
         }
 
-        batch.setPayoutStatus("PROCESSING");
+        batch.setPayoutStatus(PayoutBatchStatusEnum.valueOf("PROCESSING"));
         batch.setUpdatedAt(java.time.LocalDateTime.now());
         return payoutBatchRepository.save(batch);
     }
@@ -115,13 +116,13 @@ public class PayoutService {
         PayoutBatch batch = payoutBatchRepository.findByGoalInstanceId(goalInstanceId)
                 .orElseThrow(() -> new IllegalStateException("No active payout record found for execution."));
 
-        if (!"PROCESSING".equals(batch.getPayoutStatus())) {
+        if (!PayoutBatchStatusEnum.valueOf("PROCESSING").equals(batch.getPayoutStatus())) {
             throw new IllegalStateException("Cannot settle payout. Status must be PROCESSING to authorize wire clearing.");
         }
 
         batch.setPaymentMethod(paymentMethod);
         batch.setTrackingNumber(trackingNumber);
-        batch.setPayoutStatus("SETTLED");
+        batch.setPayoutStatus(PayoutBatchStatusEnum.valueOf("SETTLED"));
         batch.setUpdatedAt(java.time.LocalDateTime.now());
 
         // Safely updates the contribution tables to PAID now that the transaction has been verified
