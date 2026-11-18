@@ -647,6 +647,23 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
 """)
     String findGoalNameByGoalInstanceId(@Param("goalInstanceId") Long goalInstanceId);
 
+    @Query("""
+        SELECT new com.mldtech.nilapp.api.users.dto.EntityNilLeaderDTO(
+            e.entityId,
+            e.name,
+            COALESCE(SUM(c.coinsContributed), 0L)
+        )
+        FROM Contribution c
+        JOIN Entities e ON c.entityId = e.entityId
+        WHERE c.createdAt BETWEEN :startTs AND :endTs
+          AND e.isActive = true
+        GROUP BY e.entityId, e.name
+        ORDER BY COALESCE(SUM(c.coinsContributed), 0L) DESC
+    """)
+    List<EntityNilLeaderDTO> findEntityNilLeaders(
+            @Param("startTs") LocalDateTime startTs,
+            @Param("endTs") LocalDateTime endTs
+    );
 
 }
 

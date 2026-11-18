@@ -70,6 +70,7 @@ public class LeaderboardController {
     //     //TODO add device device(ios,android1) maybe should list per device and overall. maybe go deeper by watch type or brand or provider
     @GetMapping("/detailed")
     public CustomResponse<DetailedLeaderboardResponse> getDetailedLeaderboard(
+            @RequestParam Long userId,
             @RequestParam String startDate,
             @RequestParam String endDate,
             @RequestParam String leaderboardCategory,
@@ -88,6 +89,7 @@ public class LeaderboardController {
 
             System.out.println("====================================");
         DetailedLeaderboardResponse response = leaderboardService.getLeaderboardFilteredRanks(
+            userId,
             startDate,
             endDate,
             leaderboardCategory,

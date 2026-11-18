@@ -82,5 +82,21 @@ public interface UserAchievementRepository extends JpaRepository<UserAchievement
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end
     );
+
+    @Query(value = """
+        SELECT ua.user_id       AS userId,
+               u.username       AS username,
+               COUNT(ua.achievement_id) AS totalAchievements
+        FROM user_achievements ua
+        JOIN users u ON ua.user_id = u.user_id
+        WHERE ua.created_at BETWEEN :startTs AND :endTs
+        GROUP BY ua.user_id, u.username
+        ORDER BY totalAchievements DESC
+    """, nativeQuery = true)
+    List<Object[]> findTopUserAchievementRows(
+            @Param("startTs") LocalDateTime startTs,
+            @Param("endTs") LocalDateTime endTs
+    );
+
 }
 
