@@ -1,5 +1,6 @@
 package com.mldtech.nilapp.api.payout_batches.model;
 
+import com.mldtech.nilapp.enums.PaymentMethodEnum;
 import com.mldtech.nilapp.enums.PayoutBatchStatusEnum;
 import jakarta.persistence.*;
 import lombok.*;
@@ -41,8 +42,10 @@ public class PayoutBatch {
     @Column(name = "s3_manifest_url")
     private String s3ManifestUrl;
 
-    @Column(name = "payment_method")
-    private String paymentMethod;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", length = 50)
+    private PaymentMethodEnum paymentMethod;
+
 
     @Column(name = "tracking_number")
     private String trackingNumber;

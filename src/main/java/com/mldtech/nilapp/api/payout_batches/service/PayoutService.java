@@ -5,6 +5,7 @@ import com.mldtech.nilapp.api.GoalInstances.model.GoalInstance;
 import com.mldtech.nilapp.api.GoalInstances.repository.GoalInstanceRepository;
 import com.mldtech.nilapp.api.payout_batches.model.PayoutBatch;
 import com.mldtech.nilapp.api.payout_batches.repository.PayoutBatchRepository;
+import com.mldtech.nilapp.enums.PaymentMethodEnum;
 import com.mldtech.nilapp.enums.PayoutBatchStatusEnum;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -59,7 +60,7 @@ public class PayoutService {
                 .amountPaid(amountPaid)
                 .totalClaimedStepsProcessed(totalSteps)
                 .totalCoinsProcessed(totalCoins)
-                .paymentMethod("ACH")
+                .paymentMethod(PaymentMethodEnum.valueOf("ACH"))
                 .trackingNumber("TRACE_PENDING_AUDIT")
                 .payoutStatus(PayoutBatchStatusEnum.valueOf("DRAFT")) // Default state
                 .periodStart(goalInstance.getStartDate())
@@ -81,7 +82,7 @@ public class PayoutService {
         PayoutBatch failedLog = PayoutBatch.builder()
                 .goalInstanceId(goalInstanceId)
                 .amountPaid(BigDecimal.ZERO)
-                .paymentMethod("NONE")
+                .paymentMethod(PaymentMethodEnum.valueOf("NONE"))
                 .trackingNumber("ERROR_LOGGED")
                 .payoutStatus(PayoutBatchStatusEnum.valueOf("FAILED")) // Captured exception status
                 .transactionRef("ERR_" + goalInstanceId + "_" + System.currentTimeMillis())
@@ -120,7 +121,7 @@ public class PayoutService {
             throw new IllegalStateException("Cannot settle payout. Status must be PROCESSING to authorize wire clearing.");
         }
 
-        batch.setPaymentMethod(paymentMethod);
+        batch.setPaymentMethod(PaymentMethodEnum.valueOf(paymentMethod));
         batch.setTrackingNumber(trackingNumber);
         batch.setPayoutStatus(PayoutBatchStatusEnum.valueOf("SETTLED"));
         batch.setUpdatedAt(java.time.LocalDateTime.now());
