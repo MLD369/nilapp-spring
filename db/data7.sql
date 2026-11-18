@@ -487,6 +487,11 @@ ALTER TABLE public.group_stats ADD COLUMN IF NOT EXISTS goal_instance_id bigint;
 -- to say User goal batch is synce
 ALTER TABLE public.contributions ADD COLUMN IF NOT EXISTS is_synced_to_user_goals boolean DEFAULT false NOT NULL;
 
+--  code for shield logic clean streak
+ALTER TABLE public.user_streaks ADD COLUMN  IF NOT EXISTS clean_streak_days INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE public.user_streaks ADD COLUMN  IF NOT EXISTS last_shield_evaluated_date DATE;
+ALTER TABLE public.user_streaks ADD COLUMN  IF NOT EXISTS shield_claimable BOOLEAN NOT NULL DEFAULT FALSE;
+
 
 -- // TODO payout batch needs something to stop duplicates payout batch id, enitity id , transaction ref, tracking number,
 -- todo I DONT THINK THERE SHOULD BE DUPLICATES entity and goal instances  also the batch need to change the status of the goal isntance

@@ -1,7 +1,9 @@
 package com.mldtech.nilapp.api.UserStreak.repository;
 
 import com.mldtech.nilapp.api.UserStreak.model.UserStreak;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
@@ -140,12 +142,13 @@ public interface UserStreakRepository extends JpaRepository<UserStreak, Long> {
      */
     @Modifying
     @Query(value = """
-    UPDATE public.user_streaks 
-    SET previous_streak = :streakBackup,
-        current_streak = 0,
-        soft_reset_at = :today,
-        last_completed_date = NULL
-    WHERE user_id = :userId
+    UPDATE UserStreak u
+    SET u.previousStreak = :previousStreak,
+        u.currentStreak = 0,
+        u.softResetAt = :today,
+        u.cleanStreakDays = 0,
+        u.updatedAt = CURRENT_TIMESTAMP
+    WHERE u.user.userId = :userId
     """, nativeQuery = true)
     void softResetActiveStreak(
             @Param("userId") Long userId,
@@ -159,18 +162,31 @@ public interface UserStreakRepository extends JpaRepository<UserStreak, Long> {
      */
     @Modifying
     @Query(value = """
-    UPDATE public.user_streaks 
-    SET current_streak = :restoredValue,
-        previous_streak = 0,
-        soft_reset_at = NULL,
-        last_completed_date = :today
-    WHERE user_id = :userId
+    UPDATE UserStreak u
+    SET u.currentStreak = :restoredStreak,
+        u.lastCompletedDate = :today,
+        u.softResetAt = null,
+        u.cleanStreakDays = 0,
+        u.updatedAt = CURRENT_TIMESTAMP
+    WHERE u.user.userId = :userId
     """, nativeQuery = true)
     void restoreStreakState(
             @Param("userId") Long userId,
             @Param("restoredValue") int restoredValue,
             @Param("today") LocalDate today
     );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+    SELECT u FROM UserStreak u
+    WHERE u.lastCompletedDate = :yesterday
+      AND (u.lastShieldEvaluatedDate IS NULL OR u.lastShieldEvaluatedDate < :yesterday)
+""")
+    List<UserStreak> findAndLockProfilesEligibleForShieldEval(@Param("yesterday") LocalDate yesterday);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM UserStreak u WHERE u.user.userId = :userId")
+    Optional<UserStreak> findByUserIdForUpdate(@Param("userId") Long userId);
 
 
 }

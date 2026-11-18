@@ -2,6 +2,7 @@ package com.mldtech.nilapp.api.UserStreak.controller;
 
 
 import com.mldtech.nilapp.api.UserStreak.service.UserStreakService;
+import com.mldtech.nilapp.api.users.dto.ShieldEligibilityDTO;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,4 +65,15 @@ public class UserStreakController {
             ));
         }
     }
+
+    @GetMapping("/{userId}/shield-eligibility")
+    public ResponseEntity<ShieldEligibilityDTO> getShieldEligibility(@PathVariable Long userId) {
+        return ResponseEntity.ok(userStreakService.checkShieldEligibility(userId));
+    }
+
+    @PostMapping("/{userId}/claim-shield")
+    public ResponseEntity<ShieldEligibilityDTO> claimShield(@PathVariable Long userId) {
+        return ResponseEntity.ok(userStreakService.claimUnlockedShield(userId));
+    }
+
 }

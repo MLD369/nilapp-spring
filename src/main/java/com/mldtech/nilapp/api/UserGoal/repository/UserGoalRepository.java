@@ -1,12 +1,13 @@
-package com.mldtech.nilapp.api.users.children.UserGoal.repository;
+package com.mldtech.nilapp.api.UserGoal.repository;
 
 
-import com.mldtech.nilapp.api.users.children.UserGoal.model.UserGoal;
+import com.mldtech.nilapp.api.UserGoal.model.UserGoal;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -74,5 +75,14 @@ public interface UserGoalRepository extends JpaRepository<UserGoal, Long> {
    WHERE goal_instance_id = :goalInstanceId
    """, nativeQuery = true)
     List<Long> findUserGoalIdsByInstanceId(@Param("goalInstanceId") Long goalInstanceId);
+
+    // Finds active user goals whose parent GoalInstance is either expired by date OR already marked inactive
+    @Query("""
+    SELECT ug FROM UserGoal ug 
+    JOIN ug.goalInstance gi 
+    WHERE ug.isActive = true 
+      AND (gi.isActive = false OR (gi.endDate IS NOT NULL AND gi.endDate < :today))
+""")
+    List<UserGoal> findOrphanedOrExpiredActiveUserGoals(@Param("today") LocalDate today);
 
 }

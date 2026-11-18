@@ -91,5 +91,52 @@ public class BatchScheduler {
             log.error("Cron Trigger Failure: Critical issue caught during daily workout metric aggregation loop.", e);
         }
     }
+
+    /**
+     * Orchestrates daily user activity summarization by wrapping up yesterday's workout metrics
+     * and safely shifting them to lifetime profile stats.
+     * Runs every night at 12:01 AM.
+     */
+//    @Scheduled(cron = "0 1 0 * * *")
+    @Scheduled(fixedRate = 300000)
+    public void runScheduledDailyStatsAggregation() {
+        log.info("Executing nightly daily stats aggregation rollup...");
+        try {
+            batchService.executeDailyStatsAggregationBatch();
+        } catch (Exception e) {
+            log.error("Scheduled daily stats aggregation pipeline encountered a crash.", e);
+        }
+    }
+
+    /**
+     * Closes expired goal instances whose end_date has passed and cascades closure to active user goals.
+     * Runs every night at 12:05 AM.
+     */
+//    @Scheduled(cron = "0 5 0 * * *")
+    @Scheduled(fixedRate = 300000)
+    public void runScheduledGoalExpirationBatch() {
+        log.info("Executing nightly goal expiration batch...");
+        try {
+            batchService.closeExpiredGoals();
+        } catch (Exception e) {
+            log.error("Scheduled goal expiration batch encountered a crash.", e);
+        }
+    }
+
+    /**
+     * Evaluates yesterday's completed claims on frozen user_streaks rows (FOR UPDATE)
+     * and unlocks claimable Streak Shields on clean consistency milestones (3, 7, 14, 30, 60, 100...).
+     * Runs every night at 12:10 AM.
+     */
+//    @Scheduled(cron = "0 10 0 * * *")
+    @Scheduled(fixedRate = 300000)
+    public void runScheduledShieldMilestoneBatch() {
+        log.info("Executing nightly streak shield milestone unlock batch...");
+        try {
+            batchService.executeNightlyShieldMilestoneBatch();
+        } catch (Exception e) {
+            log.error("Scheduled streak shield milestone batch encountered a crash.", e);
+        }
+    }
 }
 

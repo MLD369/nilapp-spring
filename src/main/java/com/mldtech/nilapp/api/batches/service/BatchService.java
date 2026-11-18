@@ -1,38 +1,55 @@
 package com.mldtech.nilapp.api.batches.service;
 
+import com.mldtech.nilapp.api.UserStreak.model.UserStreak;
+import com.mldtech.nilapp.api.UserStreak.repository.UserStreakRepository;
 import com.mldtech.nilapp.api.contributions.repository.ContributionRepository;
 import com.mldtech.nilapp.api.daily_stat.repository.DailyStatRepository;
+import com.mldtech.nilapp.api.GoalInstances.model.GoalInstance;
+import com.mldtech.nilapp.api.GoalInstances.repository.GoalInstanceRepository;
 import com.mldtech.nilapp.api.payout_batches.service.PayoutService;
-import com.mldtech.nilapp.api.users.children.UserGoal.repository.UserGoalRepository;
+import com.mldtech.nilapp.api.UserGoal.model.UserGoal;
+import com.mldtech.nilapp.api.UserGoal.repository.UserGoalRepository;
 import com.mldtech.nilapp.enums.PacingStatusEnum;
 import com.mldtech.nilapp.enums.UserGoalStatusEnum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
+
+import static com.mldtech.nilapp.helper.AppConstants.AMOUNT_FOR_STREAK;
+import static com.mldtech.nilapp.helper.AppConstants.SHIELD_MILESTONES;
 
 @Service
 public class BatchService {
 
     private static final Logger log = LoggerFactory.getLogger(BatchService.class);
+
     private final ContributionRepository contributionRepository;
+    private final DailyStatRepository dailyStatRepository;
+    private final GoalInstanceRepository goalInstanceRepository;
     private final PayoutService payoutService;
     private final UserGoalRepository userGoalRepository;
-    private final DailyStatRepository dailyStatRepository;
+    private final UserStreakRepository userStreakRepository;
+
 
     // ======================================================================
     // Increase this value (e.g., to 5, 7, 14) as your user base scales to millions
     // to give manual audit teams and fraud verification queues more time to clear.
-    private static final int WORKOUT_COOLING_DAYS = 0; // TODO will need to find a good date for these
+    private static final int WORKOUT_COOLING_DAYS = 0; // TODO will need to find a good date for these and use app constants
 
-    public BatchService(ContributionRepository contributionRepository, PayoutService payoutService, UserGoalRepository userGoalRepository, DailyStatRepository dailyStatRepository) {
+    public BatchService(ContributionRepository contributionRepository, PayoutService payoutService, UserGoalRepository userGoalRepository, DailyStatRepository dailyStatRepository, GoalInstanceRepository goalInstanceRepository, UserStreakRepository userStreakRepository) {
         this.contributionRepository = contributionRepository;
         this.payoutService = payoutService;
         this.userGoalRepository = userGoalRepository;
         this.dailyStatRepository = dailyStatRepository;
+        this.goalInstanceRepository = goalInstanceRepository;
+        this.userStreakRepository = userStreakRepository;
     }
 
     // Inject PayoutService alongside your repository at the class level:
@@ -182,6 +199,116 @@ public class BatchService {
             throw e;
         }
     }
+
+
+    /**
+     * Closes expired goal instances and cascades closure to active user goals.
+     * Triggered nightly at 12:05 AM by BatchScheduler.
+     */
+    @Transactional
+    public void closeExpiredGoals() {
+        LocalDate today = LocalDate.now();
+        log.info("Starting daily goal expiration batch for date: {}", today);
+
+        // 1. Close expired GoalInstances
+        List<GoalInstance> expiredInstances = goalInstanceRepository.findExpiredActiveInstances(today);
+        for (GoalInstance gi : expiredInstances) {
+            gi.setIsActive(false);
+        }
+        if (!expiredInstances.isEmpty()) {
+            goalInstanceRepository.saveAll(expiredInstances);
+        }
+
+        // 2. Cascade closure to any active UserGoals tied to expired or inactive GoalInstances
+        List<UserGoal> activeUserGoalsToClose = userGoalRepository.findOrphanedOrExpiredActiveUserGoals(today);
+        LocalDateTime now = LocalDateTime.now();
+
+        for (UserGoal ug : activeUserGoalsToClose) {
+            ug.setIsActive(false);
+            if (ug.getLeftAt() == null && !Boolean.TRUE.equals(ug.getIsComplete())) {
+                ug.setLeftAt(now);
+            }
+        }
+        if (!activeUserGoalsToClose.isEmpty()) {
+            userGoalRepository.saveAll(activeUserGoalsToClose);
+        }
+
+        log.info("Goal expiration batch complete. Closed {} GoalInstances and {} UserGoals.",
+                expiredInstances.size(), activeUserGoalsToClose.size());
+    }
+
+
+
+    /**
+     * Freezes eligible user_streaks rows (FOR UPDATE), increments clean_streak_days,
+     * and unlocks shieldClaimable = true on exact consistency milestones (3, 7, 14, 30, 60, 100, 200...).
+     * Triggered nightly at 12:10 AM by BatchScheduler.
+     */
+    @Transactional
+    public void executeNightlyShieldMilestoneBatch() {
+        LocalDate yesterday = LocalDate.now().minusDays(1);
+        log.info("Starting nightly streak shield unlock batch for date: {}", yesterday);
+
+        int rowsFrozenAndEvaluated = 0;
+        int cleanStreaksIncremented = 0;
+        int shieldsUnlockedForClaim = 0;
+
+        try {
+            List<UserStreak> lockedProfiles = userStreakRepository.findAndLockProfilesEligibleForShieldEval(yesterday);
+            rowsFrozenAndEvaluated = lockedProfiles.size();
+
+            for (UserStreak streakRecord : lockedProfiles) {
+                Long userId = streakRecord.getUser().getUserId();
+                long yesterdayClaims = userStreakRepository.countYesterdayTotalClaimsAttempts(userId);
+
+                if (yesterdayClaims >= AMOUNT_FOR_STREAK) {
+                    int newCleanDays = (streakRecord.getCleanStreakDays() != null ? streakRecord.getCleanStreakDays() : 0) + 1;
+                    streakRecord.setCleanStreakDays(newCleanDays);
+                    cleanStreaksIncremented++;
+
+                    boolean isMilestone = SHIELD_MILESTONES.contains(newCleanDays)
+                            || (newCleanDays > 100 && newCleanDays % 100 == 0);
+
+                    if (isMilestone) {
+                        streakRecord.setShieldClaimable(true);
+                        shieldsUnlockedForClaim++;
+                        log.info("User ID {} unlocked a claimable Streak Shield at {} clean days!", userId, newCleanDays);
+                    }
+                } else {
+                    // Yesterday was rescued via shield/saver instead of normal claims -> reset clean streak
+                    streakRecord.setCleanStreakDays(0);
+                }
+
+                streakRecord.setLastShieldEvaluatedDate(yesterday);
+                streakRecord.setUpdatedAt(LocalDateTime.now());
+            }
+
+            if (!lockedProfiles.isEmpty()) {
+                userStreakRepository.saveAll(lockedProfiles);
+            }
+
+            log.info("""
+                
+                ======================================================================
+                🛡️ NIGHTLY STREAK SHIELD UNLOCK BATCH SUMMARY (DATE: {})
+                ======================================================================
+                🔹 User Streak Rows Frozen & Evaluated        -> [ {} rows locked ]
+                🔹 Clean Streak Days Incremented              -> [ {} clean days updated ]
+                🔹 Shields Unlocked for UI Claim              -> [ {} shields unlocked ]
+                ======================================================================
+                """,
+                    yesterday,
+                    rowsFrozenAndEvaluated,
+                    cleanStreaksIncremented,
+                    shieldsUnlockedForClaim
+            );
+
+        } catch (Exception e) {
+            log.error("Nightly streak shield batch failed. Row locks released and changes rolled back.", e);
+            throw e;
+        }
+    }
+
 }
 /*
 

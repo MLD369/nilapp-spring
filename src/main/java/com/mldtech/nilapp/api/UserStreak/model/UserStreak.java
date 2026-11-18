@@ -71,4 +71,15 @@ public class UserStreak {
     @Column(name = "soft_reset_at")
     private LocalDate softResetAt;
 
+    @Column(name = "clean_streak_days", nullable = false)
+    @Builder.Default
+    private Integer cleanStreakDays = 0;
+
+    @Column(name = "last_shield_evaluated_date")
+    private LocalDate lastShieldEvaluatedDate;
+
+    @Column(name = "shield_claimable", nullable = false)
+    @Builder.Default
+    private Boolean shieldClaimable = false;
+
 }
