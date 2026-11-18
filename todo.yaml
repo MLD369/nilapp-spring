@@ -2,21 +2,21 @@
 # TODO urgent
 
 
-auto setting primary key issue can switch to uuid or find a way to run this code
-SELECT setval(
-pg_get_serial_sequence('public.contributions', 'contribution_id'),
-COALESCE(MAX(contribution_id), 0) + 1,
-false
-) FROM public.contributions;
-Tip: If you ever migrate to UUIDs, use UUIDv7 (supported natively in modern database updates). They are time-ordered, meaning they solve index fragmentation while keeping the collision-proof benefits of UUIDs.
-solution is most likely // Safe: Instantly skips the sequence ahead by 1000 IDs to clear any blocking rows,
-  // without running a slow 'MAX(id)' table scan.
-  String fastBumpSql = "SELECT nextval('public.contributions_id_seq') + 1000";
-bigint 9 quintillions should never get reached in holes in the sequence are fine  
+#auto setting primary key issue can switch to uuid or find a way to run this code
+#SELECT setval(
+#pg_get_serial_sequence('public.contributions', 'contribution_id'),
+#COALESCE(MAX(contribution_id), 0) + 1,
+#false
+#) FROM public.contributions;
+#Tip: If you ever migrate to UUIDs, use UUIDv7 (supported natively in modern database updates). They are time-ordered, meaning they solve index fragmentation while keeping the collision-proof benefits of UUIDs.
+#solution is most likely // Safe: Instantly skips the sequence ahead by 1000 IDs to clear any blocking rows,
+#  // without running a slow 'MAX(id)' table scan.
+#  String fastBumpSql = "SELECT nextval('public.contributions_id_seq') + 1000";
+#bigint 9 quintillions should never get reached in holes in the sequence are fine
+
   
   
-  
-  add loggers and logs to every api
+add loggers and logs to every api
   
 need to use customresponse in all api calls
 
@@ -25,11 +25,11 @@ fix all repo names
 no random longs that should be ints for tables and classes
 
 
-get user and children working
+#get user and children working
 
-get entity working 
+#get entity working 
 
-get other objects working
+#get other objects working
 
 #TODO this will be db batch to make monthly weekly and yearly task even daily
 #todo CREATE a leveling system, steaks boost exp, medals give exp, group and entity goals give exp
@@ -41,32 +41,32 @@ maybe take the garmin UI for stats?
 #TODO  block possible exploit using postman for claims,streaks, etc
 
 ##################################################################Android#################################################################
-get user steps
+#get user steps
 
-calculate steps
+#calculate steps
 
-run apis
+#run apis
 
-pages
-home
-leaderboard
-college sign up
-your stats
-settings
+#pages
+#home
+#leaderboard
+college sign up websites and apis
+#your stats
+#settings
 
-  select goals ,   point allocation
-  view badges
-  select entities
-  user entity history
+#  select goals ,   point allocation
+#  view badges
+#  select entities
+#  user entity history
   
-friends  view friends view groups
+#friends  view friends view groups
 
 ##################################################################Xcode##################################################################
-get user steps
+#get user steps
 
-calculate steps
+#calculate steps
 
-run apis
+#run apis
 
 ##################################################################aws##################################################################
 put java in ec2 port 8082
@@ -162,16 +162,16 @@ Authentication
   
   ##################################################################DB##################################################################
 #make data
-normalize database  same name in parent and child
+normalize database same name in parent and child
 
 make should entity have a entity_goals table or will entites have their own goals
 entities_goal
 
 make payout batch data
 
-make groups table many to many
+#make groups table many to many
 #make friends table 
-needs CHECK (user_id < friend_id) - to make sure there are not duplicate friend request
+#needs CHECK (user_id < friend_id) - to make sure there are not duplicate friend request
   
 # make many to many relationship for user and entities need to update data
 
@@ -227,11 +227,11 @@ GRANT DELETE ON TABLES TO wc_app_user;
 
 /////////////////////
 
-i want to be able to get this api on the  EntityDetailsScreen
+#i want to be able to get this api on the  EntityDetailsScreen
 
-i need ViewModel
-ViewModelFactory
-api service update
-model update
-user repository update
-main activity update
+#i need ViewModel
+#ViewModelFactory
+#api service update
+#model update
+#user repository update
+#main activity update
