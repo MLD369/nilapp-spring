@@ -21,6 +21,7 @@ DROP Table IF EXISTS group_entities CASCADE;
 DROP Table IF EXISTS groups CASCADE;
 DROP Table IF EXISTS group_stats CASCADE;
 DROP Table IF EXISTS pacing_statuses CASCADE;
+DROP Table IF EXISTS payment_methods CASCADE;
 DROP Table IF EXISTS payout_batches CASCADE;
 DROP Table IF EXISTS payout_batch_statuses CASCADE;
 DROP Table IF EXISTS sponsor_campaigns CASCADE;

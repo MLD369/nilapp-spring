@@ -521,3 +521,31 @@ ADD CONSTRAINT "fk_payout_batches_status"
 FOREIGN KEY ("payout_status")
 REFERENCES "payout_batch_statuses" ("status_code")
 ON UPDATE CASCADE;
+
+
+CREATE TABLE "payment_methods" (
+"method_code" VARCHAR(50) PRIMARY KEY,
+"layman_description" VARCHAR(100) NOT NULL,
+"description" TEXT,
+"is_active" BOOLEAN NOT NULL DEFAULT TRUE,
+"created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO "payment_methods" ("method_code", "layman_description", "description") VALUES
+('ACH', 'Direct Bank Deposit (ACH)', 'Automated Clearing House electronic bank-to-bank transfer'),
+('WIRE', 'Bank Wire Transfer', 'Same-day or international direct wire disbursement'),
+('CHECK', 'Physical Mailed Check', 'Printed paper check mailed to the organization address'),
+('ZELLE', 'Zelle Instant Transfer', 'Direct email or phone-linked bank transfer via Zelle'),
+('PAYPAL', 'PayPal Payout', 'Electronic disbursement sent to a verified PayPal business account'),
+('STRIPE_CONNECT', 'Stripe Direct Payout', 'Automated platform transfer via Stripe Connect'),
+('VIRTUAL_CARD', 'Virtual Prepaid Card', 'Digital single-use or reloadable corporate disbursement card'),
+('NONE', 'No payment method because of failure', 'Record Processing Failure');
+
+-- ALTER TABLE "payout_batches"
+-- ADD COLUMN "payment_method" VARCHAR(50);
+
+ALTER TABLE "payout_batches"
+ADD CONSTRAINT "fk_payout_batches_payment_method"
+FOREIGN KEY ("payment_method")
+REFERENCES "payment_methods" ("method_code")
+ON UPDATE CASCADE;
