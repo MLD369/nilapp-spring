@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,11 +25,11 @@ public class ContributionController {
     private final ContributionService contributionService;
 
     @GetMapping("/user/{userId}/1")
-    public List<Contribution> getContributionsForUser(@PathVariable Long userId) {
+    public List<Contribution> getContributionsForUser(@AuthenticationPrincipal Long userId) {
         return contributionService.getContributionsForUser(userId);
     }
     @GetMapping("/user/{userId}")
-    public CustomResponse<List<ContributionDTO>> getContributionsForUserDto(@PathVariable Long userId) {
+    public CustomResponse<List<ContributionDTO>> getContributionsForUserDto(@AuthenticationPrincipal Long userId) {
         return contributionService.getUserContributions(userId);
     }
 

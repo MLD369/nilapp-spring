@@ -384,8 +384,8 @@ ALTER TABLE public.user_streaks
     ADD COLUMN IF NOT EXISTS soft_reset_at DATE DEFAULT NULL;
 
 -- Add logic so daily steps has a status to say it has synced with users lifetime coins and steps
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS total_lifetime_steps INT DEFAULT 0;
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS total_lifetime_claimed_steps INT DEFAULT 0;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS total_lifetime_steps bigint DEFAULT 0;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS total_lifetime_claimed_steps bigint DEFAULT 0;
 
 
 -- 1. ADD BATCH SYNCHRONIZATION COLUMNS SAFELY WITH DEFAULTS
@@ -549,3 +549,32 @@ ADD CONSTRAINT "fk_payout_batches_payment_method"
 FOREIGN KEY ("payment_method")
 REFERENCES "payment_methods" ("method_code")
 ON UPDATE CASCADE;
+
+
+-- make take for refrest tokens TODO will need to change this if app grow to redis or something else
+-- Optional: Only add this if you want the PIN validated by Spring Boot across all platforms
+-- ALTER TABLE public.users ADD COLUMN pin_hash VARCHAR(255); pin will live in the app or device
+
+-- Table to track active device sessions and allow instant revocation
+CREATE TABLE public.refresh_tokens (
+                                       token_id BIGSERIAL PRIMARY KEY,
+                                       user_id BIGINT NOT NULL REFERENCES public.users(user_id) ON DELETE CASCADE,
+                                       token_hash VARCHAR(64) NOT NULL UNIQUE,
+                                       device_id VARCHAR(100) NOT NULL,
+                                       expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+                                       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                                       CONSTRAINT uq_user_device UNIQUE (user_id, device_id)
+);
+
+CREATE INDEX idx_refresh_tokens_expires_at ON public.refresh_tokens(expires_at);
+
+-- Fix password so encoded passwords  work
+ALTER TABLE public.users
+ALTER COLUMN password TYPE VARCHAR(255);
+
+ALTER TABLE public.users
+    ALTER COLUMN phone DROP NOT NULL,
+ALTER COLUMN first_name DROP NOT NULL, -- TODO might have to change for future apps if user can get things
+    ALTER COLUMN last_name DROP NOT NULL,  -- TODO might have to change for future apps if user can get things
+    ALTER COLUMN session_id DROP NOT NULL;
+ALTER TABLE public.users DROP CONSTRAINT IF EXISTS users_phone_key; -- if someone puts a fake phone it doesnt matter

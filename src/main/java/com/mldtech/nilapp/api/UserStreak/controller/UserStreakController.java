@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 @RestController
 @RequestMapping("/api/v1/user-streaks")
 @AllArgsConstructor
@@ -67,12 +67,12 @@ public class UserStreakController {
     }
 
     @GetMapping("/{userId}/shield-eligibility")
-    public ResponseEntity<ShieldEligibilityDTO> getShieldEligibility(@PathVariable Long userId) {
+    public ResponseEntity<ShieldEligibilityDTO> getShieldEligibility(@AuthenticationPrincipal Long userId) {
         return ResponseEntity.ok(userStreakService.checkShieldEligibility(userId));
     }
 
     @PostMapping("/{userId}/claim-shield")
-    public ResponseEntity<ShieldEligibilityDTO> claimShield(@PathVariable Long userId) {
+    public ResponseEntity<ShieldEligibilityDTO> claimShield(@AuthenticationPrincipal Long userId) {
         return ResponseEntity.ok(userStreakService.claimUnlockedShield(userId));
     }
 

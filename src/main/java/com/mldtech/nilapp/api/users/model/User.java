@@ -39,10 +39,10 @@ public class User {
     @Column(nullable = false, unique = true, length = 50)
     private String username;
 
-    @Column(nullable = false, length = 50,name = "first_name")
+    @Column(length = 50,name = "first_name")
     private String firstName;
 
-    @Column(nullable = false, length = 50,name = "last_name")
+    @Column(length = 50,name = "last_name")
     private String lastName;
 
     @Column(name = "middle_name")
@@ -51,7 +51,7 @@ public class User {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
-    @Column(nullable = false, unique = true, length = 20)
+    @Column(length = 20)
     private String phone;
 
     @Column(nullable = false, columnDefinition = "text")
@@ -59,6 +59,12 @@ public class User {
 
     @Column(name = "total_lifetime_coins")
     private Long totalLifetimeCoins;
+
+    @Column(name = "total_lifetime_steps")
+    private Long totalLifetimeSteps;
+
+    @Column(name = "total_lifetime_claimed_steps")
+    private Long totalLifetimeClaimedSteps;
 
     private LocalDate birthday;
     @Column(name = "birth_year")
@@ -80,7 +86,7 @@ public class User {
     private String timezone;
     @Column(nullable = false, length = 50,name = "force_password_change")
     private Boolean forcePasswordChange;
-    @Column(nullable = false, length = 50,name = "session_id")
+    @Column(length = 50,name = "session_id")
     private String sessionId;
 
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "user", orphanRemoval = true)

@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
-
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 @RestController
 @RequestMapping("/api/v1/daily-stats")
 @RequiredArgsConstructor
@@ -16,13 +16,13 @@ public class DailyStatController {
     private final DailyStatService service;
 
     @GetMapping("/{userId}")
-    public List<DailyStat> getStatsForUser(@PathVariable Long userId) {
+    public List<DailyStat> getStatsForUser(@AuthenticationPrincipal Long userId) {
         return service.getStatsForUser(userId);
     }
 
     @GetMapping("/{userId}/{date}")
     public DailyStat getStatForDay(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable String date
     ) {
         return service.getStatForDay(userId, LocalDate.parse(date));
@@ -30,7 +30,7 @@ public class DailyStatController {
 
     @GetMapping("/{userId}/range")
     public List<DailyStat> getStatsForRange(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @RequestParam String start,
             @RequestParam String end
     ) {
@@ -43,7 +43,7 @@ public class DailyStatController {
     }
 
     @PostMapping("/{userId}/total-device-steps")
-    public DailyStat syncYesterdayDeviceSteps(@PathVariable Long userId,@RequestBody DailyStat stat) {
+    public DailyStat syncYesterdayDeviceSteps(@AuthenticationPrincipal Long userId,@RequestBody DailyStat stat) {
         return service.syncYesterdayDeviceSteps(userId,stat.getTotalDeviceSteps());
     }
 }

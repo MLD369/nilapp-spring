@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.List;
 
@@ -24,7 +25,7 @@ public class FriendController {
 
     @PostMapping("/{userId}/request/{friendId}")
     public ResponseEntity<CustomResponse<?>> sendRequest(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long friendId
     ) {
         var result = service.sendFriendRequest(userId, friendId);
@@ -33,7 +34,7 @@ public class FriendController {
 
     @PostMapping("/{userId}/accept/{friendId}")
     public ResponseEntity<CustomResponse<?>> accept(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long friendId
     ) {
         var result = service.acceptFriendRequest(userId, friendId);
@@ -42,7 +43,7 @@ public class FriendController {
 
     @PostMapping("/{userId}/unfriend/{friendId}")
     public ResponseEntity<CustomResponse<?>> unfriend(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long friendId
     ) {
         var result = service.unfriend(userId, friendId);
@@ -51,7 +52,7 @@ public class FriendController {
 
     @PostMapping("/{userId}/block/{friendId}")
     public ResponseEntity<CustomResponse<?>> blockUser(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long friendId
     ) {
         var result = service.blockUser(userId, friendId);
@@ -60,7 +61,7 @@ public class FriendController {
 
     @PostMapping("/{userId}/unblock/{friendId}")
     public ResponseEntity<CustomResponse<?>> unblockUser(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long friendId,
             @RequestParam(defaultValue = "false") boolean refriend
     ) {

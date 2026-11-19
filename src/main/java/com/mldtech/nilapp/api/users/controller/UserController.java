@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
@@ -46,7 +46,7 @@ public class UserController {
      * @return CustomResponse containing UserProfileResponse
      */
     @GetMapping("/{userId}/profile") // TODO add user streak to this ???
-    public CustomResponse<UserProfileResponse> getUserProfile(@PathVariable Long userId) {
+    public CustomResponse<UserProfileResponse> getUserProfile(@AuthenticationPrincipal Long userId) {
         return userService.getUserProfile(userId);
     }
 
@@ -62,7 +62,7 @@ public class UserController {
     @GetMapping("/{userId}/contributions/summary")
     public CustomResponse<ContributionSummaryDTO> getUserContributionSummary(
             HttpServletRequest request,
-            @PathVariable Long userId
+            @AuthenticationPrincipal Long userId
     ) {
         return userService.getUserContributionSummary(userId);
     }
@@ -79,7 +79,7 @@ public class UserController {
      */
     @GetMapping("/{userId}/contributions/filter")
     public CustomResponse<List<ContributionDTO>> getUserContributionsByFilter(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @RequestParam(required = false) Long entityId,
             @RequestParam(required = false) Long groupId
     ) {
@@ -90,7 +90,7 @@ public class UserController {
      * Retrieves all achievements for a user.
      */
     @GetMapping("/{userId}/achievements")
-    public UserProfileResponse getUserAchievements(@PathVariable Long userId) {
+    public UserProfileResponse getUserAchievements(@AuthenticationPrincipal Long userId) {
         return userService.getUserAchievements(userId);
     }
 
@@ -98,7 +98,7 @@ public class UserController {
      * Retrieves all goals for a user.
      */
     @GetMapping("/{userId}/goals")
-    public UserProfileResponse getUserGoals(@PathVariable Long userId) {
+    public UserProfileResponse getUserGoals(@AuthenticationPrincipal Long userId) {
         return userService.getUserGoals(userId);
     }
 
@@ -107,7 +107,7 @@ public class UserController {
      */
     @GetMapping("/{userId}/goals/completed")
     public CustomResponse<UserProfileResponse> getUserCompletedGoals(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate
     ) {
@@ -120,7 +120,7 @@ public class UserController {
      */
     @GetMapping("/{userId}/goals/incompleted")
     public CustomResponse<UserProfileResponse> getUserIncompletedGoals(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate
     ) {
@@ -134,7 +134,7 @@ public class UserController {
      * @return CustomResponse containing UserProfileResponse with entity list
      */
     @GetMapping("/{userId}/entities")
-    public CustomResponse<UserProfileResponse> getUserEntities(@PathVariable Long userId) {
+    public CustomResponse<UserProfileResponse> getUserEntities(@AuthenticationPrincipal Long userId) {
         return userService.getUserEntities(userId);
     }
 
@@ -146,7 +146,7 @@ public class UserController {
      * Used for the "Entities" tab in the UI.
      */
     @GetMapping("/{userId}/entities/all")
-    public CustomResponse<List<EntityDTO>> getAllEntitiesWithUserStatus(@PathVariable Long userId) {
+    public CustomResponse<List<EntityDTO>> getAllEntitiesWithUserStatus(@AuthenticationPrincipal Long userId) {
         return entityService.getAllEntitiesWithUserStatus(userId);
     }
 
@@ -154,7 +154,7 @@ public class UserController {
      * Retrieves all friends for a user.
      */
     @GetMapping("/{userId}/friends")
-    public UserProfileResponse getUserFriends(@PathVariable Long userId) {
+    public UserProfileResponse getUserFriends(@AuthenticationPrincipal Long userId) {
         return userService.getUserFriends(userId);
     }
 
@@ -167,7 +167,7 @@ public class UserController {
      */
     @PutMapping("/{userId}/entities")
     public List<UserEntity> updateUserEntities(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @RequestBody UpdateUserEntitiesRequest request
     ) {
         return userEntityService.setUserEntities(userId, request.getEntityIds());
@@ -179,7 +179,7 @@ public class UserController {
      */
     @PostMapping("/{userId}/entities/{entityId}")
     public UserEntity addEntity(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long entityId
     ) {
         return userEntityService.addEntity(userId, entityId);
@@ -191,7 +191,7 @@ public class UserController {
      */
     @DeleteMapping("/{userId}/entities/{entityId}")
     public void removeEntity(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long entityId
     ) {
         userEntityService.removeEntity(userId, entityId);
@@ -209,7 +209,7 @@ public class UserController {
     @GetMapping("/{userId}/contribution-stats")
     public CustomResponse<List<ContributionPeriodStatsDTO>> getContributionStats(
             HttpServletRequest request,
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @RequestParam(required = false) Long entityId,
             @RequestParam(required = false) Long groupId,
             @RequestParam String period,
@@ -241,7 +241,7 @@ public class UserController {
      */
     @PostMapping("/{userId}/entities/{entityId}/join")
     public CustomResponse<String> joinEntity(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long entityId
     ) {
         return entityService.joinEntity(userId, entityId);
@@ -253,7 +253,7 @@ public class UserController {
      */
     @PutMapping("/{userId}/entities/{entityId}/leave")
     public CustomResponse<String> leaveEntity(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long entityId
     ) {
         return entityService.leaveEntity(userId, entityId);
@@ -269,7 +269,7 @@ public class UserController {
      */
     @PostMapping("/{userId}/groups/{groupId}/join")
     public CustomResponse<String> joinGroup(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long groupId
     ) {
         return groupService.joinGroup(userId, groupId);
@@ -281,7 +281,7 @@ public class UserController {
      */
     @PutMapping("/{userId}/groups/{groupId}/leave")
     public CustomResponse<String> leaveGroup(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long groupId
     ) {
         return groupService.leaveGroup(userId, groupId);
@@ -295,7 +295,7 @@ public class UserController {
      * Retrieves only the groups a user is currently a member of.
      */
     @GetMapping("/{userId}/groups")
-    public UserProfileResponse getUserGroups(@PathVariable Long userId) {
+    public UserProfileResponse getUserGroups(@AuthenticationPrincipal Long userId) {
         return userService.getUserGroups(userId);
     }
 
@@ -307,13 +307,13 @@ public class UserController {
      * Used for the "Groups" tab in the UI.
      */
     @GetMapping("/{userId}/groups/all")
-    public CustomResponse<List<GroupDTO>> getAllGroups(@PathVariable Long userId) {
+    public CustomResponse<List<GroupDTO>> getAllGroups(@AuthenticationPrincipal Long userId) {
         return groupService.getAllGroupsWithUserStatus(userId);
     }
 
     @GetMapping("/{userId}/stats")
     public CustomResponse<UserStatsResponse> getUserStats( /// for the stats page
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate
     ) {
@@ -323,7 +323,7 @@ public class UserController {
 
     @GetMapping("/{userId}/stats-by-period")
     public CustomResponse<UserStatsSummaryDTO> getUserStatsByPeriod(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @RequestParam String startDate,
             @RequestParam String endDate,
             @RequestParam String period
@@ -376,7 +376,7 @@ public class UserController {
 
 
     @GetMapping("/{userId}/goal-dashboard")
-    public CustomResponse<UserGoalDashboardResponse> getDashboard(@PathVariable Long userId) {
+    public CustomResponse<UserGoalDashboardResponse> getDashboard(@AuthenticationPrincipal Long userId) {
         try {
             UserGoalDashboardResponse dashboard = userService.getUserGoalDashboard(userId);
 
@@ -406,14 +406,14 @@ public class UserController {
     }
     @PostMapping("/{userId}/goal-instance/{goalInstanceId}/join")
     public Object joinGoal(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long goalInstanceId
     ) {
         return userGoalService.joinGoal(userId, goalInstanceId);
     }
     @PutMapping("/{userId}/goal-instance/{goalInstanceId}/leave")
     public Object leaveGoal(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long goalInstanceId
     ) {
         return userGoalService.leaveGoal(userId, goalInstanceId);
@@ -444,7 +444,7 @@ public class UserController {
     // ---------------------------------------------------------
     @GetMapping("/{userId}/stat-page")
     public CustomResponse<UserStatPageResponse> getUserStatPage(
-            @PathVariable Long userId,
+            @AuthenticationPrincipal Long userId,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate
     ) {
