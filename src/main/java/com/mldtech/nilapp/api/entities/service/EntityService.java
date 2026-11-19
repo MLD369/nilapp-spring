@@ -1,5 +1,6 @@
 package com.mldtech.nilapp.api.entities.service;
 
+import com.mldtech.nilapp.api.GoalInstances.service.GoalInstanceService;
 import com.mldtech.nilapp.api.entities.model.Entities;
 import com.mldtech.nilapp.api.entities.repository.EntityRepository;
 import com.mldtech.nilapp.api.GoalInstances.repository.GoalInstanceRepository;
@@ -32,6 +33,8 @@ public class EntityService {
     private final UserEntityRepository userEntityRepository;
     private final GoalInstanceRepository goalInstanceRepository;
     private final UserGoalRepository userGoalRepository;
+
+    private final GoalInstanceService goalInstanceService;
     private final Helper helper = new Helper();
 
     public CustomResponse<List<EntityDTO>> getAllEntities() {
@@ -91,8 +94,11 @@ public class EntityService {
                 .orElseThrow(() -> new RuntimeException("Entities not found"));
     }
 
-    public Entities createEntities(Entities Entities) {
-        return entityRepository.save(Entities);
+    @Transactional
+    public Entities createEntities(Entities entities) {
+        Entities savedEntity = entityRepository.save(entities);
+        goalInstanceService.createDefaultInstanceForEntity(savedEntity);
+        return savedEntity;
     }
 
     public Entities updateEntities(Long EntitiesId, Entities updated) {

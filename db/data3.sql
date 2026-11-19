@@ -45,7 +45,25 @@ INSERT INTO public.entity_affiliations(
     entity_id, affiliation_id)
 VALUES (1, 1);
 
-
+INSERT INTO public.goals (
+    goal_id,
+    goal_types_id,
+    achievement_id,
+    goal,
+    description,
+    completed_date,
+    goal_lock_date
+)
+VALUES (
+           0,
+           2,
+           0,
+           'General Community Pot',
+           'Default permanent fund for ongoing step and coin contributions when no specific goal is active',
+           '9999-12-31',
+           '9999-12-31'
+       )
+    ON CONFLICT (goal_id) DO NOTHING;
 INSERT INTO public.goals(
     goal_types_id, achievement_id, goal, description, completed_date, goal_lock_date)
 VALUES (1, 1, 'Raise 10k USD', 'Raise $10,000 for Track Team Travel', '9999-12-31', '9999-12-31');

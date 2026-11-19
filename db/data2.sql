@@ -1,4 +1,25 @@
 -- step 2
+INSERT INTO public.achievements (
+    achievement_id,
+    achievement_type,
+    achievement,
+    description,
+    badge,
+    required_steps,
+    required_distance,
+    required_coins
+)
+VALUES (
+           0,
+           2,
+           'General Fund Contributor',
+           'Default system achievement for general community contributions',
+           'default_pot_badge',
+           NULL,
+           NULL,
+           NULL
+       )
+    ON CONFLICT (achievement_id) DO NOTHING;
 INSERT INTO public.achievements(
     achievement_type, achievement, description, badge, required_steps, required_distance, required_coins)
 VALUES ( 1, '10k STEPS', 'User walked 10,000 steps', 'photo', 10000, null, null);

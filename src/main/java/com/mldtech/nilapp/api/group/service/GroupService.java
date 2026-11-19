@@ -1,5 +1,6 @@
 package com.mldtech.nilapp.api.group.service;
 
+import com.mldtech.nilapp.api.GoalInstances.service.GoalInstanceService;
 import com.mldtech.nilapp.api.entities.model.Entities;
 import com.mldtech.nilapp.api.GoalInstances.repository.GoalInstanceRepository;
 import com.mldtech.nilapp.api.GroupEntity.repository.GroupEntityRepository;
@@ -37,6 +38,8 @@ public class GroupService {
 
     private final Helper helper = new Helper();
 
+    private final GoalInstanceService goalInstanceService;
+
     public List<Group> getAllGroups() {
         return groupRepository.findAll();
     }
@@ -46,8 +49,11 @@ public class GroupService {
                 .orElseThrow(() -> new RuntimeException("Group not found"));
     }
 
+    @Transactional
     public Group createGroup(Group group) {
-        return groupRepository.save(group);
+        Group savedGroup = groupRepository.save(group);
+        goalInstanceService.createDefaultInstanceForGroup(savedGroup);
+        return savedGroup;
     }
 
     public Group updateGroup(Long groupId, Group updated) {
