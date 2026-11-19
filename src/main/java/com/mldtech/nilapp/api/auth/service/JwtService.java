@@ -20,7 +20,7 @@ public class JwtService {
     @Value("${jwt.secret}") // A 256-bit Base64 encoded secret in application.properties
     private String secretKey;
 
-    private static final long ACCESS_TOKEN_EXPIRATION_MS = 15 * 60 * 1000; // 15 minutes
+    private static final long ACCESS_TOKEN_EXPIRATION_MS = 15 * 60 * 1000; // 15 * 60 * 1000; = 15 minutes TODO 10*1000 to test 10 seconds
 
     public String generateAccessToken(Long userId, String username) {
         return Jwts.builder()

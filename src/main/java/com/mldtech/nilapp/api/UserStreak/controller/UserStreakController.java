@@ -26,7 +26,7 @@ public class UserStreakController {
      * Evaluates if their streak is safe or if the front-end should lock the screen and force a rescue pop-up.
      */
     @GetMapping("/{userId}/check-status")
-    public ResponseEntity<Map<String, Object>> verifyStreakOnAppOpen(@PathVariable("userId") Long userId) {
+    public ResponseEntity<Map<String, Object>> verifyStreakOnAppOpen(@AuthenticationPrincipal Long userId) {
         log.info("REST request to verify streak status on app open for User ID: {}", userId);
 
         Map<String, Object> streakStatus = userStreakService.checkStreakSafetyOnAppOpen(userId);
@@ -44,7 +44,7 @@ public class UserStreakController {
      */
     @PostMapping("/{userId}/rescue-selection")
     public ResponseEntity<Map<String, Object>> submitStreakRescueChoice(
-            @PathVariable("userId") Long userId,
+            @AuthenticationPrincipal Long userId,
             @RequestBody Map<String, Object> payload) {
 
         // Securely extract the choice string from the JSON body payload
