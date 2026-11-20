@@ -20,6 +20,27 @@ VALUES (
            NULL
        )
     ON CONFLICT (achievement_id) DO NOTHING;
+-- 3. Insert "Shield Hoarder" at achievement_id = 1
+INSERT INTO public.achievements (
+    achievement_id,
+    achievement_type,
+    achievement,
+    description,
+    badge,
+    required_steps,
+    required_distance,
+    required_coins
+)
+VALUES (
+           1,
+           4, -- Adjust to match your milestone/general achievement_type
+           'Shield Hoarder',
+           'Earned an extra shield while already holding the maximum of 3 shields',
+           'shield_hoarder_badge',
+           NULL,
+           NULL,
+           NULL
+       );
 INSERT INTO public.achievements(
     achievement_type, achievement, description, badge, required_steps, required_distance, required_coins)
 VALUES ( 1, '10k STEPS', 'User walked 10,000 steps', 'photo', 10000, null, null);
