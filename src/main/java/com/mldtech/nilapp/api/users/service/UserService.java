@@ -33,10 +33,12 @@ import com.mldtech.nilapp.api.users.repository.UserRepository;
 import com.mldtech.nilapp.helper.CustomResponse;
 import com.mldtech.nilapp.helper.Helper;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
+
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -73,6 +75,8 @@ public class UserService {
     Helper helper = new Helper();
 
 
+    private static final int MIN_SEARCH_LENGTH = 2;
+    private static final int MAX_SEARCH_RESULTS = 15;
 //    @Transactional   /// TODO change this to the right way with dtos
 //    public UserProfileResponse getUserProfile(Long userId) {
 //
@@ -205,6 +209,10 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
             HttpStatus.OK,
             "200"
     );
+
+
+
+
 }
 
 //    public UserProfileResponse getUserAchievements(Long userId) {
@@ -1592,7 +1600,18 @@ public CustomResponse<UserProfileResponse> getUserProfile(Long userId) {
     }
 
 
+    @Transactional(readOnly = true)
+    public List<UserSearchDTO> searchUsersByUsername(String query) {
+        String trimmed = (query == null) ? "" : query.trim();
+        if (trimmed.length() < MIN_SEARCH_LENGTH) {
+            return List.of();
+        }
 
+        return userRepository.searchByUsernamePrefix(
+                trimmed,
+                PageRequest.of(0, MAX_SEARCH_RESULTS)
+        );
+    }
 
 
 }

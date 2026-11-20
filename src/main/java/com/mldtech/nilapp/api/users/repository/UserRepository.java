@@ -2,7 +2,9 @@ package com.mldtech.nilapp.api.users.repository;
 
 //import com.mldtech.nilapp.api.users.dto.UserProfileResponse;
 import com.mldtech.nilapp.api.contributions.model.Contribution;
+import com.mldtech.nilapp.api.users.dto.UserSearchDTO;
 import com.mldtech.nilapp.api.users.model.User;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -136,6 +138,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
           AND UPPER(f.status) = 'ACCEPTED'
     """, nativeQuery = true)
     Set<Long> findFriendUserIds(@Param("currentUserId") Long currentUserId);
+
+    @Query("""
+        SELECT new com.mldtech.nilapp.api.users.dto.UserSearchDTO(u.userId, u.username)
+        FROM User u
+        WHERE LOWER(u.username) LIKE LOWER(CONCAT(:query, '%'))
+        ORDER BY u.username ASC
+    """)
+    List<UserSearchDTO> searchByUsernamePrefix(@Param("query") String query, Pageable pageable);
 
 }
 

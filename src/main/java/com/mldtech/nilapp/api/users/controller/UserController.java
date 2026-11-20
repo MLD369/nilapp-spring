@@ -14,7 +14,9 @@ import com.mldtech.nilapp.helper.CustomResponse;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -487,6 +489,11 @@ public class UserController {
                     "500"
             );
         }
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<UserSearchDTO>> searchUsers(@RequestParam("query") String query) {
+        return ResponseEntity.ok(userService.searchUsersByUsername(query));
     }
 
 
