@@ -557,13 +557,13 @@ ON UPDATE CASCADE;
 
 -- Table to track active device sessions and allow instant revocation
 CREATE TABLE public.refresh_tokens (
-                                       token_id BIGSERIAL PRIMARY KEY,
-                                       user_id BIGINT NOT NULL REFERENCES public.users(user_id) ON DELETE CASCADE,
-                                       token_hash VARCHAR(64) NOT NULL UNIQUE,
-                                       device_id VARCHAR(100) NOT NULL,
-                                       expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-                                       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                                       CONSTRAINT uq_user_device UNIQUE (user_id, device_id)
+token_id BIGSERIAL PRIMARY KEY,
+user_id BIGINT NOT NULL REFERENCES public.users(user_id) ON DELETE CASCADE,
+token_hash VARCHAR(64) NOT NULL UNIQUE,
+device_id VARCHAR(100) NOT NULL,
+expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+CONSTRAINT uq_user_device UNIQUE (user_id, device_id)
 );
 
 CREATE INDEX idx_refresh_tokens_expires_at ON public.refresh_tokens(expires_at);

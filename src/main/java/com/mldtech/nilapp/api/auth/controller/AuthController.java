@@ -1,9 +1,6 @@
 package com.mldtech.nilapp.api.auth.controller;
 
-import com.mldtech.nilapp.api.auth.dto.AuthResponse;
-import com.mldtech.nilapp.api.auth.dto.LoginRequest;
-import com.mldtech.nilapp.api.auth.dto.RefreshRequest;
-import com.mldtech.nilapp.api.auth.dto.RegisterRequest;
+import com.mldtech.nilapp.api.auth.dto.*;
 import com.mldtech.nilapp.api.auth.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -36,5 +33,15 @@ public class AuthController {
     public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
         return ResponseEntity.ok(authService.register(request));
     }
+
+   // TODO temperory reset password will be upgraded to
+   //  Now (MVP & Beta): Use Resend  beta
+   //  Production AWS SES
+    @PostMapping("/dev-reset-password")
+    public ResponseEntity<DevResetPasswordResponse> devResetPassword(
+            @RequestBody DevResetPasswordRequest request) {
+        return ResponseEntity.ok(authService.devResetPassword(request.usernameOrEmail()));
+    }
+
 
 }

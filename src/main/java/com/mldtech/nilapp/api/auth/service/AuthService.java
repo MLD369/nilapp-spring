@@ -1,6 +1,7 @@
 package com.mldtech.nilapp.api.auth.service;
 
 import com.mldtech.nilapp.api.auth.dto.AuthResponse;
+import com.mldtech.nilapp.api.auth.dto.DevResetPasswordResponse;
 import com.mldtech.nilapp.api.auth.dto.LoginRequest;
 import com.mldtech.nilapp.api.auth.dto.RegisterRequest;
 import com.mldtech.nilapp.api.auth.model.RefreshToken;
@@ -15,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
@@ -122,6 +124,42 @@ public class AuthService {
         // Immediately issue tokens so the user goes straight to the "Create PIN" screen
         return issueTokensForDevice(savedUser, request.deviceId());
     }
+
+    @Transactional
+    public DevResetPasswordResponse devResetPassword(String usernameOrEmail) {
+        String identifier = (usernameOrEmail == null) ? "" : usernameOrEmail.trim();
+
+        var user = userRepository.findByUsername(identifier)
+                .or(() -> userRepository.findByEmail(identifier))
+                .orElseThrow(() -> new EntityNotFoundException("No account found for: " + identifier));
+
+        // Generate a readable 10-character temporary password
+        String tempPassword = generateTempPassword(10);
+
+        user.setPassword(passwordEncoder.encode(tempPassword));
+        user.setForcePasswordChange(true); // Marks that they are using a temporary password
+        userRepository.save(user);
+
+        // Revoke existing sessions so old tokens are invalidated
+        refreshTokenRepository.deleteAllByUserId(user.getUserId());
+
+        return new DevResetPasswordResponse(
+                user.getUsername(),
+                tempPassword,
+                "Temporary password generated. Use it to log in."
+        );
+    }
+
+    private String generateTempPassword(int length) {
+        String chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"; // Excludes confusing O/0/I/l
+        SecureRandom random = new SecureRandom();
+        StringBuilder sb = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return sb.toString();
+    }
+
 
 }
 
