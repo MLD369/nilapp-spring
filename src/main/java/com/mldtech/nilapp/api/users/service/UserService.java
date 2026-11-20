@@ -48,7 +48,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.mldtech.nilapp.helper.AppConstants.DATE_FORMATTER;
+import static com.mldtech.nilapp.helper.AppConstants.*;
 
 @Service
 @RequiredArgsConstructor
@@ -74,9 +74,8 @@ public class UserService {
     private final DailyStatRepository dailyStatRepository;
     Helper helper = new Helper();
 
+    // TODO move to constants
 
-    private static final int MIN_SEARCH_LENGTH = 2;
-    private static final int MAX_SEARCH_RESULTS = 15;
 //    @Transactional   /// TODO change this to the right way with dtos
 //    public UserProfileResponse getUserProfile(Long userId) {
 //

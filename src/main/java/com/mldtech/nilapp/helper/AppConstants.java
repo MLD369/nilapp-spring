@@ -35,4 +35,8 @@ public class AppConstants {
     public static final int WORKOUT_COOLING_DAYS = 0; // TODO will need to find a good date for these
     // Define a reusable, thread-safe formatter
     public static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    // For user search TODO make 1 letter? or keep at 2
+    public static final int MIN_SEARCH_LENGTH = 2;
+    public static final int MAX_SEARCH_RESULTS = 15;
 }
