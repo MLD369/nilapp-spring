@@ -1,8 +1,12 @@
 package com.mldtech.nilapp.api.UserStreak.service;
 
+import com.mldtech.nilapp.api.UserAchievement.model.UserAchievement;
+import com.mldtech.nilapp.api.UserAchievement.repository.UserAchievementRepository;
 import com.mldtech.nilapp.api.UserStreak.model.UserStreak;
 import com.mldtech.nilapp.api.UserStreak.repository.UserStreakRepository;
+import com.mldtech.nilapp.api.achievements.repository.AchievementRepository;
 import com.mldtech.nilapp.api.users.dto.ShieldEligibilityDTO;
+import com.mldtech.nilapp.api.users.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -18,8 +22,14 @@ import static com.mldtech.nilapp.helper.AppConstants.*;
 @Service
 @RequiredArgsConstructor
 public class UserStreakService {
+    private final AchievementRepository achievementRepository;
+    private final UserAchievementRepository userAchievementRepository;
+    private final UserRepository userRepository;
     private final UserStreakRepository userStreakRepository;
     private static final Logger log = LoggerFactory.getLogger(UserStreakService.class);
+
+    private static final int MAX_SHIELDS = 3;
+    private static final Long SHIELD_HOARDER_ACHIEVEMENT_ID = 1L;
 
     /**
      * FRONTEND CHECK API: Returns whether a user is eligible to earn a shield (under the 3-shield cap)
@@ -51,14 +61,14 @@ public class UserStreakService {
 
         if (unlocked && currentShields >= MAX_SHIELDS) {
             return ShieldEligibilityDTO.builder()
-                    .canClaimShieldNow(false)
+                    .canClaimShieldNow(true)
                     .shieldUnlocked(true)
                     .currentShields(currentShields)
                     .maxShields(MAX_SHIELDS)
                     .cleanStreakDays(cleanDays)
-                    .nextMilestoneDays(0)
+                    .nextMilestoneDays(cleanDays)
                     .daysRemainingToShield(0)
-                    .message("You earned a shield, but your inventory is full (3/3). Use one to claim this reward!")
+                    .message("Inventory full (3/3)! Tap to claim the Shield Hoarder badge instead.")
                     .build();
         }
 
@@ -81,6 +91,7 @@ public class UserStreakService {
                 .build();
     }
 
+
     /**
      * 2. POST CLAIM API: Called when the user clicks "Claim Shield" on the UI.
      * Freezes the row (FOR UPDATE) to prevent double-claiming and enforces the 3-shield cap.
@@ -95,21 +106,49 @@ public class UserStreakService {
         }
 
         int currentShields = streakRecord.getStreakShields() != null ? streakRecord.getStreakShields() : 0;
+        boolean awardedHoarderBadge = false;
+
         if (currentShields >= MAX_SHIELDS) {
-            throw new IllegalStateException("Shield inventory is already full (3/3). Use a shield before claiming another.");
+            awardShieldHoarderAchievement(userId);
+            awardedHoarderBadge = true;
+        } else {
+            streakRecord.setStreakShields(currentShields + 1);
+            streakRecord.setTotalShieldsEarned(
+                    (streakRecord.getTotalShieldsEarned() != null ? streakRecord.getTotalShieldsEarned() : 0) + 1
+            );
         }
 
-        streakRecord.setStreakShields(currentShields + 1);
-        streakRecord.setTotalShieldsEarned(
-                (streakRecord.getTotalShieldsEarned() != null ? streakRecord.getTotalShieldsEarned() : 0) + 1
-        );
         streakRecord.setShieldClaimable(false);
         streakRecord.setUpdatedAt(LocalDateTime.now());
-
         userStreakRepository.save(streakRecord);
 
-        return checkShieldEligibility(userId);
+        ShieldEligibilityDTO response = checkShieldEligibility(userId);
+
+        String claimMessage = awardedHoarderBadge
+                ? "Shields full (3/3)! You earned the Shield Hoarder badge!"
+                : "Streak Shield claimed! (" + (currentShields + 1) + "/3)";
+
+        return ShieldEligibilityDTO.builder()
+                .canClaimShieldNow(response.isCanClaimShieldNow())
+                .shieldUnlocked(response.isShieldUnlocked())
+                .currentShields(response.getCurrentShields())
+                .maxShields(response.getMaxShields())
+                .cleanStreakDays(response.getCleanStreakDays())
+                .nextMilestoneDays(response.getNextMilestoneDays())
+                .daysRemainingToShield(response.getDaysRemainingToShield())
+                .message(claimMessage)
+                .build();
     }
+
+
+    private void awardShieldHoarderAchievement(Long userId) {
+        UserAchievement userAchievement = new UserAchievement();
+        // Adjust these setters to match your UserAchievement entity (Long IDs vs @ManyToOne objects):
+        userAchievement.setUser(userRepository.getReferenceById(userId));
+        userAchievement.setAchievement(achievementRepository.getReferenceById(SHIELD_HOARDER_ACHIEVEMENT_ID));
+        userAchievementRepository.save(userAchievement);
+    }
+
 
 
 
