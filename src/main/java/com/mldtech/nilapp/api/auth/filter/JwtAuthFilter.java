@@ -34,6 +34,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(auth);
             } catch (JwtException e) {
                 // Expired or invalid token: leave context empty so Spring returns 401
+                System.out.println("JWT Validation Failed: " + e.getMessage());
             }
         }
         chain.doFilter(request, response);
