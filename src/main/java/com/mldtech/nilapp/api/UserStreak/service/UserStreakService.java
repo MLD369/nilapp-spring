@@ -197,6 +197,7 @@ public class UserStreakService {
                 return Map.ofEntries(
                         Map.entry("status", "SAFE"),
                         Map.entry("actionRequired", false),
+                        Map.entry("redemptionCompleted", true),
                         Map.entry("currentStreak", streakRecord.getCurrentStreak()),
                         Map.entry("cleanStreakDays", streakRecord.getCleanStreakDays()),
                         Map.entry("previousStreak", 0),
@@ -213,6 +214,7 @@ public class UserStreakService {
             return Map.ofEntries(
                     Map.entry("status", "SAFE"),
                     Map.entry("actionRequired", false),
+                    Map.entry("redemptionCompleted", false),
                     Map.entry("currentStreak", streakRecord.getCurrentStreak()),
                     Map.entry("cleanStreakDays", streakRecord.getCleanStreakDays()),
                     Map.entry("previousStreak", 0),
@@ -223,12 +225,13 @@ public class UserStreakService {
                     Map.entry("redemptionDaysCompleted", streakRecord.getRedemptionDaysCompleted()),
                     Map.entry("frozenStreakToRestore", streakRecord.getFrozenStreakToRestore()),
                     Map.entry("message", inRedemption
-                            ? String.format("Redemption Challenge: Day %d/%d completed! Keep going to restore your %d-day streak and get +%d days too.",
+                            ? String.format("Redemption Challenge: Day %d/%d completed! Keep going to restore your %d-day streak and get the %d days.",
                             streakRecord.getRedemptionDaysCompleted(),
                             REDEMPTION_TARGET_DAYS,
                             streakRecord.getFrozenStreakToRestore(),
                             REDEMPTION_TARGET_DAYS)
-                            : "Your streak is secure.")
+                            : "Your streak is secure."
+                    )
             );
         }
 
