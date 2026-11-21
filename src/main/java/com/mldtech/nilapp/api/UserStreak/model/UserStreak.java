@@ -82,4 +82,17 @@ public class UserStreak {
     @Builder.Default
     private Boolean shieldClaimable = false;
 
+    @Column(name = "last_saver_used_at")
+    private LocalDate lastSaverUsedAt;
+
+    @Column(name = "frozen_streak_to_restore", nullable = false)
+    private Integer frozenStreakToRestore = 0;
+
+    @Column(name = "redemption_days_completed", nullable = false)
+    private Integer redemptionDaysCompleted = 0;
+
+    @Column(name = "is_in_redemption_mode", nullable = false)
+    private Boolean isInRedemptionMode = false;
+
+
 }

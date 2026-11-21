@@ -465,8 +465,8 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
             SUM(c.steps_contributed) AS daily_steps,
             SUM(c.coins_contributed) AS daily_coins
         FROM contributions c
-        WHERE c.contribution_status_id = 5   -- allocated - was 2 for verified
-          AND c.is_synced_to_user_goals = false -- 🛡️ Safe Queue: Never misses rows due to server downtime or midnight boundaries
+        WHERE c.contribution_status_id = 5
+          AND c.is_synced_to_user_goals = false
         GROUP BY c.user_id
     ),
     updated_user_goals AS (
@@ -475,7 +475,6 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
             current_steps_progress = ug.current_steps_progress + COALESCE(cp.daily_steps, 0),
             current_coins_progress = ug.current_coins_progress + COALESCE(cp.daily_coins, 0),
             
-            -- Close the goal immediately if they cross the target coin or step threshold
             is_complete = CASE 
                 WHEN ug.target_type = 'COINS' AND (ug.current_coins_progress + COALESCE(cp.daily_coins, 0)) >= ug.target_amount THEN true
                 WHEN ug.target_type = 'STEPS' AND (ug.current_steps_progress + COALESCE(cp.daily_steps, 0)) >= ug.target_amount THEN true
@@ -494,7 +493,6 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
                 ELSE ug.completed_at
             END,
             
-            -- FIXED: Advance status code to METRICS_MET upon crossing target boundary thresholds
             user_goal_status_id = CASE 
                 WHEN (ug.target_type = 'COINS' AND (ug.current_coins_progress + COALESCE(cp.daily_coins, 0)) >= ug.target_amount) OR
                      (ug.target_type = 'STEPS' AND (ug.current_steps_progress + COALESCE(cp.daily_steps, 0)) >= ug.target_amount)
@@ -503,28 +501,28 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
             END
         FROM calculated_progress cp
         WHERE ug.user_id = cp.user_id 
-          -- FIXED: Process ONLY records actively progressing down the tracking pipeline
           AND ug.user_goal_status_id = (SELECT user_goal_status_id FROM public.user_goal_statuses WHERE code = 'TRACKING')
           AND ug.is_active = true
         RETURNING ug.user_id, ug.is_complete, ug.goal_instance_id
     ),
-    -- Mint a unique user achievement entry instantly for the completed row run
     inserted_achievements AS (
         INSERT INTO public.user_achievements (user_id, achievement_id, goal_instance_id, earned_at)
-        SELECT uug.user_id, 101, uug.goal_instance_id, NOW() -- 101 = Standard Individual Goal Cleared Badge ID // TODO change this from 101
+        SELECT uug.user_id, g.achievement_id, uug.goal_instance_id, NOW()
         FROM updated_user_goals uug
+        JOIN public.goal_instances gi ON gi.goal_instance_id = uug.goal_instance_id
+        JOIN public.goals g ON g.goal_id = gi.goal_id
         WHERE uug.is_complete = true
-        -- FIXED: Aligned targeting specifications with your new reliable index rule
+          AND g.achievement_id IS NOT NULL
         ON CONFLICT (user_id, goal_instance_id) DO NOTHING
         RETURNING user_id
     )
-    -- 🔒 Close out the processed entries in the raw queue so they are never double counted
     UPDATE contributions
     SET is_synced_to_user_goals = true
     WHERE contribution_status_id = 5 
       AND is_synced_to_user_goals = false;
     """, nativeQuery = true)
     int evaluateUserGoalsBatch();
+
 
 
     /**
@@ -664,6 +662,42 @@ public interface ContributionRepository extends JpaRepository<Contribution, Long
             @Param("startTs") LocalDateTime startTs,
             @Param("endTs") LocalDateTime endTs
     );
+
+    // TODO add timezone logic
+    @Query(value = """
+        SELECT COUNT(contribution_id)
+        FROM contributions
+        WHERE user_id = :userId
+          AND contribution_status_id IN (1, 2, 5)
+          AND (created_at AT TIME ZONE 'America/New_York')\\:\\:date BETWEEN :startDate AND :endDate
+        """, nativeQuery = true)
+    int countClaimsBetweenDates(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    @Query(value = """
+    SELECT COUNT(*)
+    FROM (
+        SELECT (created_at AT TIME ZONE :timezone)\\:\\:date AS claim_day
+        FROM contributions
+        WHERE user_id = :userId
+          AND contribution_status_id IN (1, 2, 5)
+          AND (created_at AT TIME ZONE :timezone)\\:\\:date BETWEEN :startDate AND :endDate
+        GROUP BY 1
+        HAVING COUNT(contribution_id) >= :minClaimsPerDay
+    ) qualifying_days
+    """, nativeQuery = true)
+    int countQualifyingDaysBetweenDates(
+            @Param("userId") Long userId,
+            @Param("timezone") String timezone,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("minClaimsPerDay") int minClaimsPerDay
+    );
+
+
 
 }
 

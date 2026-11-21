@@ -259,6 +259,11 @@ public class BatchService {
 
             for (UserStreak streakRecord : lockedProfiles) {
                 Long userId = streakRecord.getUser().getUserId();
+                // TODO update to user the method long countYesterdayTotalClaimsAttempts(
+                //            @Param("userId") Long userId,
+                //            @Param("timezone") String timezone,
+                //            @Param("yesterday") LocalDate yesterday
+                //    );
                 long yesterdayClaims = userStreakRepository.countYesterdayTotalClaimsAttempts(userId);
 
                 if (yesterdayClaims >= AMOUNT_FOR_STREAK) {

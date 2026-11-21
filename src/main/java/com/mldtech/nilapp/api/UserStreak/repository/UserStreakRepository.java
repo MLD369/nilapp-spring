@@ -38,15 +38,24 @@ public interface UserStreakRepository extends JpaRepository<UserStreak, Long> {
      * Counts BOTH Pending (1) and Approved (2) claims to prevent accidental breaks
      */
     @Query(value = """
-        SELECT COUNT(contribution_id) 
-        FROM contributions 
-        WHERE user_id = :userId 
-          AND contribution_status_id IN (1, 2, 5) -- check for any contributions from before that were not rejected
-          -- ESCAPED THE COLONS HERE TO FIX THE HIBERNATE SYNTAX ERROR:
-          AND (created_at AT TIME ZONE 'America/New_York')\\:\\:date = CURRENT_DATE - INTERVAL '1 day'
-        """, nativeQuery = true)
-    long countYesterdayTotalClaimsAttempts(@Param("userId") Long userId);
+    SELECT COUNT(contribution_id)
+    FROM contributions
+    WHERE user_id = :userId
+      AND contribution_status_id IN (1, 2, 5)
+      AND (created_at AT TIME ZONE :timezone)\\:\\:date = :yesterday
+    """, nativeQuery = true)
+    long countYesterdayTotalClaimsAttempts(
+            @Param("userId") Long userId,
+            @Param("timezone") String timezone,
+            @Param("yesterday") LocalDate yesterday
+    );
 
+    // Add this 1-argument default overload so any other callers in your project compile automatically:
+    default long countYesterdayTotalClaimsAttempts(Long userId) {
+        String defaultTz = "America/New_York";
+        LocalDate yesterday = LocalDate.now(java.time.ZoneId.of(defaultTz)).minusDays(1);
+        return countYesterdayTotalClaimsAttempts(userId, defaultTz, yesterday);
+    }
 
     //  Option A: Consumes 1 shield. Bypasses the streak reset but does NOT increase streak count.
     // Option A: User chooses to spend 1 Shield (+ Increments your lifetime auditing metrics)
@@ -141,7 +150,7 @@ public interface UserStreakRepository extends JpaRepository<UserStreak, Long> {
      * tracking count down to 0, and records today's date to open the recovery options window.
      */
     @Modifying
-    @Query(value = """
+    @Query("""
     UPDATE UserStreak u
     SET u.previousStreak = :previousStreak,
         u.currentStreak = 0,
@@ -149,10 +158,10 @@ public interface UserStreakRepository extends JpaRepository<UserStreak, Long> {
         u.cleanStreakDays = 0,
         u.updatedAt = CURRENT_TIMESTAMP
     WHERE u.user.userId = :userId
-    """, nativeQuery = true)
+    """)
     void softResetActiveStreak(
             @Param("userId") Long userId,
-            @Param("streakBackup") int streakBackup,
+            @Param("previousStreak") int previousStreak,
             @Param("today") LocalDate today
     );
 
@@ -161,7 +170,7 @@ public interface UserStreakRepository extends JpaRepository<UserStreak, Long> {
      * Nulls out the soft_reset_at tracker to lock out further modifications.
      */
     @Modifying
-    @Query(value = """
+    @Query("""
     UPDATE UserStreak u
     SET u.currentStreak = :restoredStreak,
         u.lastCompletedDate = :today,
@@ -169,10 +178,10 @@ public interface UserStreakRepository extends JpaRepository<UserStreak, Long> {
         u.cleanStreakDays = 0,
         u.updatedAt = CURRENT_TIMESTAMP
     WHERE u.user.userId = :userId
-    """, nativeQuery = true)
+    """)
     void restoreStreakState(
             @Param("userId") Long userId,
-            @Param("restoredValue") int restoredValue,
+            @Param("restoredStreak") int restoredStreak,
             @Param("today") LocalDate today
     );
 
@@ -188,6 +197,9 @@ public interface UserStreakRepository extends JpaRepository<UserStreak, Long> {
     @Query("SELECT u FROM UserStreak u WHERE u.user.userId = :userId")
     Optional<UserStreak> findByUserIdForUpdate(@Param("userId") Long userId);
 
+    @Modifying
+    @Query("UPDATE UserStreak u SET u.lastSaverUsedAt = :today WHERE u.user.userId = :userId")
+    void updateLastSaverUsedAt(@Param("userId") Long userId, @Param("today") LocalDate today);
 
 }
 

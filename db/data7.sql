@@ -578,3 +578,11 @@ ALTER COLUMN first_name DROP NOT NULL, -- TODO might have to change for future a
     ALTER COLUMN last_name DROP NOT NULL,  -- TODO might have to change for future apps if user can get things
     ALTER COLUMN session_id DROP NOT NULL;
 ALTER TABLE public.users DROP CONSTRAINT IF EXISTS users_phone_key; -- if someone puts a fake phone it doesnt matter
+
+-- 7 day streak saver
+ALTER TABLE public.user_streaks
+    ADD COLUMN last_saver_used_at DATE,
+    ADD COLUMN frozen_streak_to_restore INT NOT NULL DEFAULT 0,
+    ADD COLUMN redemption_days_completed INT NOT NULL DEFAULT 0,
+    ADD COLUMN is_in_redemption_mode BOOLEAN NOT NULL DEFAULT FALSE;
+
